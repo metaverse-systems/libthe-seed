@@ -1,0 +1,8 @@
+# Blacklist files/folders in same directory as the .gitignore file
+/*
+
+# Whitelist some files
+!.gitignore
+!create_component.sh
+!skeleton_component/
+!skeleton_component/*
