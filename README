@@ -1,1 +1,35 @@
 # the seed
+
+## Requirements
+
+* https://github.com/metaversesystems/libecs-cpp
+
+* Autotools
+
+* Libtool
+
+## Compiling
+
+```
+$ ./autogen.sh
+$ ./configure
+$ make
+```
+
+## Components
+
+To create a component, enter the ```./components``` directory:
+
+```
+$ cd components
+$ ./create_component.sh component_name email@address.com
+```
+
+## Systems
+
+To create a system, enter the ```./systems``` directory:
+
+```
+$ cd systems
+$ ./create_system.sh system_name email@address.com
+```
