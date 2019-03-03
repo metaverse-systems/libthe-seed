@@ -5,10 +5,10 @@ SKELETON::SKELETON()
     this->Type = "SKELETON";
 }
 
-SKELETON::SKELETON(uint64_t value)
+SKELETON::SKELETON(ConfigMap config)
 {
     this->Type = "SKELETON";
-    this->data = value;
+    this->data = config["value"];
 }
 
 extern "C"
@@ -17,7 +17,7 @@ extern "C"
     {
         if(p == nullptr) return new SKELETON();
 
-        uint64_t value = (uint64_t)(uint64_t *)p;
-        return new SKELETON(value);
+        ConfigMap *cm = (ConfigMap *)p;
+        return new SKELETON(*cm);
     }
 }

@@ -1,1 +1,1 @@
-SUBDIRS = Editor
+SUBDIRS = Loaders Editor

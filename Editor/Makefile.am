@@ -1,5 +1,5 @@
 bin_PROGRAMS = Editor
 
 Editor_SOURCES = Editor.cpp
-Editor_CXXFLAGS = -std=c++14 ${ECS_CFLAGS}
-Editor_LDADD = -lpthread ${ECS_LIBS}
+Editor_CXXFLAGS = -std=c++14 ${LIBECS_CFLAGS}
+Editor_LDADD = -lpthread ${LIBECS_LIBS} ../Loaders/libloaders.la
