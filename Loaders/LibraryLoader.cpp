@@ -27,6 +27,8 @@ std::vector<std::string> LibraryLoader::PathsGet()
     {
 #ifdef _WIN32
         std::string full_path = p + "\\lib" + this->name + "-0.dll";
+#elif __APPLE__
+        std::string full_path = p + "/lib" + this->name + ".dylib";
 #else
         std::string full_path = p + "/lib" + this->name + ".so";
 #endif
@@ -51,7 +53,7 @@ void LibraryLoader::Load()
     {
 #ifdef _WIN32
         this->dl_handle = LoadLibrary(path.c_str());
-        if(!this->dl_handle)
+        if(this->dl_handle == nullptr)
         {
             DWORD result = GetLastError();
             LPSTR messageBuffer = nullptr;
@@ -64,15 +66,18 @@ void LibraryLoader::Load()
 #else
         dlerror();
         this->dl_handle = dlopen(path.c_str(), RTLD_LAZY);
-        if(!this->dl_handle) error = std::string(dlerror());
+        if(this->dl_handle == nullptr) 
+        {
+            error = std::string(dlerror());
+        }
         else break;
 #endif
     }
 
-    if(!this->dl_handle)
+    if(this->dl_handle == nullptr)
     {
         std::cerr << error << std::endl;
-        throw std::string(error);
+        throw error;
     }
 }
 
@@ -110,6 +115,7 @@ void *LibraryLoader::FunctionGet(std::string FuncName)
 
     if(!ptr)
     {
+        std::cerr << error << std::endl;
         throw std::string(error);
     }
     return ptr;

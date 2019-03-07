@@ -33,7 +33,6 @@ namespace ComponentLoader
         }
         catch(std::string e)
         {
-            std::cerr << e << std::endl;
             throw e;
         }
 
@@ -62,7 +61,6 @@ namespace ComponentLoader
 
     ecs::Component *Get(std::string component, void *data)
     {
-        std::cout << "Loading component " << component << ". Pointer: 0x" << data << std::endl;
         if(!component_loaders[component])
         {
             try
