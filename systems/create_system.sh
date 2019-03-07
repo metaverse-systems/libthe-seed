@@ -10,14 +10,14 @@ fi
 
 cp -r skeleton_system ${1}
 cd ${1}
-sed -i "s/SKELETON/${1}/g" configure.ac
-sed -i "s/AUTHOR_EMAIL/${2}/g" configure.ac
-sed -i "s/AUTHOR_EMAIL/${2}/g" AUTHORS
-sed -i "s/AUTHOR_EMAIL/${2}/g" COPYING
+sed -i'' -e "s/SKELETON/${1}/g" configure.ac
+sed -i'' -e "s/AUTHOR_EMAIL/${2}/g" configure.ac
+sed -i'' -e "s/AUTHOR_EMAIL/${2}/g" AUTHORS
+sed -i'' -e "s/AUTHOR_EMAIL/${2}/g" COPYING
 
-sed -i "s/SKELETON/${1}/g" src/Makefile.am
-sed -i "s/SKELETON/${1}/g" src/SKELETON.hpp
-sed -i "s/SKELETON/${1}/g" src/SKELETON.cpp
+sed -i'' -e "s/SKELETON/${1}/g" src/Makefile.am
+sed -i'' -e "s/SKELETON/${1}/g" src/SKELETON.hpp
+sed -i'' -e "s/SKELETON/${1}/g" src/SKELETON.cpp
 
 mv src/SKELETON.hpp src/${1}.hpp
 mv src/SKELETON.cpp src/${1}.cpp
