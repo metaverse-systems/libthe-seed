@@ -1,6 +1,7 @@
 #!/bin/bash
 
-aclocal \
+libtoolize \
+&& aclocal \
 && autoheader \
 && automake --add-missing -c \
 && autoconf
