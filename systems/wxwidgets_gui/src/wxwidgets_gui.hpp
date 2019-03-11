@@ -2,7 +2,7 @@
 
 #include <wxw.hpp>
 #include <libecs-cpp/ecs.hpp>
-#include <jsoncpp/json/json.h>
+#include <json/json.h>
 #include <thread>
 
 class wxwidgets_gui : public ecs::System
