@@ -10,6 +10,11 @@ int main(int argc, char *argv[])
 
     world->System(SystemLoader::Get("physics"));
 
+    Json::Value wxw;
+    wxw["argc"] = argc;
+    wxw["argv"] = (Json::UInt64)((uint64_t)argv);
+    world->System(SystemLoader::Get("wxwidgets_gui", &wxw));
+
     ecs::Entity *e = world->Entity("Player");
 
     Json::Value config;
@@ -24,7 +29,7 @@ int main(int argc, char *argv[])
 
     std::cout << world->save() << std::endl;
 
-    for(;;)
+    while(ECS->IsRunning())
     {
         usleep(50);
     }
