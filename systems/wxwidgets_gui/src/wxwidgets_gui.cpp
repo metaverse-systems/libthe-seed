@@ -40,11 +40,6 @@ void wxwidgets_gui::Update(uint32_t dt)
     // Do some work
 }
 
-void wxwidgets_gui::Shutdown()
-{
-    this->Container->ManagerGet()->Shutdown();
-}
-
 extern "C"
 {
     ecs::System *create_system(void *p)

@@ -11,7 +11,6 @@ class wxwidgets_gui : public ecs::System
     wxwidgets_gui(); 
     wxwidgets_gui(Json::Value);
     void Update(uint32_t dt);
-    void Shutdown();
   private:
     std::thread wxThread;
     void ThreadFunc();
