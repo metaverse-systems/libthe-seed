@@ -17,6 +17,7 @@ AM_INIT_AUTOMAKE([subdir-objects])
 AC_CHECK_LIB([pthread], [pthread_exit])
 
 PKG_CHECK_MODULES([LIBECS], ecs-cpp)
+PKG_CHECK_MODULES([JSONCPP], jsoncpp)
 
 # Checks for header files.
 

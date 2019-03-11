@@ -5,10 +5,17 @@ SKELETON::SKELETON()
     this->Type = "SKELETON";
 }
 
-SKELETON::SKELETON(ConfigMap config)
+SKELETON::SKELETON(Json::Value config)
 {
     this->Type = "SKELETON";
-    this->data = config["value"];
+    this->data = config["value"].asString();
+}
+
+Json::Value SKELETON::save()
+{
+    Json::Value config;
+    config["data"] = this->data;
+    return config;
 }
 
 extern "C"
@@ -17,7 +24,7 @@ extern "C"
     {
         if(p == nullptr) return new SKELETON();
 
-        ConfigMap *cm = (ConfigMap *)p;
-        return new SKELETON(*cm);
+        Json::Value *config = (Json::Value *)p;
+        return new SKELETON(*config);
     }
 }

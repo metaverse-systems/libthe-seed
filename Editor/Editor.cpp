@@ -12,15 +12,17 @@ int main(int argc, char *argv[])
 
     ecs::Entity *e = world->Entity("Player");
 
-    ConfigMap cm;
+    Json::Value config;
 
-    cm["x"] = "50.5";
-    cm["y"] = "100.0";
-    e->Component(ComponentLoader::Get("position", &cm));
+    config["x"] = 50.5;
+    config["y"] = 100.0;
+    e->Component(ComponentLoader::Get("position", &config));
 
-    cm["x"] = "0.5";
-    cm["y"] = "0.0";
-    e->Component(ComponentLoader::Get("velocity", &cm));
+    config["x"] = 0.5;
+    config["y"] = 0.0;
+    e->Component(ComponentLoader::Get("velocity", &config));
+
+    std::cout << world->save() << std::endl;
 
     for(;;)
     {

@@ -6,6 +6,7 @@ class SKELETON : public ecs::Component
 {
   public:
     SKELETON(); 
-    SKELETON(ConfigMap);
+    SKELETON(Json::Value);
+    Json::Value save();
     std::string data;
 };
