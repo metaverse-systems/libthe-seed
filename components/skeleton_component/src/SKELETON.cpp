@@ -8,7 +8,7 @@ SKELETON::SKELETON()
 SKELETON::SKELETON(Json::Value config)
 {
     this->Type = "SKELETON";
-    this->data = config["value"].asString();
+    this->data = config["data"].asString();
 }
 
 Json::Value SKELETON::save()
