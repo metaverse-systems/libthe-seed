@@ -14,7 +14,7 @@ SKELETON::SKELETON(Json::Value config)
 Json::Value SKELETON::save()
 {
     Json::Value config;
-    config["data"] = this->data;
+    config["data"] = (Json::UInt64)this->data;
     return config;
 }
 
