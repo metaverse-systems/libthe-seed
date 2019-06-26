@@ -12,18 +12,26 @@ namespace ComponentLoader
         }
         catch(std::string e)
         {
+            std::cout << "Exception in ComponentLoader::Loader::Loader()" << e << std::endl;
             throw e;
         }
     }
 
-    ecs::Component *Loader::ComponentGet()
+    ComponentCreator Loader::ComponentGet()
+    {
+        void *ptr = this->library->FunctionGet("create_component");
+        ComponentCreator creator = reinterpret_cast<ComponentCreator>(ptr);
+        return creator;
+    }
+
+    ecs::Component *Loader::ComponentCreate()
     {
         void *ptr = this->library->FunctionGet("create_component");
         ComponentCreator creator = reinterpret_cast<ComponentCreator>(ptr);
         return creator(nullptr);
     }
 
-    ecs::Component *Loader::ComponentGet(void *data)
+    ecs::Component *Loader::ComponentCreate(void *data)
     {
         void *ptr;
 
@@ -42,7 +50,7 @@ namespace ComponentLoader
 
     std::map<std::string, ComponentLoader::Loader *> component_loaders;
 
-    ecs::Component *Get(std::string component)
+    ecs::Component *Create(std::string component)
     {
         if(!component_loaders[component]) 
         {
@@ -56,10 +64,10 @@ namespace ComponentLoader
             }
         }
 
-        return component_loaders[component]->ComponentGet();
+        return component_loaders[component]->ComponentCreate();
     }
 
-    ecs::Component *Get(std::string component, void *data)
+    ecs::Component *Create(std::string component, void *data)
     {
         if(!component_loaders[component])
         {
@@ -73,6 +81,23 @@ namespace ComponentLoader
             }
         }
 
-        return component_loaders[component]->ComponentGet(data);
+        return component_loaders[component]->ComponentCreate(data);
+    }
+
+    ComponentCreator Get(std::string component)
+    {
+        if(!component_loaders[component])
+        {
+            try
+            {
+                component_loaders[component] = new Loader(component);
+            }
+            catch(std::string e)
+            {
+                throw e;
+            }
+        }
+
+        return component_loaders[component]->ComponentGet();
     }
 }

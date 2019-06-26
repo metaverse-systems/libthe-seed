@@ -15,7 +15,9 @@ wxwidgets_gui::wxwidgets_gui(Json::Value config)
 
     wxApp::SetInstance(this->App);
     void *p = (void *)config["argv"].asUInt64();
+
     this->argv = (char **)p;
+    std::cout << argv[0] << std::endl;
     this->argc = config["argc"].asInt();
 
     this->wxThread = std::thread(&wxwidgets_gui::ThreadFunc, this);

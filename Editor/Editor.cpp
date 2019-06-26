@@ -2,32 +2,56 @@
 #include "../Loaders/ComponentLoader.hpp"
 #include "../Loaders/SystemLoader.hpp"
 #include <iostream>
+#include <fstream>
 #include <unistd.h>
 
 int main(int argc, char *argv[])
 {
     ecs::Container *world = ECS->Container();
+    world->Start();
 
-    world->System(SystemLoader::Get("physics"));
+    Json::Value sdl;
+    sdl["width"] = 1280;
+    sdl["height"] = 720;
+    sdl["title"] = "Editor";
 
-    Json::Value wxw;
-    wxw["argc"] = argc;
-    wxw["argv"] = (Json::UInt64)((uint64_t)argv);
-    world->System(SystemLoader::Get("wxwidgets_gui", &wxw));
+    world->System(SystemLoader::Create("sdl_linux", &sdl));
+    world->System(SystemLoader::Create("physics", &sdl));
 
-    ecs::Entity *e = world->Entity("Player");
+    if(argc == 2)
+    {
+        std::ifstream file(argv[1]);
+        Json::Reader reader;
+        Json::Value config;
+        reader.parse(file, config);
 
-    Json::Value config;
+        uint16_t counter = 0;
 
-    config["x"] = 50.5;
-    config["y"] = 100.0;
-    e->Component(ComponentLoader::Get("position", &config));
+        for(uint16_t counter = 0; counter < config.size(); counter++)
+        {
+            ecs::Entity *e = world->Entity(config[counter]["Handle"].asString());
 
-    config["x"] = 0.5;
-    config["y"] = 0.0;
-    e->Component(ComponentLoader::Get("velocity", &config));
+            std::vector<std::string> keys = config[counter]["Components"].getMemberNames();
+            for(auto &k : keys)
+            {
+                ecs::Component *c = nullptr;
+                try
+                {
+                    c = ComponentLoader::Create(k, &config[counter]["Components"][k]);
+                }
+                catch(std::string error)
+                {
+                    std::cout << error << std::endl;
+                    return -1;
+                }
 
-    std::cout << world->save() << std::endl;
+                std::cout << "Loaded component " << c->Type << std::endl;
+                e->Component(c);
+            }
+
+            std::cout << "Loaded entity " << e->HandleGet() << std::endl;
+        }
+    }
 
     while(ECS->IsRunning())
     {

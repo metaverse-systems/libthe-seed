@@ -8,3 +8,7 @@
 !skeleton_system/*
 !wxwidgets_gui/
 !wxwidgets_gui/*
+!sdl_linux/
+!sdl_linux/*
+!life/
+!life/*

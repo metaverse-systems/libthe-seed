@@ -32,5 +32,6 @@ AC_CHECK_HEADER([windows.h],
 
 AC_CONFIG_FILES([Makefile
                  Loaders/Makefile
-                 Editor/Makefile])
+                 Editor/Makefile
+                 Life/Makefile])
 AC_OUTPUT

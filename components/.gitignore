@@ -6,3 +6,5 @@
 !create_component.sh
 !skeleton_component/
 !skeleton_component/*
+!cell/
+!cell/*

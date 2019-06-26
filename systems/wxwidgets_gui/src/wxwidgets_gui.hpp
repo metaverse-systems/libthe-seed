@@ -15,6 +15,6 @@ class wxwidgets_gui : public ecs::System
     std::thread wxThread;
     void ThreadFunc();
     wxApp *App = nullptr;
-    char **argv = nullptr;
-    int argc = 0;
+    char **argv;
+    int argc = 1;
 };

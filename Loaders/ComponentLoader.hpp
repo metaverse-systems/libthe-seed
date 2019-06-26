@@ -13,14 +13,16 @@ namespace ComponentLoader
       public:
         Loader(std::string library);
         ~Loader();
-        ecs::Component *ComponentGet();
-        ecs::Component *ComponentGet(void *data);
+        ecs::Component *ComponentCreate();
+        ecs::Component *ComponentCreate(void *data);
+        ComponentCreator ComponentGet();
       private:
         LibraryLoader *library;
     };
 
     extern std::map<std::string, ComponentLoader::Loader *> component_loaders;
 
-    ecs::Component *Get(std::string component);
-    ecs::Component *Get(std::string component, void *data);
+    ecs::Component *Create(std::string component);
+    ecs::Component *Create(std::string component, void *data);
+    ComponentCreator Get(std::string);
 }

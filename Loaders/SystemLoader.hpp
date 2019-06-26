@@ -13,14 +13,16 @@ namespace SystemLoader
       public:
         Loader(std::string library);
         ~Loader();
-        ecs::System *SystemGet();
-        ecs::System *SystemGet(void *data);
+        ecs::System *SystemCreate();
+        ecs::System *SystemCreate(void *data);
+        SystemCreator SystemGet();
       private:
         LibraryLoader *library;
     };
 
     extern std::map<std::string, SystemLoader::Loader *> system_loaders;
 
-    ecs::System *Get(std::string system);
-    ecs::System *Get(std::string system, void *data);
+    ecs::System *Create(std::string system);
+    ecs::System *Create(std::string system, void *data);
+    SystemCreator Get(std::string system);
 }
