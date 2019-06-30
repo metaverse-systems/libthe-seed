@@ -46,8 +46,6 @@ sdl_linux::sdl_linux(Json::Value config)
     }
 
     this->ComponentRequest("texture");
-    this->ComponentRequest("background");
-    this->ComponentRequest("shape");
 }
 
 Json::Value sdl_linux::save()
@@ -70,57 +68,20 @@ void sdl_linux::Update(uint32_t dt)
         SDL_SetRenderDrawColor(this->renderer, 0, 0, 0, 0xFF );
         SDL_RenderClear(this->renderer);
 
-        std::vector<std::string> RequestedComponents;
-        RequestedComponents.push_back("texture");
-        RequestedComponents.push_back("background");
-        RequestedComponents.push_back("shape");
-        std::map<std::string, std::map<std::string, ecs::Component *>> Components = this->Container->ComponentsGet(RequestedComponents);
-
-/*
-        for(auto &c : Components["background"])
-        {
-            auto b = (background *)c.second;
-            if(b->tex == nullptr)
-            {
-                b->tex = SDL_CreateTextureFromSurface(this->renderer, b->image);
-            }
-
-            auto p = (position *)this->Container->Entity(b->EntityHandle)->ComponentGet("position");
-            SDL_Rect dest_rect = { p->x, p->y, b->tex_rect.w, b->tex_rect.h };
-
-            SDL_RenderCopy(this->renderer, b->tex, &b->tex_rect, &dest_rect);
-        }
-*/
+        ecs::ComponentMap Components = this->ComponentsGet();
 
         for(auto &c : Components["texture"])
         {
             auto t = (texture *)c.second;
-            if(t->tex == nullptr) t->tex = this->tex_cache[t->tex_filename];
-/*
-            {
-                SDL_Rect dest = { 0, 0, 16, 16 };
-                uint16_t x = t->tex_index % 16;
-                uint16_t y = (t->tex_index / 16);
-std::cout << "Loading index " << t->tex_index << " at coordinates " << x << ", " << y << std::endl;
-                SDL_Rect src = { x * 16, y * 16, 16, 16 };
-//                SDL_RenderCopy(this->renderer, t->tex, &src, &dest);
-            }
-*/
+            auto p = (position *)this->Container->Entity(t->EntityHandle)->ComponentGet("position");
 
-//            auto p = (position *)this->Container->Entity(t->EntityHandle)->ComponentGet("position");
-//            SDL_Rect dest_rect = { p->x, p->y, t->tex_rect.w, t->tex_rect.h };
-//            SDL_RenderCopy(this->renderer, t->tex, &t->tex_rect, &dest_rect);
-
+            SDL_Rect src = { t->col * t->width, t->row * t->height, t->width, t->height };
+            SDL_Rect dest = { p->x * t->width, p->y * t->height, t->width, t->height };
+            SDL_SetTextureColorMod(this->tex_cache[t->tex_filename], t->r, t->g, t->b);
+            SDL_RenderCopy(this->renderer, this->tex_cache[t->tex_filename], &src, &dest);
         }
 
         SDL_SetRenderDrawBlendMode(this->renderer, SDL_BLENDMODE_BLEND);
-        for(auto &c : Components["shape"])
-        {
-            auto s = (shape *)c.second;
-            SDL_Rect rect = { s->x, s->y, s->width, s->height };
-            SDL_SetRenderDrawColor(this->renderer, s->r, s->g, s->b, s->a);
-            SDL_RenderFillRect(this->renderer, &rect );
-        }
         SDL_RenderPresent(this->renderer);
     }
     else

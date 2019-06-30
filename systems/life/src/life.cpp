@@ -75,7 +75,7 @@ void life::Update(uint32_t dt)
         }
         else
         {
-            s->a = 32;
+            s->a = 16;
         }
     }
 }
