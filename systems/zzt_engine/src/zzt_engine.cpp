@@ -13,6 +13,8 @@ zzt_engine::zzt_engine(Json::Value config)
     this->Handle = "zzt_engine";
     this->filename = config["filename"].asString();
     this->tex_sheet = config["tex_sheet"].asString();
+    this->tex_height = config["tex_height"].asUInt();
+    this->tex_width = config["tex_width"].asUInt();
     this->board_number = config["board"].asUInt();
 
     this->ComponentRequest("position");
@@ -81,7 +83,7 @@ void zzt_engine::create_zzt_texture(ecs::Entity *e, uint8_t character, uint8_t c
     {
         std::cout << "Can't find character " << std::to_string(character) << std::endl;
     }
-    this->create_texture(e, this->tex_sheet, 9, 16,
+    this->create_texture(e, this->tex_sheet, this->tex_width, this->tex_height,
                          zzt_elements[character].col,
                          zzt_elements[character].row,
                          zzt_colors[color]);

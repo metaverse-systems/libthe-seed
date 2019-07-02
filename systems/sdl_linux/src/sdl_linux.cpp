@@ -16,6 +16,7 @@ sdl_linux::sdl_linux(Json::Value config)
     this->Handle = "sdl_linux";
     this->height = config["height"].asUInt();
     this->width = config["width"].asUInt();
+    if(config["scale"].asString().size()) this->scale = config["scale"].asFloat();
     this->title = config["title"].asString();
     this->columns = config["columns"].asUInt();
     this->rows = config["rows"].asUInt();
@@ -76,7 +77,7 @@ void sdl_linux::Update(uint32_t dt)
             auto p = (position *)this->Container->Entity(t->EntityHandle)->ComponentGet("position");
 
             SDL_Rect src = { t->col * t->width, t->row * t->height, t->width, t->height };
-            SDL_Rect dest = { p->x * t->width, p->y * t->height, t->width, t->height };
+            SDL_Rect dest = { p->x * (t->width * this->scale), p->y * (t->height * this->scale), t->width * this->scale, t->height * this->scale };
             SDL_SetTextureColorMod(this->tex_cache[t->tex_filename], t->r, t->g, t->b);
             SDL_RenderCopy(this->renderer, this->tex_cache[t->tex_filename], &src, &dest);
         }

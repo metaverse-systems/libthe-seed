@@ -19,6 +19,7 @@ class zzt_engine : public ecs::System
     void create_position(ecs::Entity *e, float x, float y);
     void create_texture(ecs::Entity *e, std::string filename, int32_t width, int32_t height, int32_t col, int32_t row, std::string color);
     void create_zzt_texture(ecs::Entity *e, uint8_t character, uint8_t color);
+    uint16_t tex_width, tex_height;
   private:
     uint16_t cycle = 0;
     World *world = nullptr;

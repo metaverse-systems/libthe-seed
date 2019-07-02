@@ -18,6 +18,7 @@ class sdl_linux : public ecs::System
     std::map<std::string, SDL_Surface *> image_cache;
     std::map<std::string, SDL_Texture *> tex_cache;
     uint16_t width = 640, height = 480, columns = 80, rows = 25;
+    float scale = 1;
     std::string title = "SDL Window";
     bool running = true;
 };
