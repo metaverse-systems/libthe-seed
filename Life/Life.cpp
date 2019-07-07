@@ -49,8 +49,6 @@ int main(int argc, char *argv[])
                 shape["a"] = 32;
             }
             e->Component(ComponentLoader::Create("shape", &shape));
-
-//            std::cout << "Created " << std::to_string(x) << ", " << std::to_string(y) << std::endl;
         }
     }
 
