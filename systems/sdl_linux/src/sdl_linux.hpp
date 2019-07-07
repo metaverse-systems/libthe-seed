@@ -11,6 +11,7 @@ class sdl_linux : public ecs::System
     sdl_linux(Json::Value);
     Json::Value save();
     void Update(uint32_t dt);
+    void Init();
   private:
     SDL_Window *window = nullptr;
     SDL_Renderer *renderer = nullptr;
@@ -21,4 +22,5 @@ class sdl_linux : public ecs::System
     float scale = 1;
     std::string title = "SDL Window";
     bool running = true;
+    Json::Value images;
 };

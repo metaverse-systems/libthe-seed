@@ -55,11 +55,13 @@ int main(int argc, char *argv[])
     std::cout << "Loading " << zzt_config["filename"] << std::endl;
     world->System(SystemLoader::Create("zzt_engine", &zzt_config));
 
-    world->Start(1000000 / 15);
+//    world->Start(1000000 / 15);
+    world->SystemsInit();
 
     while(ECS->IsRunning())
     {
         usleep(150000);
+        world->Update();
     }
     return 0;
 }
