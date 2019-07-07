@@ -57,7 +57,6 @@ int main(int argc, char *argv[])
     while(ECS->IsRunning())
     {
         usleep(150000);
-//        world->Update();
     }
     return 0;
 }
