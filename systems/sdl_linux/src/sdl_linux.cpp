@@ -20,13 +20,19 @@ sdl_linux::sdl_linux(Json::Value config)
     this->title = config["title"].asString();
     this->columns = config["columns"].asUInt();
     this->rows = config["rows"].asUInt();
+    this->images = config["images"];
 
+    this->ComponentRequest("texture");
+}
+
+void sdl_linux::Init()
+{
     if(SDL_Init(SDL_INIT_VIDEO) < 0)
     {
         throw std::string("Couldn't initialize SDL video.");
     }
 
-    this->window = SDL_CreateWindow(this->title.c_str(), SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 
+    this->window = SDL_CreateWindow(this->title.c_str(), SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
                                     this->width, this->height, SDL_WINDOW_SHOWN);
     if(this->window == nullptr)
     {
@@ -38,15 +44,13 @@ sdl_linux::sdl_linux(Json::Value config)
 
     this->screen_surface = SDL_GetWindowSurface(this->window);
 
-    for(uint16_t counter = 0; counter < config["images"].size(); counter++)
+    for(uint16_t counter = 0; counter < this->images.size(); counter++)
     {
-        std::string filename = config["images"][counter].asString();
+        std::string filename = this->images[counter].asString();
         std::cout << "Loading " << filename << std::endl;
         this->image_cache[filename] = IMG_Load(filename.c_str());
         this->tex_cache[filename] = SDL_CreateTextureFromSurface(this->renderer, this->image_cache[filename]);
     }
-
-    this->ComponentRequest("texture");
 }
 
 Json::Value sdl_linux::save()
