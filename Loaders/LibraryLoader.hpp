@@ -10,10 +10,10 @@ class LibraryLoader
     ~LibraryLoader();
     void *FunctionGet(std::string FuncName);
     void PathAdd(std::string path);
+    std::string name;
   private:
     void *dl_handle = nullptr;
     void Load();
     std::vector<std::string> PathsGet();
-    std::string name;
     std::vector<std::string> paths;
 };

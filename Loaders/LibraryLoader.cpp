@@ -76,7 +76,8 @@ void LibraryLoader::Load()
 
     if(this->dl_handle == nullptr)
     {
-        std::cerr << error << std::endl;
+        std::cout << "Couldn't open shared object." << std::endl;
+        std::cout << error << std::endl;
         throw error;
     }
 }
@@ -98,7 +99,7 @@ void *LibraryLoader::FunctionGet(std::string FuncName)
     std::string error;
 
 #ifdef _WIN32
-    ptr = (void *)GetProcAddress((HMODULE)this->dl_handle, func_name.c_str());
+    ptr = (void *)GetProcAddress((HMODULE)this->dl_handle, FuncName.c_str());
     if(!ptr)
     {
         DWORD result = GetLastError();

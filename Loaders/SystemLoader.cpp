@@ -13,7 +13,7 @@ namespace SystemLoader
         }
         catch(std::string e)
         {
-std::cout << "Error in SystemLoader::Loader::Loader()" << std::endl;
+            std::cout << "Error in SystemLoader::Loader::Loader(\"" + library + "\")" << std::endl;
             throw e;
         }
     }
@@ -36,7 +36,7 @@ std::cout << "Error in SystemLoader::Loader::Loader()" << std::endl;
         }
         catch(std::string e)
         {
-            std::cout << "Error in SystemLoader::Loader::SystemCreate()" << std::endl;
+            e = "SystemLoader::Loader(\"" + this->library->name + "\")::SystemCreate(): Couldn't get create_system function. " + e;
             throw e;
         }
 
@@ -53,7 +53,7 @@ std::cout << "Error in SystemLoader::Loader::Loader()" << std::endl;
         }
         catch(std::string e)
         {
-            std::cout << "Couldn't get create_system function. " << e << std::endl;
+            e = "SystemLoader::Loader(\"" + this->library->name + "\")::SystemCreate(void *): Couldn't get create_system function. " + e;
             throw e;
         }
 
@@ -83,6 +83,8 @@ std::cout << "Error in SystemLoader::Loader::Loader()" << std::endl;
             }
             catch(std::string e)
             {
+                std::cout << "SystemLoader::Create()" << std::endl;
+                std::cout << e << std::endl;
                 throw e;
             }
         }
@@ -100,11 +102,25 @@ std::cout << "Error in SystemLoader::Loader::Loader()" << std::endl;
             }
             catch(std::string e)
             {
-                throw e;
+                std::cout << "SystemLoader::Create(,)" << std::endl;
+                std::cout << e << std::endl;
+                exit(1);
             }
         }
 
-        return system_loaders[system]->SystemCreate(data);
+        ecs::System *sys = nullptr;
+        
+        try
+        {
+            sys = system_loaders[system]->SystemCreate(data);
+        }
+        catch(std::string e)
+        {
+            std::cout << e << std::endl;
+            exit(1);
+        }
+
+        return sys;
     }
 
     SystemCreator Get(std::string system)

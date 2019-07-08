@@ -8,6 +8,7 @@ namespace ComponentLoader
         try
         {
             this->library = new LibraryLoader(library);
+            this->library->PathAdd(".");
             this->library->PathAdd("../components/" + library + "/src/.libs/");
         }
         catch(std::string e)
@@ -41,6 +42,8 @@ namespace ComponentLoader
         }
         catch(std::string e)
         {
+            std::cout << "ComponentLoader::Loader(\"" + this->library->name + "\")::ComponentCreate(&data): Couldn't find create_component in library.";
+            std::cout << e << std::endl;
             throw e;
         }
 
@@ -60,11 +63,23 @@ namespace ComponentLoader
             }
             catch(std::string e)
             {
-                throw e;
+                std::cout << e << std::endl;
+                exit(1);
             }
         }
 
-        return component_loaders[component]->ComponentCreate();
+        ecs::Component *com = nullptr;
+        try
+        {
+            com = component_loaders[component]->ComponentCreate();
+        }
+        catch(std::string e)
+        {
+            std::cout << e << std::endl;
+            exit(1);
+        }
+ 
+        return com;
     }
 
     ecs::Component *Create(std::string component, void *data)
@@ -77,11 +92,23 @@ namespace ComponentLoader
             }
             catch(std::string e)
             {
-                throw e;
+                std::cout << e << std::endl;
+                exit(1);
             }
         }
 
-        return component_loaders[component]->ComponentCreate(data);
+        ecs::Component *com = nullptr;
+        try
+        {
+            com = component_loaders[component]->ComponentCreate(data);
+        }
+        catch(std::string e)
+        {
+            std::cout << e << std::endl;
+            exit(1);
+        }
+
+        return com;
     }
 
     ComponentCreator Get(std::string component)
