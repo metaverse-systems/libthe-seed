@@ -41,7 +41,7 @@ int main(int argc, char *argv[])
     sdl["rows"] = 25;
     sdl["title"] = "MMG";
     sdl["images"].append(tex_sheet);
-    world->System(SystemLoader::Create("sdl_linux", &sdl));
+    world->System(SystemLoader::Create("sdl", &sdl));
 
     Json::Value zzt_config;
     zzt_config["filename"] = "./TOWN.ZZT";

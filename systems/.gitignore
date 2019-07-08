@@ -10,6 +10,8 @@
 !wxwidgets_gui/*
 !sdl_linux/
 !sdl_linux/*
+!sdl/
+!sdl/*
 !life/
 !life/*
 !zzt_engine/
