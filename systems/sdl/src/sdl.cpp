@@ -2,6 +2,8 @@
 #include <SDL_image.h>
 #include "../../components/position/src/position.hpp"
 #include "../../components/texture/src/texture.hpp"
+#include "../../components/shape/src/shape.hpp"
+#include <iostream>
 
 sdl::sdl() 
 { 
@@ -20,6 +22,7 @@ sdl::sdl(Json::Value config)
     this->images = config["images"];
 
     this->ComponentRequest("texture");
+    this->ComponentRequest("shape");
 }
 
 void sdl::Init()
@@ -36,6 +39,8 @@ void sdl::Init()
         std::string message = "Window could not be created! SDL_Error: " + std::string(SDL_GetError());
         throw message;
     }
+
+    SDL_SetWindowFullscreen(this->window, SDL_WINDOW_FULLSCREEN_DESKTOP);
 
     this->renderer = SDL_CreateRenderer(this->window, -1, SDL_RENDERER_ACCELERATED);
 
@@ -58,39 +63,64 @@ Json::Value sdl::save()
 
 void sdl::Update(uint32_t dt)
 {
-    if(running)
-    {
-        SDL_Event event;
-        while(SDL_PollEvent(&event))
-        {
-            if(event.type == SDL_QUIT) this->running = false;
-        }
-
-        SDL_SetRenderDrawColor(this->renderer, 0, 0, 0, 0xFF );
-        SDL_RenderClear(this->renderer);
-
-        ecs::ComponentMap Components = this->ComponentsGet();
-
-        for(auto &c : Components["texture"])
-        {
-            auto t = (texture *)c.second;
-            auto p = (position *)this->Container->Entity(t->EntityHandle)->ComponentGet("position");
-
-            SDL_Rect src = { t->col * t->width, t->row * t->height, t->width, t->height };
-            SDL_Rect dest = { p->x * (t->width * this->scale), p->y * (t->height * this->scale), t->width * this->scale, t->height * this->scale };
-            SDL_SetTextureColorMod(this->tex_cache[t->tex_filename], t->r, t->g, t->b);
-            SDL_RenderCopy(this->renderer, this->tex_cache[t->tex_filename], &src, &dest);
-        }
-
-        SDL_SetRenderDrawBlendMode(this->renderer, SDL_BLENDMODE_BLEND);
-        SDL_RenderPresent(this->renderer);
-    }
-    else
+    if(!running)
     {
         SDL_DestroyWindow(this->window);
         SDL_Quit();
         this->Container->ManagerGet()->Shutdown();
+        return;
     }
+
+    SDL_Event event;
+    while(SDL_PollEvent(&event))
+    {
+        switch(event.type)
+        {
+            case SDL_QUIT:
+                this->running = false;
+            case SDL_KEYUP:
+                switch(event.key.keysym.sym)
+                {
+                    case SDLK_ESCAPE:
+                        this->running = false;
+                        break;
+                    default:
+                        break;
+                }
+                break;
+            default:
+                break;
+        }
+    }
+
+    SDL_SetRenderDrawColor(this->renderer, 0, 0, 0, 0xFF );
+    SDL_RenderClear(this->renderer);
+
+    ecs::ComponentMap Components = this->ComponentsGet();
+
+    for(auto &c : Components["texture"])
+    {
+        auto t = (texture *)c.second;
+        auto p = (position *)this->Container->Entity(t->EntityHandle)->ComponentGet("position");
+
+        SDL_Rect src = { t->col * t->width, t->row * t->height, t->width, t->height };
+        SDL_Rect dest = { p->x * (t->width * this->scale), p->y * (t->height * this->scale), t->width * this->scale, t->height * this->scale };
+        SDL_SetTextureColorMod(this->tex_cache[t->tex_filename], t->r, t->g, t->b);
+        SDL_RenderCopy(this->renderer, this->tex_cache[t->tex_filename], &src, &dest);
+    }
+
+    for(auto &c : Components["shape"])
+    {
+        auto s = (shape *)c.second;
+        auto p = (position *)this->Container->Entity(s->EntityHandle)->ComponentGet("position");
+
+        SDL_Rect rect = { p->x * this->scale, p->y * this->scale, s->width * this->scale, s->height * this->scale };
+        SDL_SetRenderDrawColor(this->renderer, s->r, s->g, s->b, s->a);
+        SDL_RenderFillRect(this->renderer, &rect);
+    }
+
+    SDL_SetRenderDrawBlendMode(this->renderer, SDL_BLENDMODE_BLEND);
+    SDL_RenderPresent(this->renderer);
 }
 
 extern "C"

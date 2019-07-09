@@ -5,34 +5,42 @@
 #include <fstream>
 #include <unistd.h>
 
+constexpr auto scale = 1;
+
 int main(int argc, char *argv[])
 {
     ecs::Container *world = ECS->Container();
 
     Json::Value sdl;
-    sdl["width"] = 1280;
-    sdl["height"] = 720;
+    sdl["width"] = 1920;
+    sdl["height"] = 1080;
     sdl["title"] = "Life";
+    sdl["scale"] = scale;
 
-    world->System(SystemLoader::Create("sdl_linux", &sdl));
+    world->System(SystemLoader::Create("sdl", &sdl));
     world->System(SystemLoader::Create("life"));
 
     Json::Value shape;
-    shape["width"] = 38;
-    shape["height"] = 38; 
+    shape["width"] = 40;
+    shape["height"] = 40; 
 
-    for(uint8_t x = 0; x < 32; x++)
+    for(uint8_t x = 0; x < 48; x++)
     {
-        for(uint8_t y = 0; y < 18; y++)
+        for(uint8_t y = 0; y < 27; y++)
         {
             ecs::Entity *e = world->Entity();
 
-            Json::Value config;
+            Json::Value cell;
 
-            config["x"] = x;
-            config["y"] = y;
-            config["alive"] = (rand() % 100) > 50 ? true : false;
-            e->Component(ComponentLoader::Create("cell", &config));
+            cell["x"] = x;
+            cell["y"] = y;
+            cell["alive"] = (rand() % 100) > 35 ? true : false;
+            e->Component(ComponentLoader::Create("cell", &cell));
+
+            Json::Value pos;
+            pos["x"] = x * 40;
+            pos["y"] = y * 40;
+            e->Component(ComponentLoader::Create("position", &pos));
 
             shape["x"] = x * 40;
             shape["y"] = y * 40;
@@ -40,7 +48,7 @@ int main(int argc, char *argv[])
             shape["g"] = rand() % 255;
             shape["b"] = rand() % 255;
 
-            if(config["alive"].asBool())
+            if(cell["alive"].asBool())
             {
                 shape["a"] = 255;
             }

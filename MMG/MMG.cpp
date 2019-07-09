@@ -5,7 +5,7 @@
 #include <fstream>
 #include <unistd.h>
 
-constexpr auto tex_sheet = "cp437_9x16.png";
+constexpr auto tex_sheet = "cp437_9x16a.png";
 constexpr auto tex_width = 9;
 constexpr auto tex_height = 16;
 
@@ -27,7 +27,7 @@ constexpr auto tex_width = 32;
 constexpr auto tex_height = 48;
 #endif
 
-constexpr auto scale = 2;
+constexpr auto scale = 2.5;
 
 int main(int argc, char *argv[])
 {
@@ -55,13 +55,11 @@ int main(int argc, char *argv[])
     std::cout << "Loading " << zzt_config["filename"] << std::endl;
     world->System(SystemLoader::Create("zzt_engine", &zzt_config));
 
-//    world->Start(1000000 / 15);
-    world->SystemsInit();
+    world->Start(1000000 / 15);
 
     while(ECS->IsRunning())
     {
         usleep(150000);
-        world->Update();
     }
     return 0;
 }

@@ -32,6 +32,8 @@ void life::Update(uint32_t dt)
     // Do some work
 
     ecs::ComponentMap Components = this->ComponentsGet();
+    std::vector<cell *> to_die;
+    std::vector<cell *> to_live;
 
     for(auto &component : Components["cell"])
     {
@@ -58,15 +60,19 @@ void life::Update(uint32_t dt)
             }
         }
 
+        bool die = false, live = false;
         if(c->alive)
         {
-            if(neighbors < 2) c->alive = false;
-            if(neighbors > 3) c->alive = false;
+            if(neighbors < 2) die = true; //c->alive = false;
+            if(neighbors > 3) die = true; //c->alive = false;
         }
         else
         {
-            if(neighbors == 3) c->alive = true;
+            if(neighbors == 3) live = true; //c->alive = true;
         }
+
+        if(die) to_die.push_back(c);
+        if(live) to_live.push_back(c);
 
         auto s = (shape *)this->Container->Entity(c->EntityHandle)->ComponentGet("shape");
         if(c->alive)
@@ -78,6 +84,9 @@ void life::Update(uint32_t dt)
             s->a = 16;
         }
     }
+
+    for(auto &c : to_die) c->alive = false;
+    for(auto &c : to_live) c->alive = true;
 }
 
 extern "C"
