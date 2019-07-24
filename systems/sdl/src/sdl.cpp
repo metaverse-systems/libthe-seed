@@ -3,7 +3,6 @@
 #include "../../components/position/src/position.hpp"
 #include "../../components/texture/src/texture.hpp"
 #include "../../components/shape/src/shape.hpp"
-#include <iostream>
 
 sdl::sdl() 
 { 
@@ -96,11 +95,11 @@ void sdl::Update(uint32_t dt)
     SDL_SetRenderDrawColor(this->renderer, 0, 0, 0, 0xFF );
     SDL_RenderClear(this->renderer);
 
-    ecs::ComponentMap Components = this->ComponentsGet();
+    std::map<std::string, ecs::ComponentList> Components = this->ComponentsGet();
 
     for(auto &c : Components["texture"])
     {
-        auto t = (texture *)c.second;
+        auto t = (texture *)c;
         auto p = (position *)this->Container->Entity(t->EntityHandle)->ComponentGet("position");
 
         SDL_Rect src = { t->col * t->width, t->row * t->height, t->width, t->height };
@@ -111,7 +110,7 @@ void sdl::Update(uint32_t dt)
 
     for(auto &c : Components["shape"])
     {
-        auto s = (shape *)c.second;
+        auto s = (shape *)c;
         auto p = (position *)this->Container->Entity(s->EntityHandle)->ComponentGet("position");
 
         SDL_Rect rect = { p->x * this->scale, p->y * this->scale, s->width * this->scale, s->height * this->scale };
