@@ -31,13 +31,13 @@ void life::Update(uint32_t dt)
     // It's been dt milliseconds since the last Update()
     // Do some work
 
-    ecs::ComponentMap Components = this->ComponentsGet();
+    std::map<std::string, ecs::ComponentList> Components = this->ComponentsGet();
     std::vector<cell *> to_die;
     std::vector<cell *> to_live;
 
     for(auto &component : Components["cell"])
     {
-        auto c = (cell *)component.second;
+        auto c = (cell *)component;
 
         // Count live neighbors
         uint8_t neighbors = 0;
@@ -51,7 +51,7 @@ void life::Update(uint32_t dt)
                 if((x == 0) && (y == 0)) continue;
                 for(auto &check : Components["cell"])
                 {
-                   auto check_cell = (cell *)check.second;
+                   auto check_cell = (cell *)check;
                    if((check_cell->x == adjusted_x) && (check_cell->y == adjusted_y))
                    {
                        if(check_cell->alive) neighbors++;
