@@ -1,6 +1,6 @@
 #include <libecs-cpp/ecs.hpp>
-#include "../Loaders/ComponentLoader.hpp"
-#include "../Loaders/SystemLoader.hpp"
+#include "../loaders/ComponentLoader.hpp"
+#include "../loaders/SystemLoader.hpp"
 #include <iostream>
 #include <fstream>
 #include <unistd.h>

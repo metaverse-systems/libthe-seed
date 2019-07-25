@@ -1,2 +1,2 @@
 ACLOCAL_AMFLAGS = -I m4
-SUBDIRS = Loaders MMG
+SUBDIRS = loaders MMG

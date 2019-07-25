@@ -4,7 +4,7 @@
 AC_PREREQ([2.69])
 AC_INIT([the-seed], [0.0.1], [tim@metaverse.systems])
 LT_INIT
-AC_CONFIG_SRCDIR([Loaders/LibraryLoader.cpp])
+AC_CONFIG_SRCDIR([loaders/LibraryLoader.cpp])
 AC_CONFIG_HEADERS([config.h])
 
 AC_CONFIG_MACRO_DIR([m4])
@@ -31,6 +31,6 @@ AC_CHECK_HEADER([windows.h],
 # Checks for library functions.
 
 AC_CONFIG_FILES([Makefile
-                 Loaders/Makefile
+                 loaders/Makefile
                  MMG/Makefile])
 AC_OUTPUT

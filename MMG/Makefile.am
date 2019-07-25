@@ -2,4 +2,4 @@ bin_PROGRAMS = MMG
 
 MMG_SOURCES = MMG.cpp
 MMG_CXXFLAGS = -std=c++14 ${LIBECS_CFLAGS} ${JSONCPP_CFLAGS}
-MMG_LDADD = -lpthread ${LIBECS_LIBS} ${JSONCPP_LIBS} ../Loaders/libloaders.la
+MMG_LDADD = -lpthread ${LIBECS_LIBS} ${JSONCPP_LIBS} ../loaders/libloaders.la
