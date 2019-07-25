@@ -12,12 +12,8 @@ sdl::sdl()
 sdl::sdl(Json::Value config)
 {
     this->Handle = "sdl";
-    this->height = config["height"].asUInt();
-    this->width = config["width"].asUInt();
     if(config["scale"].asString().size()) this->scale = config["scale"].asFloat();
     this->title = config["title"].asString();
-    this->columns = config["columns"].asUInt();
-    this->rows = config["rows"].asUInt();
     this->images = config["images"];
 
     this->ComponentRequest("texture");
@@ -39,17 +35,18 @@ void sdl::Init()
         throw message;
     }
 
-    SDL_SetWindowFullscreen(this->window, SDL_WINDOW_FULLSCREEN_DESKTOP);
+    SDL_SetWindowFullscreen((SDL_Window *)this->window, SDL_WINDOW_FULLSCREEN_DESKTOP);
 
-    this->renderer = SDL_CreateRenderer(this->window, -1, SDL_RENDERER_ACCELERATED);
+    this->renderer = SDL_CreateRenderer((SDL_Window *)this->window, -1, SDL_RENDERER_ACCELERATED);
 
-    this->screen_surface = SDL_GetWindowSurface(this->window);
+    this->screen_surface = SDL_GetWindowSurface((SDL_Window *)this->window);
 
     for(uint16_t counter = 0; counter < this->images.size(); counter++)
     {
         std::string filename = this->images[counter].asString();
         this->image_cache[filename] = IMG_Load(filename.c_str());
-        this->tex_cache[filename] = SDL_CreateTextureFromSurface(this->renderer, this->image_cache[filename]);
+        this->tex_cache[filename] = SDL_CreateTextureFromSurface((SDL_Renderer *)this->renderer, 
+                                        (SDL_Surface *)this->image_cache[filename]);
     }
 }
 
@@ -64,10 +61,18 @@ void sdl::Update(uint32_t dt)
 {
     if(!running)
     {
-        SDL_DestroyWindow(this->window);
+        SDL_DestroyWindow((SDL_Window *)this->window);
         SDL_Quit();
         this->Container->ManagerGet()->Shutdown();
         return;
+    }
+
+    if(this->height == 0)
+    {
+        int w, h;
+        SDL_GetRendererOutputSize((SDL_Renderer *)this->renderer, &w, &h);
+        this->height = h;
+        this->width = w;
     }
 
     SDL_Event event;
@@ -92,8 +97,8 @@ void sdl::Update(uint32_t dt)
         }
     }
 
-    SDL_SetRenderDrawColor(this->renderer, 0, 0, 0, 0xFF );
-    SDL_RenderClear(this->renderer);
+    SDL_SetRenderDrawColor((SDL_Renderer *)this->renderer, 0, 0, 0, 0xFF );
+    SDL_RenderClear((SDL_Renderer *)this->renderer);
 
     std::map<std::string, ecs::ComponentList> Components = this->ComponentsGet();
 
@@ -104,8 +109,8 @@ void sdl::Update(uint32_t dt)
 
         SDL_Rect src = { t->col * t->width, t->row * t->height, t->width, t->height };
         SDL_Rect dest = { p->x * (t->width * this->scale), p->y * (t->height * this->scale), t->width * this->scale, t->height * this->scale };
-        SDL_SetTextureColorMod(this->tex_cache[t->tex_filename], t->r, t->g, t->b);
-        SDL_RenderCopy(this->renderer, this->tex_cache[t->tex_filename], &src, &dest);
+        SDL_SetTextureColorMod((SDL_Texture *)this->tex_cache[t->tex_filename], t->r, t->g, t->b);
+        SDL_RenderCopy((SDL_Renderer *)this->renderer, (SDL_Texture *)this->tex_cache[t->tex_filename], &src, &dest);
     }
 
     for(auto &c : Components["shape"])
@@ -114,12 +119,12 @@ void sdl::Update(uint32_t dt)
         auto p = (position *)this->Container->Entity(s->EntityHandle)->ComponentGet("position");
 
         SDL_Rect rect = { p->x * this->scale, p->y * this->scale, s->width * this->scale, s->height * this->scale };
-        SDL_SetRenderDrawColor(this->renderer, s->r, s->g, s->b, s->a);
-        SDL_RenderFillRect(this->renderer, &rect);
+        SDL_SetRenderDrawColor((SDL_Renderer *)this->renderer, s->r, s->g, s->b, s->a);
+        SDL_RenderFillRect((SDL_Renderer *)this->renderer, &rect);
     }
 
-    SDL_SetRenderDrawBlendMode(this->renderer, SDL_BLENDMODE_BLEND);
-    SDL_RenderPresent(this->renderer);
+    SDL_SetRenderDrawBlendMode((SDL_Renderer *)this->renderer, SDL_BLENDMODE_BLEND);
+    SDL_RenderPresent((SDL_Renderer *)this->renderer);
 }
 
 extern "C"
