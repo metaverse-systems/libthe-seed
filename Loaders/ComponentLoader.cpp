@@ -10,6 +10,7 @@ namespace ComponentLoader
             this->library = new LibraryLoader(library);
             this->library->PathAdd(".");
             this->library->PathAdd("../components/" + library + "/src/.libs/");
+            this->library->PathAdd("../../../components/" + library + "/src/.libs/");
         }
         catch(std::string e)
         {

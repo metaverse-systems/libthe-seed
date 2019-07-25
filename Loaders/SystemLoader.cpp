@@ -10,6 +10,7 @@ namespace SystemLoader
             this->library = new LibraryLoader(library);
             this->library->PathAdd("./");
             this->library->PathAdd("../systems/" + library + "/src/.libs/");
+            this->library->PathAdd("../../../systems/" + library + "/src/.libs/");
         }
         catch(std::string e)
         {

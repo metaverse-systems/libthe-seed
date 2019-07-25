@@ -4,7 +4,7 @@
 AC_PREREQ([2.69])
 AC_INIT([the-seed], [0.0.1], [tim@metaverse.systems])
 LT_INIT
-AC_CONFIG_SRCDIR([Editor/Editor.cpp])
+AC_CONFIG_SRCDIR([Loaders/LibraryLoader.cpp])
 AC_CONFIG_HEADERS([config.h])
 
 AC_CONFIG_MACRO_DIR([m4])
@@ -32,7 +32,5 @@ AC_CHECK_HEADER([windows.h],
 
 AC_CONFIG_FILES([Makefile
                  Loaders/Makefile
-                 Editor/Makefile
-                 Life/Makefile
                  MMG/Makefile])
 AC_OUTPUT
