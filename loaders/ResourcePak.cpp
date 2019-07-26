@@ -1,10 +1,8 @@
 #include "ResourcePak.hpp"
-#include <iostream>
 #include <fstream>
 
 ResourcePak::ResourcePak(std::string resource_pak)
 {
-    std::cout << "Looking for " << resource_pak << ".pak..." << std::flush;
     this->name = resource_pak;
 
     std::streampos size;
@@ -23,8 +21,7 @@ ResourcePak::ResourcePak(std::string resource_pak)
         return;
     }
 
-    std::cout << "not found." << std::endl;
-    std::cout << "Looking for " << resource_pak << "/..." << std::flush;
+    /* Load from directory */
 }
 
 void ResourcePak::load_file()

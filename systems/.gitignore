@@ -8,11 +8,12 @@
 !skeleton_system/*
 !wxwidgets_gui/
 !wxwidgets_gui/*
-!sdl_linux/
-!sdl_linux/*
+!sdl_mixer/
+!sdl_mixer/*
 !sdl/
 !sdl/*
 !life/
 !life/*
 !zzt_engine/
 !zzt_engine/*
+!build.sh

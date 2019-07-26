@@ -25,11 +25,28 @@ Json::Value life::save()
 
 void life::Update(uint32_t dt)
 {
+    bool update = false;
+
     this->ms += dt;
-    if(this->ms < 1000) return;
-    this->ms = 0;
-    // It's been dt milliseconds since the last Update()
-    // Do some work
+    Json::Value to_invert;
+    while(!this->messages.empty())
+    {
+        Json::Value message = this->messages.front();
+        this->messages.pop();
+        if(message["action"] == "left_click")
+        {
+            uint32_t x = message["x"].asUInt() / 40;
+            uint32_t y = message["y"].asUInt() / 40;
+            to_invert[x][y] = "invert";
+            this->ms = 0;
+        }
+    }
+
+    if(this->ms > 2500)
+    {
+        update = true;
+        this->ms -= 2500;
+    }
 
     std::map<std::string, ecs::ComponentList> Components = this->ComponentsGet();
     std::vector<cell *> to_die;
@@ -39,23 +56,26 @@ void life::Update(uint32_t dt)
     {
         auto c = (cell *)component;
 
-        // Count live neighbors
         uint8_t neighbors = 0;
-        for(int8_t x = -1; x < 2; x++)
+        if(update)
         {
-            for(int8_t y = -1; y < 2; y++)
+            // Count live neighbors
+            for(int8_t x = -1; x < 2; x++)
             {
-                int8_t adjusted_x = c->x + x;
-                int8_t adjusted_y = c->y + y;
-
-                if((x == 0) && (y == 0)) continue;
-                for(auto &check : Components["cell"])
+                for(int8_t y = -1; y < 2; y++)
                 {
-                   auto check_cell = (cell *)check;
-                   if((check_cell->x == adjusted_x) && (check_cell->y == adjusted_y))
-                   {
-                       if(check_cell->alive) neighbors++;
-                   }
+                    int8_t adjusted_x = c->x + x;
+                    int8_t adjusted_y = c->y + y;
+
+                    if((x == 0) && (y == 0)) continue;
+                    for(auto &check : Components["cell"])
+                    {
+                       auto check_cell = (cell *)check;
+                       if((check_cell->x == adjusted_x) && (check_cell->y == adjusted_y))
+                       {   
+                           if(check_cell->alive) neighbors++;
+                       }
+                    }
                 }
             }
         }
@@ -63,12 +83,20 @@ void life::Update(uint32_t dt)
         bool die = false, live = false;
         if(c->alive)
         {
-            if(neighbors < 2) die = true; //c->alive = false;
-            if(neighbors > 3) die = true; //c->alive = false;
+            if(update)
+            {
+                if(neighbors < 2) die = true;
+                if(neighbors > 3) die = true;
+            }
+            if(to_invert[c->x][c->y] == "invert") die = true;
         }
         else
         {
-            if(neighbors == 3) live = true; //c->alive = true;
+            if(update)
+            { 
+                if(neighbors == 3) live = true;
+            }
+            if(to_invert[c->x][c->y] == "invert") live = true;
         }
 
         if(die) to_die.push_back(c);

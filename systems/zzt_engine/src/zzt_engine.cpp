@@ -1,6 +1,6 @@
 #include <zzt_engine.hpp>
 #include "../../components/position/src/position.hpp"
-#include "../../../Loaders/ComponentLoader.hpp"
+#include "../../../loaders/ComponentLoader.hpp"
 #include <iostream>
 
 zzt_engine::zzt_engine() 
@@ -42,11 +42,11 @@ void zzt_engine::Update(uint32_t dt)
         this->board = new Board(this->world->GetBoard(this->board_number), this);
     }
 
-    ecs::ComponentMap Components = this->ComponentsGet();
+    std::map<std::string, ecs::ComponentList> Components = this->ComponentsGet();
 
     for(auto &component : Components["position"])
     {
-        auto pos = (position *)component.second;
+        auto pos = (position *)component;
     }
 }
 

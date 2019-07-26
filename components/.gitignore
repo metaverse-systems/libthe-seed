@@ -12,3 +12,4 @@
 !shape/*
 !texture/
 !texture/*
+!build.sh

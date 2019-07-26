@@ -76,10 +76,26 @@ void sdl::Update(uint32_t dt)
     }
 
     SDL_Event event;
+    Json::Value message;
     while(SDL_PollEvent(&event))
     {
         switch(event.type)
         {
+            case SDL_MOUSEBUTTONUP:
+                switch(event.button.button)
+                {
+                    case SDL_BUTTON_LEFT:
+                        message["action"] = "left_click";
+                        message["x"] = event.motion.x;
+                        message["y"] = event.motion.y;
+                        message["destination"]["system"] = "life";
+                        message["source"]["system"] = "sdl";
+                        this->Container->MessageSubmit(message);
+                        break;
+                    default:
+                        break;
+                }
+                break;
             case SDL_QUIT:
                 this->running = false;
             case SDL_KEYUP:

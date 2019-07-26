@@ -18,6 +18,7 @@ int main(int argc, char *argv[])
 
     sdl *sdl_system = (sdl *)SystemLoader::Create("sdl", &sdl_config);
     world->System(sdl_system);
+
     world->System(SystemLoader::Create("life"));
 
     ecs::System *sdl_mixer_system = SystemLoader::Create("sdl_mixer");
@@ -25,14 +26,17 @@ int main(int argc, char *argv[])
 
     world->Start(1000000 / 15);
 
-    while(sdl_system->height == 0) usleep(10000);
+    while(sdl_system->height == 0)
+    {
+        usleep(50000);
+    }
 
     sdl_mixer_system->ResourceAdd(r1->name, r1);
 
     Json::Value song;
     song["resource_pak"] = "resource1";
     song["name"] = "2AM in Shimokitazawa 1.0";
-    song["name"] = "Ride Or Die";
+//    song["name"] = "Ride Or Die";
     song["status"] = "start_playing";
 
     ecs::Entity *e = world->Entity();
@@ -52,7 +56,7 @@ int main(int argc, char *argv[])
 
             cell["x"] = x;
             cell["y"] = y;
-            cell["alive"] = (rand() % 100) > 75 ? true : false;
+            cell["alive"] = (rand() % 100) > 85 ? true : false;
             e->Component(ComponentLoader::Create("cell", &cell));
 
             Json::Value pos;
