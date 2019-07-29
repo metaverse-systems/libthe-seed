@@ -59,7 +59,7 @@ void sdl_mixer::Update(uint32_t dt)
 
     for(auto &c : Components["song"])
     {
-        auto s = (song *)c;
+        auto s = std::dynamic_pointer_cast<song>(c);
         if(s->status == "start_playing")
         {
             ResourcePak *p = (ResourcePak *)this->resources[s->resource_pak];

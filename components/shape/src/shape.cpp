@@ -35,11 +35,14 @@ Json::Value shape::save()
 
 extern "C"
 {
-    ecs::Component *create_component(void *p)
+    std::shared_ptr<ecs::Component> create_component(void *p)
     {
-        if(p == nullptr) return new shape();
+        if(p == nullptr)
+        {
+            return std::make_shared<shape>();
+        }
 
         Json::Value *config = (Json::Value *)p;
-        return new shape(*config);
+        return std::make_shared<shape>(*config);
     }
 }

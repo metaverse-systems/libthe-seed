@@ -19,12 +19,14 @@ int main(int argc, char *argv[])
     sdl *sdl_system = (sdl *)SystemLoader::Create("sdl", &sdl_config);
     world->System(sdl_system);
 
+    world->System(SystemLoader::Create("sdl_input"));
+
     world->System(SystemLoader::Create("life"));
 
     ecs::System *sdl_mixer_system = SystemLoader::Create("sdl_mixer");
     world->System(sdl_mixer_system);
 
-    world->Start(1000000 / 15);
+    world->Start(1000000 / 10);
 
     while(sdl_system->height == 0)
     {
@@ -36,7 +38,6 @@ int main(int argc, char *argv[])
     Json::Value song;
     song["resource_pak"] = "resource1";
     song["name"] = "2AM in Shimokitazawa 1.0";
-//    song["name"] = "Ride Or Die";
     song["status"] = "start_playing";
 
     ecs::Entity *e = world->Entity();
@@ -83,7 +84,7 @@ int main(int argc, char *argv[])
 
     while(ECS->IsRunning())
     {
-        usleep(150000);
+        usleep(500000);
     }
     return 0;
 }

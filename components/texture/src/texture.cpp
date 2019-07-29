@@ -31,11 +31,14 @@ Json::Value texture::save()
 
 extern "C"
 {
-    ecs::Component *create_component(void *p)
+    std::shared_ptr<ecs::Component> create_component(void *p)
     {
-        if(p == nullptr) return new texture();
+        if(p == nullptr)
+        {
+            return std::make_shared<texture>();
+        }
 
         Json::Value *config = (Json::Value *)p;
-        return new texture(*config);
+        return std::make_shared<texture>(*config);
     }
 }

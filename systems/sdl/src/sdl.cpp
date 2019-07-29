@@ -15,13 +15,13 @@ sdl::sdl(Json::Value config)
     if(config["scale"].asString().size()) this->scale = config["scale"].asFloat();
     this->title = config["title"].asString();
     this->images = config["images"];
-
-    this->ComponentRequest("texture");
-    this->ComponentRequest("shape");
 }
 
 void sdl::Init()
 {
+    this->ComponentRequest("texture");
+    this->ComponentRequest("shape");
+
     if(SDL_Init(SDL_INIT_VIDEO) < 0)
     {
         throw std::string("Couldn't initialize SDL video.");
@@ -75,44 +75,6 @@ void sdl::Update(uint32_t dt)
         this->width = w;
     }
 
-    SDL_Event event;
-    Json::Value message;
-    while(SDL_PollEvent(&event))
-    {
-        switch(event.type)
-        {
-            case SDL_MOUSEBUTTONUP:
-                switch(event.button.button)
-                {
-                    case SDL_BUTTON_LEFT:
-                        message["action"] = "left_click";
-                        message["x"] = event.motion.x;
-                        message["y"] = event.motion.y;
-                        message["destination"]["system"] = "life";
-                        message["source"]["system"] = "sdl";
-                        this->Container->MessageSubmit(message);
-                        break;
-                    default:
-                        break;
-                }
-                break;
-            case SDL_QUIT:
-                this->running = false;
-            case SDL_KEYUP:
-                switch(event.key.keysym.sym)
-                {
-                    case SDLK_ESCAPE:
-                        this->running = false;
-                        break;
-                    default:
-                        break;
-                }
-                break;
-            default:
-                break;
-        }
-    }
-
     SDL_SetRenderDrawColor((SDL_Renderer *)this->renderer, 0, 0, 0, 0xFF );
     SDL_RenderClear((SDL_Renderer *)this->renderer);
 
@@ -120,8 +82,8 @@ void sdl::Update(uint32_t dt)
 
     for(auto &c : Components["texture"])
     {
-        auto t = (texture *)c;
-        auto p = (position *)this->Container->Entity(t->EntityHandle)->ComponentGet("position");
+        auto t = std::dynamic_pointer_cast<texture>(c);
+        auto p = std::dynamic_pointer_cast<position>(this->Container->Entity(t->EntityHandle)->ComponentGet("position"));
 
         SDL_Rect src = { t->col * t->width, t->row * t->height, t->width, t->height };
         SDL_Rect dest = { p->x * (t->width * this->scale), p->y * (t->height * this->scale), t->width * this->scale, t->height * this->scale };
@@ -131,8 +93,8 @@ void sdl::Update(uint32_t dt)
 
     for(auto &c : Components["shape"])
     {
-        auto s = (shape *)c;
-        auto p = (position *)this->Container->Entity(s->EntityHandle)->ComponentGet("position");
+        auto s = std::dynamic_pointer_cast<shape>(c);
+        auto p = std::dynamic_pointer_cast<position>(this->Container->Entity(s->EntityHandle)->ComponentGet("position"));
 
         SDL_Rect rect = { p->x * this->scale, p->y * this->scale, s->width * this->scale, s->height * this->scale };
         SDL_SetRenderDrawColor((SDL_Renderer *)this->renderer, s->r, s->g, s->b, s->a);
