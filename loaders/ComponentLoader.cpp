@@ -26,14 +26,14 @@ namespace ComponentLoader
         return creator;
     }
 
-    ecs::Component *Loader::ComponentCreate()
+    std::shared_ptr<ecs::Component> Loader::ComponentCreate()
     {
         void *ptr = this->library->FunctionGet("create_component");
         ComponentCreator creator = reinterpret_cast<ComponentCreator>(ptr);
         return creator(nullptr);
     }
 
-    ecs::Component *Loader::ComponentCreate(void *data)
+    std::shared_ptr<ecs::Component> Loader::ComponentCreate(void *data)
     {
         void *ptr;
 
@@ -54,7 +54,7 @@ namespace ComponentLoader
 
     std::map<std::string, ComponentLoader::Loader *> component_loaders;
 
-    ecs::Component *Create(std::string component)
+    std::shared_ptr<ecs::Component> Create(std::string component)
     {
         if(!component_loaders[component]) 
         {
@@ -69,21 +69,18 @@ namespace ComponentLoader
             }
         }
 
-        ecs::Component *com = nullptr;
         try
         {
-            com = component_loaders[component]->ComponentCreate();
+            return component_loaders[component]->ComponentCreate();
         }
         catch(std::string e)
         {
             std::cout << e << std::endl;
             exit(1);
         }
- 
-        return com;
     }
 
-    ecs::Component *Create(std::string component, void *data)
+    std::shared_ptr<ecs::Component> Create(std::string component, void *data)
     {
         if(!component_loaders[component])
         {
@@ -98,18 +95,15 @@ namespace ComponentLoader
             }
         }
 
-        ecs::Component *com = nullptr;
         try
         {
-            com = component_loaders[component]->ComponentCreate(data);
+            return component_loaders[component]->ComponentCreate(data);
         }
         catch(std::string e)
         {
             std::cout << e << std::endl;
             exit(1);
         }
-
-        return com;
     }
 
     ComponentCreator Get(std::string component)

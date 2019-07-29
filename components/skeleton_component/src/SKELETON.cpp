@@ -20,11 +20,14 @@ Json::Value SKELETON::save()
 
 extern "C"
 {
-    ecs::Component *create_component(void *p)
+    std::shared_ptr<ecs::Component> create_component(void *p)
     {
-        if(p == nullptr) return new SKELETON();
+        if(p == nullptr)
+        {
+            return std::make_shared<SKELETON>();
+        }
 
         Json::Value *config = (Json::Value *)p;
-        return new SKELETON(*config);
+        return std::make_shared<SKELETON>(*config);
     }
 }

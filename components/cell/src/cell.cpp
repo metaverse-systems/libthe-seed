@@ -24,11 +24,14 @@ Json::Value cell::save()
 
 extern "C"
 {
-    ecs::Component *create_component(void *p)
+    std::shared_ptr<ecs::Component> create_component(void *p)
     {
-        if(p == nullptr) return new cell();
+        if(p == nullptr)
+        {
+            return std::make_shared<cell>();
+        }
 
         Json::Value *config = (Json::Value *)p;
-        return new cell(*config);
+        return std::make_shared<cell>(*config);
     }
 }

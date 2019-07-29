@@ -17,3 +17,5 @@
 !zzt_engine/
 !zzt_engine/*
 !build.sh
+!sdl_input/
+!sdl_input/*

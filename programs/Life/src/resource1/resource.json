@@ -1,7 +1,6 @@
 {
-  "header_size": 00000300,
+  "header_size": 00000190,
   "resources": [
-    { "name": "2AM in Shimokitazawa 1.0", "bytes": 8515200 , "mime_type": "audio/mpeg", "filename": "2AM_in_Shimokitazawa_1.0.mp3" },
-    { "name": "Ride Or Die", "bytes": 7463705, "mime_type": "audio/mpeg", "filename": "RideOrDie PreMaster.mp3" }
+    { "name": "2AM in Shimokitazawa 1.0", "bytes": 3406893 , "mime_type": "audio/mpeg", "filename": "2AM_in_Shimokitazawa_1.0_128k.mp3" }
   ]
 }

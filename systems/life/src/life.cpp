@@ -1,19 +1,20 @@
 #include <life.hpp>
 #include <iostream>
-#include "../../components/cell/src/cell.hpp"
 #include "../../components/shape/src/shape.hpp"
+#include "../../components/input/src/input.hpp"
 
 life::life() 
 { 
     this->Handle = "life";
-
-    this->ComponentRequest("cell");
 }
 
 life::life(Json::Value config)
 {
     this->Handle = "life";
+}
 
+void life::Init()
+{
     this->ComponentRequest("cell");
 }
 
@@ -28,33 +29,56 @@ void life::Update(uint32_t dt)
     bool update = false;
 
     this->ms += dt;
-    Json::Value to_invert;
-    while(!this->messages.empty())
+    std::vector<std::string> get_components;
+    get_components.push_back("input");
+    std::map<std::string, ecs::ComponentList> Components = this->Container->ComponentsGet(get_components);
+
+    for(auto &c : this->to_die) c->alive = false;
+    this->to_die.clear();
+    for(auto &c : this->to_live) c->alive = true;
+    this->to_live.clear();
+
+    while(!Components["input"].empty())
     {
-        Json::Value message = this->messages.front();
-        this->messages.pop();
-        if(message["action"] == "left_click")
+        auto c = Components["input"].back();
+        Components["input"].pop_back();
+        auto i = std::dynamic_pointer_cast<input>(c);
+
+        if(i->action == "left_click")
         {
-            uint32_t x = message["x"].asUInt() / 40;
-            uint32_t y = message["y"].asUInt() / 40;
-            to_invert[x][y] = "invert";
+            uint32_t x = i->content["x"].asUInt() / 40;
+            uint32_t y = i->content["y"].asUInt() / 40;
+            this->to_invert[x][y] = "invert";
             this->ms = 0;
         }
+
+        if(i->action == "keyup")
+        {
+            if(i->content["key"] == " ") this->paused = !this->paused;
+        }
+
+        if(i->action == "quit")
+        {
+            this->Container->ManagerGet()->Shutdown();
+        }
+
+        ecs::Entity *e = this->Container->Entity(i->EntityHandle);
+        e->destroy();
+        this->ms = 0;
+        return;
     }
 
-    if(this->ms > 2500)
+    if(this->ms > 1000)
     {
-        update = true;
-        this->ms -= 2500;
+        if(!this->paused) update = true;
+        this->ms -= 1000;
     }
 
-    std::map<std::string, ecs::ComponentList> Components = this->ComponentsGet();
-    std::vector<cell *> to_die;
-    std::vector<cell *> to_live;
+    Components = this->ComponentsGet();
 
     for(auto &component : Components["cell"])
     {
-        auto c = (cell *)component;
+        auto c = std::dynamic_pointer_cast<cell>(component);
 
         uint8_t neighbors = 0;
         if(update)
@@ -70,7 +94,7 @@ void life::Update(uint32_t dt)
                     if((x == 0) && (y == 0)) continue;
                     for(auto &check : Components["cell"])
                     {
-                       auto check_cell = (cell *)check;
+                       auto check_cell = std::dynamic_pointer_cast<cell>(check);
                        if((check_cell->x == adjusted_x) && (check_cell->y == adjusted_y))
                        {   
                            if(check_cell->alive) neighbors++;
@@ -88,7 +112,11 @@ void life::Update(uint32_t dt)
                 if(neighbors < 2) die = true;
                 if(neighbors > 3) die = true;
             }
-            if(to_invert[c->x][c->y] == "invert") die = true;
+            if(this->to_invert[c->x][c->y] == "invert")
+            {
+                die = true;
+                this->to_invert[c->x][c->y] = "";
+            }
         }
         else
         {
@@ -96,13 +124,17 @@ void life::Update(uint32_t dt)
             { 
                 if(neighbors == 3) live = true;
             }
-            if(to_invert[c->x][c->y] == "invert") live = true;
+            if(this->to_invert[c->x][c->y] == "invert") 
+            {
+                live = true;
+                this->to_invert[c->x][c->y] = "";
+            }
         }
 
-        if(die) to_die.push_back(c);
-        if(live) to_live.push_back(c);
+        if(die) this->to_die.push_back(c);
+        if(live) this->to_live.push_back(c);
 
-        auto s = (shape *)this->Container->Entity(c->EntityHandle)->ComponentGet("shape");
+        auto s = std::dynamic_pointer_cast<shape>(this->Container->Entity(c->EntityHandle)->ComponentGet("shape"));
         if(c->alive)
         {
             s->a = 255;
@@ -112,9 +144,6 @@ void life::Update(uint32_t dt)
             s->a = 16;
         }
     }
-
-    for(auto &c : to_die) c->alive = false;
-    for(auto &c : to_live) c->alive = true;
 }
 
 extern "C"
