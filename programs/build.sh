@@ -25,7 +25,7 @@ fi
 
 for d in `ls`;
 do
-  if [ "${d}" == "create_program.sh" ] || [ "${d}" == "build.sh" ] || [ "${d}" == "skeleton_program" ];
+  if [ "${d}" == "create_program.sh" ] || [ "${d}" == "build.sh" ] || [ "${d}" == "skeleton_program" ] || [ "${d}" == "sign.sh" ];
   then
     continue;
   fi
