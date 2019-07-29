@@ -593,7 +593,7 @@ PACKAGE_TARNAME='life'
 PACKAGE_VERSION='0.0.1'
 PACKAGE_STRING='life 0.0.1'
 PACKAGE_BUGREPORT='tim@metaverse.systems'
-PACKAGE_URL=''
+PACKAGE_URL='https://metaverse.systems'
 
 # Factoring default headers for most tests.
 ac_includes_default="\
@@ -1482,6 +1482,7 @@ Use these variables to override the choices made by `configure' or to help
 it to find libraries and programs with nonstandard names/locations.
 
 Report bugs to <tim@metaverse.systems>.
+life home page: <https://metaverse.systems>.
 _ACEOF
 ac_status=$?
 fi
@@ -16638,7 +16639,8 @@ $config_headers
 Configuration commands:
 $config_commands
 
-Report bugs to <tim@metaverse.systems>."
+Report bugs to <tim@metaverse.systems>.
+life home page: <https://metaverse.systems>."
 
 _ACEOF
 cat >>$CONFIG_STATUS <<_ACEOF || ac_write_fail=1

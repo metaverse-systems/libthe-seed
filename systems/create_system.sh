@@ -1,9 +1,9 @@
 #!/bin/bash
 
-if [ -z "$1" ] || [ -z "$2" ]
+if [ -z "$1" ] || [ -z "$2" ] || [ -z "$3" ]
 then
     printf "Usage:\n"
-    printf "    $0 new_system_name author@email.com\n\n"
+    printf "    $0 new_system_name author@email.com https://your.website\n\n"
     printf "Name cannot contain spaces\n"
     exit
 fi
@@ -12,6 +12,7 @@ cp -r skeleton_system ${1}
 cd ${1}
 sed -i'' -e "s/SKELETON/${1}/g" configure.ac
 sed -i'' -e "s/AUTHOR_EMAIL/${2}/g" configure.ac
+sed -i'' -e "s/AUTHOR_URL/${3}/g" configure.ac
 sed -i'' -e "s/AUTHOR_EMAIL/${2}/g" AUTHORS
 sed -i'' -e "s/AUTHOR_EMAIL/${2}/g" COPYING
 

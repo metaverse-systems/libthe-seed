@@ -1,5 +1,5 @@
 AC_PREREQ([2.69])
-AC_INIT([sdl], [0.0.1], [tim@metaverse.systems])
+AC_INIT([sdl], [0.0.1], [tim@metaverse.systems], [sdl], [https://metaverse.systems])
 AC_CONFIG_HEADERS([config.h])
 AC_PROG_CXX
 AM_INIT_AUTOMAKE([subdir-objects])
