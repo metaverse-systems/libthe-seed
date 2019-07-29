@@ -13,3 +13,9 @@
 !texture/
 !texture/*
 !build.sh
+!song/
+!song/*
+!input/
+!input/*
+!position/
+!position/*
