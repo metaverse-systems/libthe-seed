@@ -17,4 +17,6 @@ class life : public ecs::System
     std::vector<std::shared_ptr<cell>> to_die;
     std::vector<std::shared_ptr<cell>> to_live;
     Json::Value to_invert;
+    uint8_t cell_width = 0;
+    uint8_t cell_height = 0;
 };

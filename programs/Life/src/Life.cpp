@@ -21,7 +21,10 @@ int main(int argc, char *argv[])
 
     world->System(SystemLoader::Create("sdl_input"));
 
-    world->System(SystemLoader::Create("life"));
+    Json::Value shape;
+    shape["width"] = 30;
+    shape["height"] = 30;
+    world->System(SystemLoader::Create("life", &shape));
 
     ecs::System *sdl_mixer_system = SystemLoader::Create("sdl_mixer");
     world->System(sdl_mixer_system);
@@ -43,10 +46,6 @@ int main(int argc, char *argv[])
     ecs::Entity *e = world->Entity();
     e->Component(ComponentLoader::Create("song", &song));
 
-    Json::Value shape;
-    shape["width"] = 40;
-    shape["height"] = 40;
-
     for(uint8_t x = 0; x < (sdl_system->width / shape["width"].asUInt()); x++)
     {
         for(uint8_t y = 0; y < (sdl_system->height / shape["height"].asUInt()); y++)
@@ -61,11 +60,11 @@ int main(int argc, char *argv[])
             e->Component(ComponentLoader::Create("cell", &cell));
 
             Json::Value pos;
-            pos["x"] = x * 40;
-            pos["y"] = y * 40;
+            pos["x"] = x * shape["width"].asUInt();
+            pos["y"] = y * shape["height"].asUInt();
             e->Component(ComponentLoader::Create("position", &pos));
-            shape["x"] = x * 40;
-            shape["y"] = y * 40;
+            shape["x"] = x * shape["width"].asUInt();
+            shape["y"] = y * shape["height"].asUInt();
             shape["r"] = rand() % 255;
             shape["g"] = rand() % 255;
             shape["b"] = rand() % 255;

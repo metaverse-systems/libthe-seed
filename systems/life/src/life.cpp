@@ -11,6 +11,8 @@ life::life()
 life::life(Json::Value config)
 {
     this->Handle = "life";
+    this->cell_width = config["width"].asUInt();
+    this->cell_height = config["height"].asUInt();
 }
 
 void life::Init()
@@ -46,8 +48,8 @@ void life::Update(uint32_t dt)
 
         if(i->action == "left_click")
         {
-            uint32_t x = i->content["x"].asUInt() / 40;
-            uint32_t y = i->content["y"].asUInt() / 40;
+            uint32_t x = i->content["x"].asUInt() / this->cell_width;
+            uint32_t y = i->content["y"].asUInt() / this->cell_height;
             this->to_invert[x][y] = "invert";
             this->ms = 0;
         }
@@ -68,10 +70,10 @@ void life::Update(uint32_t dt)
         return;
     }
 
-    if(this->ms > 1000)
+    if(this->ms > 1500)
     {
         if(!this->paused) update = true;
-        this->ms -= 1000;
+        this->ms -= 1500;
     }
 
     Components = this->ComponentsGet();
