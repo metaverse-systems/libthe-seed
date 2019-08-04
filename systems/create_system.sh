@@ -12,7 +12,7 @@ cp -r skeleton_system ${1}
 cd ${1}
 sed -i'' -e "s/SKELETON/${1}/g" configure.ac
 sed -i'' -e "s/AUTHOR_EMAIL/${2}/g" configure.ac
-sed -i'' -e "s/AUTHOR_URL/${3}/g" configure.ac
+sed -i'' -e "s~AUTHOR_URL~${3}~g" configure.ac
 sed -i'' -e "s/AUTHOR_EMAIL/${2}/g" AUTHORS
 sed -i'' -e "s/AUTHOR_EMAIL/${2}/g" COPYING
 
