@@ -1,5 +1,6 @@
 #include "Life.hpp"
 #include "../../../systems/sdl/src/sdl.hpp"
+#include "../../../systems/life2/src/life2.hpp"
 #include <iostream>
 #include <fstream>
 
@@ -24,7 +25,6 @@ int main(int argc, char *argv[])
     Json::Value shape;
     shape["width"] = 30;
     shape["height"] = 30;
-    world->System(SystemLoader::Create("life", &shape));
 
     ecs::System *sdl_mixer_system = SystemLoader::Create("sdl_mixer");
     world->System(sdl_mixer_system);
@@ -36,6 +36,9 @@ int main(int argc, char *argv[])
         usleep(50000);
     }
 
+    shape["columns"] = sdl_system->width / shape["width"].asUInt();
+    shape["rows"] = sdl_system->height / shape["height"].asUInt();
+
     sdl_mixer_system->ResourceAdd(r1->name, r1);
 
     Json::Value song;
@@ -46,10 +49,11 @@ int main(int argc, char *argv[])
     ecs::Entity *e = world->Entity();
     e->Component(ComponentLoader::Create("song", &song));
 
-    for(uint8_t x = 0; x < (sdl_system->width / shape["width"].asUInt()); x++)
+    for(uint16_t x = 0; x < (sdl_system->width / shape["width"].asUInt()); x++)
     {
-        for(uint8_t y = 0; y < (sdl_system->height / shape["height"].asUInt()); y++)
+        for(uint16_t y = 0; y < (sdl_system->height / shape["height"].asUInt()); y++)
         {
+//            std::cout << "Creating cell " << std::to_string(x) << ", " << std::to_string(y) << std::endl;
             e = world->Entity();
 
             Json::Value cell;
@@ -80,6 +84,10 @@ int main(int argc, char *argv[])
             e->Component(ComponentLoader::Create("shape", &shape));
         }
     }
+
+    life2 *life_system = (life2 *)SystemLoader::Create("life2", &shape);
+    world->System(life_system);
+    life_system->Init();
 
     while(ECS->IsRunning())
     {

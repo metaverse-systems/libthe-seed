@@ -9,5 +9,5 @@ class position : public ecs::Component
     position(Json::Value);
     Json::Value save();
 
-    float x = 0.0, y = 0.0, z = 0.0;
+    uint32_t x = 0, y = 0, z = 0;
 };

@@ -8,8 +8,8 @@ position::position()
 position::position(Json::Value config)
 {
     this->Type = "position";
-    this->x = config["x"].asFloat();
-    this->y = config["y"].asFloat();
+    this->x = config["x"].asUInt();
+    this->y = config["y"].asUInt();
 }
 
 Json::Value position::save()
