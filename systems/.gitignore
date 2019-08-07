@@ -19,3 +19,5 @@
 !build.sh
 !sdl_input/
 !sdl_input/*
+!life2/
+!life2/*
