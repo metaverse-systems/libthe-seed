@@ -46,7 +46,7 @@ void zzt_engine::Update(uint32_t dt)
 
     for(auto &component : Components["position"])
     {
-        auto pos = (position *)component;
+        auto pos = std::dynamic_pointer_cast<position>(component);
     }
 }
 

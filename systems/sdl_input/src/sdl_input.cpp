@@ -19,6 +19,12 @@ Json::Value sdl_input::save()
     return config;
 }
 
+void sdl_input::Init()
+{
+    SDL_Init(0);
+    SDL_InitSubSystem(SDL_INIT_EVENTS);
+}
+
 void sdl_input::Update(uint32_t dt)
 {
     SDL_Event event;
