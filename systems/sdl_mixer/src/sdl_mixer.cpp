@@ -55,11 +55,17 @@ void sdl_mixer::Update(uint32_t dt)
     // It's been dt milliseconds since the last Update()
     // Do some work
 
-    std::map<std::string, ecs::ComponentList> Components = this->ComponentsGet();
+    ecs::TypeEntityComponentList Components = this->ComponentsGet();
 
-    for(auto &c : Components["song"])
+    std::shared_ptr<song> s;
+    for(auto &entity_component_list : Components["song"])
     {
-        auto s = std::dynamic_pointer_cast<song>(c);
+        ecs::ComponentList songs = entity_component_list.second;
+        for(auto &song_ : songs)
+        {
+            s = std::dynamic_pointer_cast<song>(song_);
+        }
+
         if(s->status == "start_playing")
         {
             ResourcePak *p = (ResourcePak *)this->resources[s->resource_pak];
