@@ -1,6 +1,7 @@
 #include <life2.hpp>
 #include "../../components/shape/src/shape.hpp"
 #include "../../components/input/src/input.hpp"
+#include <iostream>
 
 life2::life2() 
 { 
@@ -19,15 +20,13 @@ life2::life2(Json::Value config)
 void life2::Init()
 {
     this->ComponentRequest("cell");
+    this->ComponentRequest("shape");
+    this->ComponentRequest("input");
 
     this->cells = new std::shared_ptr<cell>*[this->cell_columns]; 
     for(uint32_t column = 0; column < this->cell_columns; column++)
     {
         this->cells[column] = new std::shared_ptr<cell>[this->cell_rows];
-        for(uint32_t row = 0; row < this->cell_rows; row++)
-        {
-            this->cells[column][row] = this->CellGet(column, row);
-        }
     }
 }
 
@@ -39,12 +38,15 @@ Json::Value life2::save()
 
 std::shared_ptr<cell> life2::CellGet(uint32_t x, uint32_t y)
 {
-    std::map<std::string, ecs::ComponentList> Components = this->ComponentsGet();
+    ecs::TypeEntityComponentList Components = this->ComponentsGet();
 
-    for(auto &component : Components["cell"])
+    for(auto &c : Components["cell"])
     {
-        auto c = std::dynamic_pointer_cast<cell>(component);
-        if((c->x == x) && (c->y == y)) return c;
+        for(auto &component : c.second)
+        {
+            auto result = std::dynamic_pointer_cast<cell>(component);
+            if((result->x == x) && (result->y == y)) return result;
+        }
     }
 
     return nullptr;
@@ -60,37 +62,38 @@ void life2::Update(uint32_t dt)
     this->to_live.clear();
 
     this->ms += dt;
-    std::vector<std::string> get_components;
-    get_components.push_back("input");
-    std::map<std::string, ecs::ComponentList> Components = this->Container->ComponentsGet(get_components);
+    ecs::TypeEntityComponentList Components = this->ComponentsGet();
 
-    while(!Components["input"].empty())
+    for(auto &component_list : Components["input"])
     {
-        auto c = Components["input"].back();
-        Components["input"].pop_back();
-        auto i = std::dynamic_pointer_cast<input>(c);
-
-        if(i->action == "left_click")
+        ecs::ComponentList l = component_list.second;
+        while(!l.empty())
         {
-            uint32_t x = i->content["x"].asUInt() / this->cell_width;
-            uint32_t y = i->content["y"].asUInt() / this->cell_height;
-            this->to_invert[x][y] = "invert";
-            this->ms = 0;
-        }
+            auto i = std::dynamic_pointer_cast<input>(l.back());
+            l.pop_back();
 
-        if(i->action == "keyup")
-        {
-            if(i->content["key"] == " ") this->paused = !this->paused;
-        }
+            if(i->action == "left_click")
+            {
+                uint32_t x = i->content["x"].asUInt() / this->cell_width;
+                uint32_t y = i->content["y"].asUInt() / this->cell_height;
+                this->to_invert[x][y] = "invert";
+                this->ms = 0;
+            }
 
-        if(i->action == "quit")
-        {
-            this->Container->ManagerGet()->Shutdown();
-        }
+            if(i->action == "keyup")
+            {
+                if(i->content["key"] == " ") this->paused = !this->paused;
+            }
 
-        ecs::Entity *e = this->Container->Entity(i->EntityHandle);
-        e->destroy();
-        return;
+            if(i->action == "quit")
+            {
+                this->Container->ManagerGet()->Shutdown();
+            }
+
+            ecs::Entity *e = this->Container->Entity(i->EntityHandle);
+            e->destroy();
+            return;
+        }
     }
 
     if(this->ms > 1000)
@@ -111,7 +114,7 @@ void life2::Update(uint32_t dt)
                 this->cells[column][row] = this->CellGet(column, row);
             }
 
-            auto c = this->cells[column][row];
+            std::shared_ptr<cell> c = this->cells[column][row];
             if(c == nullptr) continue;
 
             uint8_t neighbors = 0;
@@ -173,7 +176,13 @@ void life2::Update(uint32_t dt)
             if(die) this->to_die.push_back(c);
             if(live) this->to_live.push_back(c);
 
-            auto s = std::dynamic_pointer_cast<shape>(this->Container->Entity(c->EntityHandle)->ComponentGet("shape"));
+            std::shared_ptr<shape> s = nullptr;
+            for(auto &s_ : Components["shape"][c->EntityHandle])
+            {
+                s = std::dynamic_pointer_cast<shape>(s_);
+            }
+            if(s == nullptr) continue;
+
             if(c->alive)
             {
                 s->a = 255;

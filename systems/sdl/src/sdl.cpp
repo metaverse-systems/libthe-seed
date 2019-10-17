@@ -21,6 +21,7 @@ void sdl::Init()
 {
     this->ComponentRequest("texture");
     this->ComponentRequest("shape");
+    this->ComponentRequest("position");
 
     if(SDL_Init(SDL_INIT_VIDEO) < 0)
     {
@@ -78,27 +79,49 @@ void sdl::Update(uint32_t dt)
     SDL_SetRenderDrawColor((SDL_Renderer *)this->renderer, 0, 0, 0, 0xFF );
     SDL_RenderClear((SDL_Renderer *)this->renderer);
 
-    std::map<std::string, ecs::ComponentList> Components = this->ComponentsGet();
+    ecs::TypeEntityComponentList Components = this->ComponentsGet();
 
-    for(auto &c : Components["texture"])
+    std::shared_ptr<texture> tex;
+    for(auto &entity_component_list : Components["texture"])
     {
-        auto t = std::dynamic_pointer_cast<texture>(c);
-        auto p = std::dynamic_pointer_cast<position>(this->Container->Entity(t->EntityHandle)->ComponentGet("position"));
+        ecs::ComponentList texes = entity_component_list.second;
+        for(auto &t : texes)
+        {
+            tex = std::dynamic_pointer_cast<texture>(t);
+            ecs::ComponentList positions = Components["position"][t->EntityHandle];
+            std::shared_ptr<position> pos;
+            for(auto &p : positions)
+            {
+                pos = std::dynamic_pointer_cast<position>(p);
+            }
 
-        SDL_Rect src = { t->col * t->width, t->row * t->height, t->width, t->height };
-        SDL_Rect dest = { p->x * (t->width * this->scale), p->y * (t->height * this->scale), t->width * this->scale, t->height * this->scale };
-        SDL_SetTextureColorMod((SDL_Texture *)this->tex_cache[t->tex_filename], t->r, t->g, t->b);
-        SDL_RenderCopy((SDL_Renderer *)this->renderer, (SDL_Texture *)this->tex_cache[t->tex_filename], &src, &dest);
+            SDL_Rect src = { tex->col * tex->width, tex->row * tex->height, tex->width, tex->height };
+            SDL_Rect dest = { pos->x * (tex->width * this->scale), pos->y * (tex->height * this->scale), tex->width * this->scale, tex->height * this->scale };
+            SDL_SetTextureColorMod((SDL_Texture *)this->tex_cache[tex->tex_filename], tex->r, tex->g, tex->b);
+            SDL_RenderCopy((SDL_Renderer *)this->renderer, (SDL_Texture *)this->tex_cache[tex->tex_filename], &src, &dest);
+        }
     }
 
-    for(auto &c : Components["shape"])
+    std::shared_ptr<shape> s;
+    for(auto &entity_component_list : Components["shape"])
     {
-        auto s = std::dynamic_pointer_cast<shape>(c);
-        auto p = std::dynamic_pointer_cast<position>(this->Container->Entity(s->EntityHandle)->ComponentGet("position"));
-
-        SDL_Rect rect = { p->x * this->scale, p->y * this->scale, s->width * this->scale, s->height * this->scale };
-        SDL_SetRenderDrawColor((SDL_Renderer *)this->renderer, s->r, s->g, s->b, s->a);
-        SDL_RenderFillRect((SDL_Renderer *)this->renderer, &rect);
+        ecs::ComponentList shapes = entity_component_list.second;
+        for(auto &shape_ : shapes)
+        {
+            s = std::dynamic_pointer_cast<shape>(shape_);
+            ecs::ComponentList positions = Components["position"][s->EntityHandle];
+            std::shared_ptr<position> pos = nullptr;
+            
+            for(auto &p : positions)
+            {
+                pos = std::dynamic_pointer_cast<position>(p);
+            }
+            if(pos == nullptr) continue;
+            
+            SDL_Rect rect = { pos->x * this->scale, pos->y * this->scale, s->width * this->scale, s->height * this->scale };
+            SDL_SetRenderDrawColor((SDL_Renderer *)this->renderer, s->r, s->g, s->b, s->a);
+            SDL_RenderFillRect((SDL_Renderer *)this->renderer, &rect);
+        }
     }
 
     SDL_SetRenderDrawBlendMode((SDL_Renderer *)this->renderer, SDL_BLENDMODE_BLEND);
