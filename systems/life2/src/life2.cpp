@@ -42,7 +42,7 @@ std::shared_ptr<cell> life2::CellGet(uint32_t x, uint32_t y)
 
     for(auto &c : Components["cell"])
     {
-        for(auto &component : c.second)
+        while(auto component = c.second.Pop())
         {
             auto result = std::dynamic_pointer_cast<cell>(component);
             if((result->x == x) && (result->y == y)) return result;
@@ -66,11 +66,9 @@ void life2::Update(uint32_t dt)
 
     for(auto &component_list : Components["input"])
     {
-        ecs::ComponentList l = component_list.second;
-        while(!l.empty())
+        while(auto component = component_list.second.Pop())
         {
-            auto i = std::dynamic_pointer_cast<input>(l.back());
-            l.pop_back();
+            auto i = std::dynamic_pointer_cast<input>(component);
 
             if(i->action == "left_click")
             {
@@ -176,11 +174,7 @@ void life2::Update(uint32_t dt)
             if(die) this->to_die.push_back(c);
             if(live) this->to_live.push_back(c);
 
-            std::shared_ptr<shape> s = nullptr;
-            for(auto &s_ : Components["shape"][c->EntityHandle])
-            {
-                s = std::dynamic_pointer_cast<shape>(s_);
-            }
+            auto s = std::dynamic_pointer_cast<shape>(Components["shape"][c->EntityHandle].Pop());
             if(s == nullptr) continue;
 
             if(c->alive)

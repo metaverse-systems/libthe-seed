@@ -81,44 +81,33 @@ void sdl::Update(uint32_t dt)
 
     ecs::TypeEntityComponentList Components = this->ComponentsGet();
 
-    std::shared_ptr<texture> tex;
     for(auto &entity_component_list : Components["texture"])
     {
-        ecs::ComponentList texes = entity_component_list.second;
-        for(auto &t : texes)
+        while(auto component = entity_component_list.second.Pop())
         {
-            tex = std::dynamic_pointer_cast<texture>(t);
-            ecs::ComponentList positions = Components["position"][t->EntityHandle];
-            std::shared_ptr<position> pos;
-            for(auto &p : positions)
-            {
-                pos = std::dynamic_pointer_cast<position>(p);
-            }
-
+            auto tex = std::dynamic_pointer_cast<texture>(component);
+            auto positions = Components["position"][tex->EntityHandle];
+            auto pos = std::dynamic_pointer_cast<position>(positions.Pop());
+            
             SDL_Rect src = { tex->col * tex->width, tex->row * tex->height, tex->width, tex->height };
-            SDL_Rect dest = { pos->x * (tex->width * this->scale), pos->y * (tex->height * this->scale), tex->width * this->scale, tex->height * this->scale };
+            int tex_scale_x = tex->width * this->scale;
+            int tex_scale_y = tex->height * this->scale;
+            SDL_Rect dest = { pos->x * tex_scale_x, pos->y * tex_scale_y, tex_scale_x, tex_scale_y };
             SDL_SetTextureColorMod((SDL_Texture *)this->tex_cache[tex->tex_filename], tex->r, tex->g, tex->b);
             SDL_RenderCopy((SDL_Renderer *)this->renderer, (SDL_Texture *)this->tex_cache[tex->tex_filename], &src, &dest);
         }
     }
 
-    std::shared_ptr<shape> s;
     for(auto &entity_component_list : Components["shape"])
     {
-        ecs::ComponentList shapes = entity_component_list.second;
-        for(auto &shape_ : shapes)
+        while(auto component = entity_component_list.second.Pop())
         {
-            s = std::dynamic_pointer_cast<shape>(shape_);
-            ecs::ComponentList positions = Components["position"][s->EntityHandle];
-            std::shared_ptr<position> pos = nullptr;
-            
-            for(auto &p : positions)
-            {
-                pos = std::dynamic_pointer_cast<position>(p);
-            }
+            auto s = std::dynamic_pointer_cast<shape>(component);
+            auto positions = Components["position"][s->EntityHandle];
+            auto pos = std::dynamic_pointer_cast<position>(positions.Pop());
             if(pos == nullptr) continue;
             
-            SDL_Rect rect = { pos->x * this->scale, pos->y * this->scale, s->width * this->scale, s->height * this->scale };
+            SDL_Rect rect = { (int)(pos->x * this->scale), (int)(pos->y * this->scale), (int)(s->width * this->scale), (int)(s->height * this->scale) };
             SDL_SetRenderDrawColor((SDL_Renderer *)this->renderer, s->r, s->g, s->b, s->a);
             SDL_RenderFillRect((SDL_Renderer *)this->renderer, &rect);
         }

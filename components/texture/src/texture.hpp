@@ -10,6 +10,6 @@ class texture : public ecs::Component
     ~texture();
     Json::Value save();
     std::string tex_filename;
-    int32_t width, height, col, row;
+    int width, height, col, row;
     uint8_t r, g, b, a;
 };

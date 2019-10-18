@@ -57,14 +57,10 @@ void sdl_mixer::Update(uint32_t dt)
 
     ecs::TypeEntityComponentList Components = this->ComponentsGet();
 
-    std::shared_ptr<song> s;
     for(auto &entity_component_list : Components["song"])
     {
-        ecs::ComponentList songs = entity_component_list.second;
-        for(auto &song_ : songs)
-        {
-            s = std::dynamic_pointer_cast<song>(song_);
-        }
+        auto s = std::dynamic_pointer_cast<song>(entity_component_list.second.Pop());
+        if(s == nullptr) continue;
 
         if(s->status == "start_playing")
         {

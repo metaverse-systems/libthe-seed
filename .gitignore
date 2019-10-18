@@ -55,3 +55,4 @@ Makefile
 *.lo
 libtool
 *.exe
+*.dll
