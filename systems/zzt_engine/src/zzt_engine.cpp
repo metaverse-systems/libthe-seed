@@ -42,11 +42,11 @@ void zzt_engine::Update(uint32_t dt)
         this->board = new Board(this->world->GetBoard(this->board_number), this);
     }
 
-    std::map<std::string, ecs::ComponentList> Components = this->ComponentsGet();
+    auto Components = this->ComponentsGet();
 
-    for(auto &component : Components["position"])
+    for(auto &entity_component_list : Components["position"])
     {
-        auto pos = std::dynamic_pointer_cast<position>(component);
+        auto pos = std::dynamic_pointer_cast<position>(entity_component_list.second.Pop());
     }
 }
 
