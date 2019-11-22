@@ -8,7 +8,6 @@ class sdl_input : public ecs::System
     sdl_input(); 
     sdl_input(Json::Value);
     Json::Value save();
-    uint64_t data = 0;
-    void Update(uint32_t dt);
+    void Update();
     void Init();
 };

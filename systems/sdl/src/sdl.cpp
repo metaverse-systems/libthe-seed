@@ -58,9 +58,9 @@ Json::Value sdl::save()
     return config;
 }
 
-void sdl::Update(uint32_t dt)
+void sdl::Update()
 {
-    if(!running)
+    if(!this->running)
     {
         SDL_DestroyWindow((SDL_Window *)this->window);
         SDL_Quit();
@@ -79,11 +79,11 @@ void sdl::Update(uint32_t dt)
     SDL_SetRenderDrawColor((SDL_Renderer *)this->renderer, 0, 0, 0, 0xFF );
     SDL_RenderClear((SDL_Renderer *)this->renderer);
 
-    ecs::TypeEntityComponentList Components = this->ComponentsGet();
+    auto Components = this->ComponentsGet();
 
-    for(auto &entity_component_list : Components["texture"])
+    for(auto &[entity, component_list] : Components["texture"])
     {
-        while(auto component = entity_component_list.second.Pop())
+        while(auto component = component_list.Pop())
         {
             auto tex = std::dynamic_pointer_cast<texture>(component);
             auto positions = Components["position"][tex->EntityHandle];
@@ -98,9 +98,9 @@ void sdl::Update(uint32_t dt)
         }
     }
 
-    for(auto &entity_component_list : Components["shape"])
+    for(auto &[entity, component_list] : Components["shape"])
     {
-        while(auto component = entity_component_list.second.Pop())
+        while(auto component = component_list.Pop())
         {
             auto s = std::dynamic_pointer_cast<shape>(component);
             auto positions = Components["position"][s->EntityHandle];

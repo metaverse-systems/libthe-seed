@@ -9,7 +9,7 @@ class sdl : public ecs::System
     sdl(); 
     sdl(Json::Value);
     Json::Value save();
-    void Update(uint32_t dt);
+    void Update();
     void Init();
     uint16_t width, height;
   private:

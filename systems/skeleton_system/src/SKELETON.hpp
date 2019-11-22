@@ -9,5 +9,5 @@ class SKELETON : public ecs::System
     SKELETON(Json::Value);
     Json::Value save();
     uint64_t data = 0;
-    void Update(uint32_t dt);
+    void Update();
 };

@@ -50,16 +50,13 @@ void sdl_mixer::Init()
     }
 }
 
-void sdl_mixer::Update(uint32_t dt)
+void sdl_mixer::Update()
 {
-    // It's been dt milliseconds since the last Update()
-    // Do some work
-
     ecs::TypeEntityComponentList Components = this->ComponentsGet();
 
-    for(auto &entity_component_list : Components["song"])
+    for(auto &[entity, component_list] : Components["song"])
     {
-        auto s = std::dynamic_pointer_cast<song>(entity_component_list.second.Pop());
+        auto s = std::dynamic_pointer_cast<song>(component_list.Pop());
         if(s == nullptr) continue;
 
         if(s->status == "start_playing")
