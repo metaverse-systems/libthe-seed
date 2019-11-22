@@ -25,7 +25,7 @@ void sdl_input::Init()
     SDL_InitSubSystem(SDL_INIT_EVENTS);
 }
 
-void sdl_input::Update(uint32_t dt)
+void sdl_input::Update()
 {
     SDL_Event event;
     while(SDL_PollEvent(&event))
@@ -49,17 +49,7 @@ void sdl_input::Update(uint32_t dt)
                 input_config["action"] = "quit";
             case SDL_KEYUP:
                 input_config["action"] = "keyup";
-                switch(event.key.keysym.sym)
-                {
-                    case SDLK_ESCAPE:
-                        input_config["action"] = "quit";
-                        break;
-                    case SDLK_SPACE:
-                        input_config["content"]["key"] = " ";
-                        break;
-                    default:
-                        break;
-                }
+                input_config["content"]["key"] = SDL_GetKeyName(event.key.keysym.sym);
                 break;
             default:
                 break;

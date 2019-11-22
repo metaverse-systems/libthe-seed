@@ -52,9 +52,10 @@ std::shared_ptr<cell> life2::CellGet(uint32_t x, uint32_t y)
     return nullptr;
 }
 
-void life2::Update(uint32_t dt)
+void life2::Update()
 {
     bool update = false;
+    auto dt = this->DeltaTimeGet();
 
     for(auto &c : this->to_die) c->alive = false;
     this->to_die.clear();
@@ -64,9 +65,9 @@ void life2::Update(uint32_t dt)
     this->ms += dt;
     ecs::TypeEntityComponentList Components = this->ComponentsGet();
 
-    for(auto &component_list : Components["input"])
+    for(auto &[entity, component_list] : Components["input"])
     {
-        while(auto component = component_list.second.Pop())
+        while(auto component = component_list.Pop())
         {
             auto i = std::dynamic_pointer_cast<input>(component);
 
@@ -80,15 +81,11 @@ void life2::Update(uint32_t dt)
 
             if(i->action == "keyup")
             {
-                if(i->content["key"] == " ") this->paused = !this->paused;
+                if(i->content["key"] == "Space") this->paused = !this->paused;
+                if(i->content["key"] == "Escape") this->Container->ManagerGet()->Shutdown();
             }
 
-            if(i->action == "quit")
-            {
-                this->Container->ManagerGet()->Shutdown();
-            }
-
-            ecs::Entity *e = this->Container->Entity(i->EntityHandle);
+            ecs::Entity *e = this->Container->Entity(entity);
             e->destroy();
             return;
         }

@@ -4,7 +4,7 @@
 #include "LibraryLoader.hpp"
 #include <libecs-cpp/ecs.hpp>
 
-using ComponentCreator = std::shared_ptr<ecs::Component> (*)(void *);
+using ComponentCreator = ecs::Component *(*)(void *);
 
 namespace ComponentLoader
 {
@@ -13,8 +13,8 @@ namespace ComponentLoader
       public:
         Loader(std::string library);
         ~Loader();
-        std::shared_ptr<ecs::Component> ComponentCreate();
-        std::shared_ptr<ecs::Component> ComponentCreate(void *data);
+        ecs::Component *ComponentCreate();
+        ecs::Component *ComponentCreate(void *data);
         ComponentCreator ComponentGet();
       private:
         LibraryLoader *library;
@@ -22,7 +22,7 @@ namespace ComponentLoader
 
     extern std::map<std::string, ComponentLoader::Loader *> component_loaders;
 
-    std::shared_ptr<ecs::Component> Create(std::string component);
-    std::shared_ptr<ecs::Component> Create(std::string component, void *data);
+    ecs::Component *Create(std::string component);
+    ecs::Component *Create(std::string component, void *data);
     ComponentCreator Get(std::string);
 }

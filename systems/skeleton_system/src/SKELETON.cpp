@@ -18,8 +18,9 @@ Json::Value SKELETON::save()
     return config;
 }
 
-void SKELETON::Update(uint32_t dt)
+void SKELETON::Update()
 {
+    auto dt = this->DeltaTimeGet();
     // It's been dt milliseconds since the last Update()
     // Do some work
 }

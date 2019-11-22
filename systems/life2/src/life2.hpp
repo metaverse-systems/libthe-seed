@@ -9,7 +9,7 @@ class life2 : public ecs::System
     life2(); 
     life2(Json::Value);
     Json::Value save();
-    void Update(uint32_t dt);
+    void Update();
     void Init();
   private:
     uint32_t ms = 0;

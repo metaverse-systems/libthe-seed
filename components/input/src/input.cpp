@@ -22,14 +22,14 @@ Json::Value input::save()
 
 extern "C"
 {
-    std::shared_ptr<ecs::Component> create_component(void *p)
+    ecs::Component *create_component(void *p)
     {
         if(p == nullptr)
         {
-            return std::make_shared<input>();
+            return new input();
         }
 
         Json::Value *config = (Json::Value *)p;
-        return std::make_shared<input>(*config);
+        return new input(*config);
     }
 }
