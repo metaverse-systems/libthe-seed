@@ -23,3 +23,7 @@
 !life2/*
 !rogue_engine/
 !rogue_engine/*
+!cycle/
+!cycle/*
+!sdl_video/
+!sdl_video/*
