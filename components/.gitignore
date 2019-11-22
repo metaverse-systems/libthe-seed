@@ -19,3 +19,9 @@
 !input/*
 !position/
 !position/*
+!cycle_shape/
+!cycle_shape/*
+!draw/
+!draw/*
+!velocity/
+!velocity/*
