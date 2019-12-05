@@ -1,24 +1,24 @@
-#include <imgui.hpp>
+#include <gui.hpp>
 
-imgui::imgui() 
+gui::gui() 
 { 
-    this->Handle = "imgui";
+    this->Handle = "gui";
 }
 
-imgui::imgui(Json::Value config)
+gui::gui(Json::Value config)
 {
-    this->Handle = "imgui";
+    this->Handle = "gui";
     this->data = config["data"].asUInt64();
 }
 
-Json::Value imgui::save()
+Json::Value gui::save()
 {
     Json::Value config;
     config["data"] = (Json::UInt64)this->data;
     return config;
 }
 
-void imgui::Update()
+void gui::Update()
 {
     auto dt = this->DeltaTimeGet();
     // It's been dt milliseconds since the last Update()
@@ -29,9 +29,9 @@ extern "C"
 {
     ecs::System *create_system(void *p)
     {
-        if(p == nullptr) return new imgui();
+        if(p == nullptr) return new gui();
 
         Json::Value *config = (Json::Value *)p;
-        return new imgui(*config);
+        return new gui(*config);
     }
 }

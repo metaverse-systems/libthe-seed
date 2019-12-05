@@ -27,5 +27,5 @@
 !cycle/*
 !sdl_video/
 !sdl_video/*
-!imgui/
-!imgui/*
+!gui/
+!gui/*
