@@ -8,13 +8,13 @@ gui::gui()
 gui::gui(Json::Value config)
 {
     this->Handle = "gui";
-    this->data = config["data"].asUInt64();
+    this->visible = config["visible"].asBool();
 }
 
 Json::Value gui::save()
 {
     Json::Value config;
-    config["data"] = (Json::UInt64)this->data;
+    config["visible"] = this->visible;
     return config;
 }
 
