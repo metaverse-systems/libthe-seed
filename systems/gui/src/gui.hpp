@@ -8,6 +8,6 @@ class gui : public ecs::System
     gui(); 
     gui(Json::Value);
     Json::Value save();
-    uint64_t data = 0;
+    bool visible = false;
     void Update();
 };
