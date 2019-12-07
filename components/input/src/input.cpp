@@ -8,14 +8,14 @@ input::input()
 input::input(Json::Value config)
 {
     this->Type = "input";
-    this->action = config["action"].asString();
+    this->event = config["event"].asString();
     this->content = config["content"];
 }
 
 Json::Value input::save()
 {
     Json::Value config;
-    config["action"] = this->action;
+    config["event"] = this->event;
     config["content"] = this->content;
     return config;
 }

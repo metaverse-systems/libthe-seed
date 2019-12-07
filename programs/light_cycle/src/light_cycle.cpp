@@ -5,13 +5,24 @@ int main(int argc, char *argv[])
 {
     auto world = ECS->Container();
 
+    // Video output
     Json::Value video_config;
     video_config["title"] = "light cycle";
     video_config["fullscreen"] = true;
     auto video = (sdl_video *)SystemLoader::Create("sdl_video", &video_config);
     world->System(video);
-    world->System(SystemLoader::Create("cycle"));
+
+    // Game engine
+    Json::Value cycle_config;
+    cycle_config["paused"] = true;
+    world->System(SystemLoader::Create("cycle", &cycle_config));
+
+    // Input
     world->System(SystemLoader::Create("sdl_input"));
+
+    Json::Value gui_config;
+    gui_config["visible"] = true;
+    world->System(SystemLoader::Create("gui", &gui_config));
 
     world->Start(1000000 / 60);
     

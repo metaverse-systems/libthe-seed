@@ -8,6 +8,6 @@ class input : public ecs::Component
     input(); 
     input(Json::Value);
     Json::Value save();
-    std::string action;
+    std::string event;
     Json::Value content;
 };

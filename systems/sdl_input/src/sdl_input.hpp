@@ -10,4 +10,6 @@ class sdl_input : public ecs::System
     Json::Value save();
     void Update();
     void Init();
+  private:
+    std::vector<std::string> registered_keys;
 };
