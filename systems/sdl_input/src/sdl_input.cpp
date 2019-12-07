@@ -37,7 +37,7 @@ void sdl_input::Update()
                 switch(event.button.button)
                 {
                     case SDL_BUTTON_LEFT:
-                        input_config["action"] = "left_click";
+                        input_config["event"] = "left_click";
                         input_config["content"]["x"] = event.motion.x;
                         input_config["content"]["y"] = event.motion.y;
                         break;
@@ -46,9 +46,9 @@ void sdl_input::Update()
                 }
                 break;
             case SDL_QUIT:
-                input_config["action"] = "quit";
+                input_config["event"] = "quit";
             case SDL_KEYUP:
-                input_config["action"] = "keyup";
+                input_config["event"] = "keyup";
                 input_config["content"]["key"] = SDL_GetKeyName(event.key.keysym.sym);
                 break;
             default:

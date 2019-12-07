@@ -71,7 +71,7 @@ void life2::Update()
         {
             auto i = std::dynamic_pointer_cast<input>(component);
 
-            if(i->action == "left_click")
+            if(i->event == "left_click")
             {
                 uint32_t x = i->content["x"].asUInt() / this->cell_width;
                 uint32_t y = i->content["y"].asUInt() / this->cell_height;
@@ -79,7 +79,7 @@ void life2::Update()
                 this->ms = 0;
             }
 
-            if(i->action == "keyup")
+            if(i->event == "keyup")
             {
                 if(i->content["key"] == "Space") this->paused = !this->paused;
                 if(i->content["key"] == "Escape") this->Container->ManagerGet()->Shutdown();

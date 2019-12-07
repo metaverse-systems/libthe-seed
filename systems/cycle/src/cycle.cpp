@@ -15,6 +15,7 @@ cycle::cycle()
 cycle::cycle(Json::Value config)
 {
     this->Handle = "cycle";
+    if(config["paused"] != "") this->paused = config["paused"].asBool();
 }
 
 Json::Value cycle::save()
@@ -48,7 +49,7 @@ void cycle::Update()
         {
             auto i = std::dynamic_pointer_cast<input>(component);
     
-            if(i->action == "keyup")
+            if(i->event == "keyup")
             {
                 if(i->content["key"] == "Space") this->paused = !this->paused;
                 if(i->content["key"] == "Escape") this->Container->ManagerGet()->Shutdown();
