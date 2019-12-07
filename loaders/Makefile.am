@@ -7,4 +7,5 @@ libloaders_la_LDFLAGS = -no-undefined -version-info 0:0:0
 libloaders_la_SOURCES = LibraryLoader.cpp \
 		SystemLoader.cpp \
 		ComponentLoader.cpp \
+		JSONLoader.cpp \
 		ResourcePak.cpp
