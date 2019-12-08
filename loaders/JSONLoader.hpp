@@ -8,9 +8,14 @@ namespace JSONLoader
     class Loader
     {
       public:
-        Loader(std::string data);
+        Loader(ecs::Container *, std::string data);
         ~Loader();
+        void Parse();
       private:
         Json::Value scene;
+        ecs::Container *container = nullptr;
     };
+
+    void Parse(ecs:: Container *, std::string data);
+    void Parse(ecs:: Container *, std::string data, Json::Value config);
 }
