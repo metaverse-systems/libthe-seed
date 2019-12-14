@@ -23,7 +23,7 @@ sdl_mixer::sdl_mixer(Json::Value config)
     this->Handle = "sdl_mixer";
 }
 
-Json::Value sdl_mixer::save()
+Json::Value sdl_mixer::Export()
 {
     Json::Value config;
     return config;

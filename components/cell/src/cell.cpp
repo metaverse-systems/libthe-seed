@@ -13,7 +13,7 @@ cell::cell(Json::Value config)
     this->y = config["y"].asUInt();
 }
 
-Json::Value cell::save()
+Json::Value cell::Export()
 {
     Json::Value config;
     config["alive"] = this->alive;

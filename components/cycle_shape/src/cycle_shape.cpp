@@ -16,7 +16,7 @@ cycle_shape::cycle_shape(Json::Value config)
     this->a = config["a"].asUInt();
 }
 
-Json::Value cycle_shape::save()
+Json::Value cycle_shape::Export()
 {
     Json::Value config;
     config["height"] = this->height;

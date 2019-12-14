@@ -8,7 +8,7 @@ class life2 : public ecs::System
   public:
     life2(); 
     life2(Json::Value);
-    Json::Value save();
+    Json::Value Export();
     void Update();
     void Init();
   private:

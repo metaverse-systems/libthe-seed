@@ -11,7 +11,7 @@ SKELETON::SKELETON(Json::Value config)
     this->data = config["data"].asString();
 }
 
-Json::Value SKELETON::save()
+Json::Value SKELETON::Export()
 {
     Json::Value config;
     config["data"] = this->data;

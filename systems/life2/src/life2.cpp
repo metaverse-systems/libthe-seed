@@ -30,7 +30,7 @@ void life2::Init()
     }
 }
 
-Json::Value life2::save()
+Json::Value life2::Export()
 {
     Json::Value config;
     return config;

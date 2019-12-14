@@ -4,6 +4,7 @@
 #include "../../components/velocity/src/velocity.hpp"
 #include "../../components/cycle_shape/src/cycle_shape.hpp"
 #include "../../components/draw/src/draw.hpp"
+#include "../../components/collision/src/collision.hpp"
 #include <cmath>
 #include <iostream>
 
@@ -16,11 +17,14 @@ cycle::cycle(Json::Value config)
 {
     this->Handle = "cycle";
     if(config["paused"] != "") this->paused = config["paused"].asBool();
+    this->max_velocity = config["max_velocity"].asFloat();
 }
 
-Json::Value cycle::save()
+Json::Value cycle::Export()
 {
     Json::Value config;
+    config["paused"] = this->paused ? "true" : "false";
+    config["max_velocity"] = this->max_velocity;
     return config;
 }
 
@@ -31,6 +35,7 @@ void cycle::Init()
     this->ComponentRequest("velocity");
     this->ComponentRequest("cycle_shape");
     this->ComponentRequest("draw");
+    this->ComponentRequest("collision");
 }
 
 void cycle::Update()
@@ -66,6 +71,49 @@ void cycle::Update()
 
     if(this->paused) return;
 
+    for(auto &[entity, component_list] : Components["collision"])
+    {
+        while(auto ccomponent = component_list.Pop())
+        {
+            auto pcomponent = Components["position"][entity].Pop();
+            auto dcomponent = Components["draw"][entity].Pop();
+            auto pos = std::dynamic_pointer_cast<position>(pcomponent);
+            auto d = std::dynamic_pointer_cast<draw>(dcomponent);
+
+            auto CheckComponents = this->ComponentsGet();
+            for(auto &[check_entity, check_list] : CheckComponents["collision"])
+            {
+                if(check_entity == entity) continue;
+
+                while(auto check_ccomponent = check_list.Pop())
+                {
+                    auto check_pcomponent = CheckComponents["position"][check_entity].Pop();
+                    if(check_pcomponent == nullptr) continue;
+
+                    auto check_dcomponent = CheckComponents["draw"][check_entity].Pop();
+                    if(check_dcomponent == nullptr) continue;
+
+                    auto check_pos = std::dynamic_pointer_cast<position>(check_pcomponent);
+                    auto check_d = std::dynamic_pointer_cast<draw>(check_dcomponent);
+
+                    if(pos->x < check_pos->x + check_d->width &&
+                       pos->x + d->width > check_pos->x &&
+                       pos->y < check_pos->y + check_d->height &&
+                       pos->y + d->height > check_pos->y) 
+                    {
+                        this->paused = true;
+                        auto vcomponent = Components["velocity"][entity].Pop();
+                        auto vel = std::dynamic_pointer_cast<velocity>(vcomponent);
+                        std::cout << "Ending velocity " << vel->x << ", " << vel->y << std::endl;
+                        return;
+                    }
+                }
+            }
+        }
+    }
+
+    Components = this->ComponentsGet();
+
     for(auto &[entity, component_list] : Components["position"])
     {
         while(auto pcomponent = component_list.Pop())
@@ -80,8 +128,8 @@ void cycle::Update()
             pos->x += vel->x * multiplier;
             pos->y += vel->y * multiplier;
 
-            vel->x *= 1.0005;
-            vel->y *= 1.0005;
+            if((float)std::abs(vel->x) < this->max_velocity) vel->x *= 1.0015;
+            if((float)std::abs(vel->y) < this->max_velocity) vel->y *= 1.0015;
 
             if(turn_left || turn_right || turn_up || turn_down)
             {

@@ -12,7 +12,7 @@ position::position(Json::Value config)
     this->y = config["y"].asUInt();
 }
 
-Json::Value position::save()
+Json::Value position::Export()
 {
     Json::Value config;
     config["x"] = this->x;

@@ -51,9 +51,9 @@ void sdl::Init()
     }
 }
 
-Json::Value sdl::save()
+Json::Value sdl::Export()
 {
-    throw std::string("save() not implemented");
+    throw std::string("Export() not implemented");
     Json::Value config;
     return config;
 }

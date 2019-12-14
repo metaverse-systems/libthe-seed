@@ -13,7 +13,7 @@ song::song(Json::Value config)
     this->status = config["status"].asString();
 }
 
-Json::Value song::save()
+Json::Value song::Export()
 {
     Json::Value config;
     return config;

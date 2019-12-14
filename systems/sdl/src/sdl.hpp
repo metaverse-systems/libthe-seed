@@ -8,7 +8,7 @@ class sdl : public ecs::System
   public:
     sdl(); 
     sdl(Json::Value);
-    Json::Value save();
+    Json::Value Export();
     void Update();
     void Init();
     uint16_t width, height;

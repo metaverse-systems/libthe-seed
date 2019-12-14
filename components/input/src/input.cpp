@@ -12,7 +12,7 @@ input::input(Json::Value config)
     this->content = config["content"];
 }
 
-Json::Value input::save()
+Json::Value input::Export()
 {
     Json::Value config;
     config["event"] = this->event;

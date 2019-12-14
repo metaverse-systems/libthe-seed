@@ -12,7 +12,7 @@ velocity::velocity(Json::Value config)
     this->y = config["y"].asFloat();
 }
 
-Json::Value velocity::save()
+Json::Value velocity::Export()
 {
     Json::Value config;
     config["x"] = this->x;

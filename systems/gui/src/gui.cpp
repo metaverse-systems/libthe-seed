@@ -11,10 +11,10 @@ gui::gui(Json::Value config)
     this->visible = config["visible"].asBool();
 }
 
-Json::Value gui::save()
+Json::Value gui::Export()
 {
     Json::Value config;
-    config["visible"] = this->visible;
+    config["visible"] = this->visible ? "true" : "false";
     return config;
 }
 

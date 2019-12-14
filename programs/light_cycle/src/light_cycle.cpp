@@ -17,6 +17,7 @@ int main(int argc, char *argv[])
     // Game engine
     Json::Value cycle_config;
     cycle_config["paused"] = true;
+    cycle_config["max_velocity"] = 750.0;
     world->System(SystemLoader::Create("cycle", &cycle_config));
 
     // Input
@@ -29,24 +30,10 @@ int main(int argc, char *argv[])
     world->Start(1000000 / 60);
     while(!video->height) usleep(100000);
     
-    std::string data;
-    std::ifstream file;
-    std::streampos fsize, fstart = 0;
+    // Load entities from file
+    JSONLoader::FileParse(world, "world.json");
 
-    Json::Value config;
-    config["screen_height"] = video->height;
-    config["screen_width"] = video->width;
-
-    file.open("world.json");
-    fstart = file.tellg();
-    file.seekg(0, std::ios::end);
-    fsize = file.tellg() - fstart;
-    file.seekg(0, std::ios::beg);
-    data.resize(fsize);
-    file.read(&data[0], fsize);
-    file.close();
-
-    JSONLoader::Parse(world, data, config);
+    std::cout << world->Export() << std::endl;
 
     while(ECS->IsRunning())
     {

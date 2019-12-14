@@ -13,7 +13,7 @@ sdl_input::sdl_input(Json::Value config)
     this->Handle = "sdl_input";
 }
 
-Json::Value sdl_input::save()
+Json::Value sdl_input::Export()
 {
     Json::Value config;
     return config;

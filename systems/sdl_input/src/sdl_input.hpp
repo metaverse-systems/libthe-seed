@@ -7,7 +7,7 @@ class sdl_input : public ecs::System
   public:
     sdl_input(); 
     sdl_input(Json::Value);
-    Json::Value save();
+    Json::Value Export();
     void Update();
     void Init();
   private:

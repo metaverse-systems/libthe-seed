@@ -8,7 +8,7 @@ class sdl_mixer : public ecs::System
   public:
     sdl_mixer(); 
     sdl_mixer(Json::Value);
-    Json::Value save();
+    Json::Value Export();
     void Update();
     void Init();
 };

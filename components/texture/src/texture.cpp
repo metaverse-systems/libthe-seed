@@ -23,7 +23,7 @@ texture::~texture()
 {
 }
 
-Json::Value texture::save()
+Json::Value texture::Export()
 {
     Json::Value config;
     return config;

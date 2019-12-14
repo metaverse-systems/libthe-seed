@@ -1,5 +1,6 @@
 #include "JSONLoader.hpp"
 #include "ComponentLoader.hpp"
+#include <fstream>
 
 namespace JSONLoader
 {
@@ -18,8 +19,7 @@ namespace JSONLoader
     {
         for(auto entity : this->scene["entities"])
         {
-            auto e = this->container->Entity();
-            e->Handle = entity["Handle"].asString();
+            auto e = this->container->Entity(entity["Handle"].asString());
 
             for(auto type : entity["Components"].getMemberNames())
             {
@@ -35,15 +35,26 @@ namespace JSONLoader
     {
     }
 
-    void Parse(ecs::Container *container, std::string data)
+    void StringParse(ecs::Container *container, std::string data)
     {
-        auto loader = Loader(container, data);
-        loader.Parse();
+        Loader(container, data).Parse();
     }
 
-    void Parse(ecs::Container *container, std::string data, Json::Value config)
+    void FileParse(ecs::Container *container, std::string filename)
     {
-        auto loader = Loader(container, data);
-        loader.Parse();
+        std::string data;
+        std::ifstream file;
+        std::streampos fsize, fstart = 0;
+
+        file.open(filename);
+        fstart = file.tellg();
+        file.seekg(0, std::ios::end);
+        fsize = file.tellg() - fstart;
+        file.seekg(0, std::ios::beg);
+        data.resize(fsize);
+        file.read(&data[0], fsize);
+        file.close();
+
+        StringParse(container, data);
     }
 }

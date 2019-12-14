@@ -18,7 +18,7 @@ shape::shape(Json::Value config)
     this->y = config["y"].asUInt();
 }
 
-Json::Value shape::save()
+Json::Value shape::Export()
 {
     Json::Value config;
     config["height"] = this->height;

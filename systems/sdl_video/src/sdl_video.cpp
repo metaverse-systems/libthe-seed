@@ -21,10 +21,11 @@ sdl_video::sdl_video(Json::Value config)
     this->fullscreen = config["fullscreen"].asBool();
 }
 
-Json::Value sdl_video::save()
+Json::Value sdl_video::Export()
 {
     Json::Value config;
-//    config["data"] = (Json::UInt64)this->data;
+    config["title"] = this->title;
+    config["fullscreen"] = this->fullscreen ? "true" : "false";
     return config;
 }
 

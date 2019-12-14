@@ -7,7 +7,7 @@ class sdl_video : public ecs::System
   public:
     sdl_video(); 
     sdl_video(Json::Value);
-    Json::Value save();
+    Json::Value Export();
     void Update();
     void Init();
     uint16_t width, height;

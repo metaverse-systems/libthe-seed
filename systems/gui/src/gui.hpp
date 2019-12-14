@@ -16,7 +16,7 @@ class gui : public ecs::System
   public:
     gui(); 
     gui(Json::Value);
-    Json::Value save();
+    Json::Value Export();
     bool visible = false;
     void Update();
 };
