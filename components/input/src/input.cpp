@@ -8,28 +8,28 @@ input::input()
 input::input(Json::Value config)
 {
     this->Type = "input";
-    this->action = config["action"].asString();
+    this->event = config["event"].asString();
     this->content = config["content"];
 }
 
-Json::Value input::save()
+Json::Value input::Export()
 {
     Json::Value config;
-    config["action"] = this->action;
+    config["event"] = this->event;
     config["content"] = this->content;
     return config;
 }
 
 extern "C"
 {
-    std::shared_ptr<ecs::Component> create_component(void *p)
+    ecs::Component *create_component(void *p)
     {
         if(p == nullptr)
         {
-            return std::make_shared<input>();
+            return new input();
         }
 
         Json::Value *config = (Json::Value *)p;
-        return std::make_shared<input>(*config);
+        return new input(*config);
     }
 }

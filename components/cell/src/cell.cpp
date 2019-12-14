@@ -13,7 +13,7 @@ cell::cell(Json::Value config)
     this->y = config["y"].asUInt();
 }
 
-Json::Value cell::save()
+Json::Value cell::Export()
 {
     Json::Value config;
     config["alive"] = this->alive;
@@ -24,14 +24,14 @@ Json::Value cell::save()
 
 extern "C"
 {
-    std::shared_ptr<ecs::Component> create_component(void *p)
+    ecs::Component *create_component(void *p)
     {
         if(p == nullptr)
         {
-            return std::make_shared<cell>();
+            return new cell();
         }
 
         Json::Value *config = (Json::Value *)p;
-        return std::make_shared<cell>(*config);
+        return new cell(*config);
     }
 }

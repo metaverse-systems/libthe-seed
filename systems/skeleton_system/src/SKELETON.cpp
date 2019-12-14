@@ -11,15 +11,16 @@ SKELETON::SKELETON(Json::Value config)
     this->data = config["data"].asUInt64();
 }
 
-Json::Value SKELETON::save()
+Json::Value SKELETON::Export()
 {
     Json::Value config;
     config["data"] = (Json::UInt64)this->data;
     return config;
 }
 
-void SKELETON::Update(uint32_t dt)
+void SKELETON::Update()
 {
+    auto dt = this->DeltaTimeGet();
     // It's been dt milliseconds since the last Update()
     // Do some work
 }

@@ -8,7 +8,7 @@ class texture : public ecs::Component
     texture(); 
     texture(Json::Value);
     ~texture();
-    Json::Value save();
+    Json::Value Export();
     std::string tex_filename;
     int width, height, col, row;
     uint8_t r, g, b, a;

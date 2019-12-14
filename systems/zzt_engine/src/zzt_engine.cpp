@@ -20,7 +20,7 @@ zzt_engine::zzt_engine(Json::Value config)
     this->ComponentRequest("position");
 }
 
-Json::Value zzt_engine::save()
+Json::Value zzt_engine::Export()
 {
     Json::Value config;
     return config;

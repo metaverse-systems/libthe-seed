@@ -1,0 +1,178 @@
+{
+	"entities" : 
+	{
+		"464f43c7-ee3d-4d46-8b15-5c45db57ad67" : 
+		{
+			"Components" : 
+			{
+				"draw" : 
+				[
+					{
+						"a" : 255,
+						"b" : 161,
+						"g" : 255,
+						"height" : 10,
+						"r" : 5,
+						"width" : 1910 
+					}
+				],
+				"position" : 
+				[
+					{
+						"x" : 0,
+						"y" : 1070
+					}
+				],
+                                "collision" :
+                                [
+                                        {
+                                                "action": "kill"
+                                        }
+                                ]
+			},
+			"Handle" : "464f43c7-ee3d-4d46-8b15-5c45db57ad67"
+		},
+		"4d486ce4-9f13-4c41-8eb1-6d939d56d37e" : 
+		{
+			"Components" : 
+			{
+				"draw" : 
+				[
+					{
+						"a" : 255,
+						"b" : 161,
+						"g" : 255,
+						"height" : 1070,
+						"r" : 5,
+						"width" : 10
+					}
+				],
+				"position" : 
+				[
+					{
+						"x" : 0,
+						"y" : 0
+					}
+				],
+                                "collision" :
+                                [
+                                        {
+                                                "action": "kill"
+                                        }
+                                ]
+			},
+			"Handle" : "4d486ce4-9f13-4c41-8eb1-6d939d56d37e"
+		},
+		"5d376add-298d-4c79-a26a-93ef0b2b5bde" : 
+		{
+			"Components" : 
+			{
+				"draw" : 
+				[
+					{
+						"a" : 255,
+						"b" : 150,
+						"g" : 251,
+						"height" : 1070,
+						"r" : 255,
+						"width" : 10
+					}
+				],
+				"position" : 
+				[
+					{
+						"x" : 1910,
+						"y" : 10
+					}
+				],
+                                "collision" :
+                                [
+                                        {
+                                                "action": "kill"
+                                        }
+                                ]
+			},
+			"Handle" : "5d376add-298d-4c79-a26a-93ef0b2b5bde"
+		},
+		"8ecc0815-f96c-4780-ad13-c09bc437daf6" : 
+		{
+			"Components" : 
+			{
+				"draw" : 
+				[
+					{
+						"a" : 255,
+						"b" : 150,
+						"g" : 251,
+						"height" : 10,
+						"r" : 255,
+						"width" : 1910
+					}
+				],
+				"position" : 
+				[
+					{
+						"x" : 10,
+						"y" : 0
+					}
+				],
+                                "collision" :
+                                [
+                                        {
+                                                "action": "kill"
+                                        }
+                                ]
+			},
+			"Handle" : "8ecc0815-f96c-4780-ad13-c09bc437daf6"
+		},
+		"95d7a625-1b22-4a17-8705-d081f81fccd0" : 
+		{
+			"Components" : 
+			{
+				"cycle_shape" : 
+				[
+					{
+						"a" : 0,
+						"b" : 0,
+						"g" : 0,
+						"height" : 10,
+						"r" : 0,
+						"width" : 10
+					}
+				],
+				"draw" : 
+				[
+					{
+						"a" : 255,
+						"b" : 206,
+						"g" : 113,
+						"height" : 10,
+						"r" : 255,
+						"width" : 10
+					}
+				],
+				"position" : 
+				[
+					{
+						"x" : 15,
+						"y" : 15
+					}
+				],
+				"velocity" : 
+				[
+					{
+						"x" : 100,
+						"y" : 0
+					}
+				],
+                                "collision" :
+                                [
+                                        {
+                                        }
+                                ]
+			},
+			"Handle" : "95d7a625-1b22-4a17-8705-d081f81fccd0"
+		}
+	},
+	"handle" : "e8a32b3d-1cd0-457e-a596-cafbc3828385"
+}

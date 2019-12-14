@@ -18,7 +18,7 @@ shape::shape(Json::Value config)
     this->y = config["y"].asUInt();
 }
 
-Json::Value shape::save()
+Json::Value shape::Export()
 {
     Json::Value config;
     config["height"] = this->height;
@@ -35,14 +35,14 @@ Json::Value shape::save()
 
 extern "C"
 {
-    std::shared_ptr<ecs::Component> create_component(void *p)
+    ecs::Component *create_component(void *p)
     {
         if(p == nullptr)
         {
-            return std::make_shared<shape>();
+            return new shape();
         }
 
         Json::Value *config = (Json::Value *)p;
-        return std::make_shared<shape>(*config);
+        return new shape(*config);
     }
 }

@@ -11,7 +11,7 @@ class zzt_engine : public ecs::System
   public:
     zzt_engine(); 
     zzt_engine(Json::Value);
-    Json::Value save();
+    Json::Value Export();
     std::string filename;
     std::string tex_sheet;
     void Update(uint32_t dt);

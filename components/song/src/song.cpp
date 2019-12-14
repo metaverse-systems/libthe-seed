@@ -13,7 +13,7 @@ song::song(Json::Value config)
     this->status = config["status"].asString();
 }
 
-Json::Value song::save()
+Json::Value song::Export()
 {
     Json::Value config;
     return config;
@@ -21,14 +21,14 @@ Json::Value song::save()
 
 extern "C"
 {
-    std::shared_ptr<ecs::Component> create_component(void *p)
+    ecs::Component *create_component(void *p)
     {
         if(p == nullptr)
         {
-            return std::make_shared<song>();
+            return new song();
         }
 
         Json::Value *config = (Json::Value *)p;
-        return std::make_shared<song>(*config);
+        return new song(*config);
     }
 }

@@ -16,6 +16,6 @@ namespace JSONLoader
         ecs::Container *container = nullptr;
     };
 
-    void Parse(ecs:: Container *, std::string data);
-    void Parse(ecs:: Container *, std::string data, Json::Value config);
+    void StringParse(ecs::Container *, std::string data);
+    void FileParse(ecs::Container *, std::string filename);
 }

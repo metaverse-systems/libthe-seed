@@ -30,7 +30,7 @@ void life2::Init()
     }
 }
 
-Json::Value life2::save()
+Json::Value life2::Export()
 {
     Json::Value config;
     return config;
@@ -52,9 +52,10 @@ std::shared_ptr<cell> life2::CellGet(uint32_t x, uint32_t y)
     return nullptr;
 }
 
-void life2::Update(uint32_t dt)
+void life2::Update()
 {
     bool update = false;
+    auto dt = this->DeltaTimeGet();
 
     for(auto &c : this->to_die) c->alive = false;
     this->to_die.clear();
@@ -64,13 +65,13 @@ void life2::Update(uint32_t dt)
     this->ms += dt;
     ecs::TypeEntityComponentList Components = this->ComponentsGet();
 
-    for(auto &component_list : Components["input"])
+    for(auto &[entity, component_list] : Components["input"])
     {
-        while(auto component = component_list.second.Pop())
+        while(auto component = component_list.Pop())
         {
             auto i = std::dynamic_pointer_cast<input>(component);
 
-            if(i->action == "left_click")
+            if(i->event == "left_click")
             {
                 uint32_t x = i->content["x"].asUInt() / this->cell_width;
                 uint32_t y = i->content["y"].asUInt() / this->cell_height;
@@ -78,17 +79,13 @@ void life2::Update(uint32_t dt)
                 this->ms = 0;
             }
 
-            if(i->action == "keyup")
+            if(i->event == "keyup")
             {
-                if(i->content["key"] == " ") this->paused = !this->paused;
+                if(i->content["key"] == "Space") this->paused = !this->paused;
+                if(i->content["key"] == "Escape") this->Container->ManagerGet()->Shutdown();
             }
 
-            if(i->action == "quit")
-            {
-                this->Container->ManagerGet()->Shutdown();
-            }
-
-            ecs::Entity *e = this->Container->Entity(i->EntityHandle);
+            ecs::Entity *e = this->Container->Entity(entity);
             e->destroy();
             return;
         }

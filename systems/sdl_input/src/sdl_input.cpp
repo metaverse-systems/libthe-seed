@@ -13,7 +13,7 @@ sdl_input::sdl_input(Json::Value config)
     this->Handle = "sdl_input";
 }
 
-Json::Value sdl_input::save()
+Json::Value sdl_input::Export()
 {
     Json::Value config;
     return config;
@@ -25,7 +25,7 @@ void sdl_input::Init()
     SDL_InitSubSystem(SDL_INIT_EVENTS);
 }
 
-void sdl_input::Update(uint32_t dt)
+void sdl_input::Update()
 {
     SDL_Event event;
     while(SDL_PollEvent(&event))
@@ -37,7 +37,7 @@ void sdl_input::Update(uint32_t dt)
                 switch(event.button.button)
                 {
                     case SDL_BUTTON_LEFT:
-                        input_config["action"] = "left_click";
+                        input_config["event"] = "left_click";
                         input_config["content"]["x"] = event.motion.x;
                         input_config["content"]["y"] = event.motion.y;
                         break;
@@ -46,20 +46,10 @@ void sdl_input::Update(uint32_t dt)
                 }
                 break;
             case SDL_QUIT:
-                input_config["action"] = "quit";
+                input_config["event"] = "quit";
             case SDL_KEYUP:
-                input_config["action"] = "keyup";
-                switch(event.key.keysym.sym)
-                {
-                    case SDLK_ESCAPE:
-                        input_config["action"] = "quit";
-                        break;
-                    case SDLK_SPACE:
-                        input_config["content"]["key"] = " ";
-                        break;
-                    default:
-                        break;
-                }
+                input_config["event"] = "keyup";
+                input_config["content"]["key"] = SDL_GetKeyName(event.key.keysym.sym);
                 break;
             default:
                 break;
