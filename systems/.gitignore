@@ -6,8 +6,6 @@
 !create_system.sh
 !skeleton_system/
 !skeleton_system/*
-!wxwidgets_gui/
-!wxwidgets_gui/*
 !sdl_mixer/
 !sdl_mixer/*
 !sdl/
@@ -21,8 +19,6 @@
 !sdl_input/*
 !life2/
 !life2/*
-!rogue_engine/
-!rogue_engine/*
 !cycle/
 !cycle/*
 !sdl_video/
