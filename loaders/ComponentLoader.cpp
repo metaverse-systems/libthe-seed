@@ -3,6 +3,8 @@
 
 namespace ComponentLoader
 {
+    std::vector<std::string> component_paths;
+
     Loader::Loader(std::string library)
     {
         try
@@ -11,6 +13,8 @@ namespace ComponentLoader
             this->library->PathAdd(".");
             this->library->PathAdd("../components/" + library + "/src/.libs/");
             this->library->PathAdd("../../../components/" + library + "/src/.libs/");
+
+            for(auto path : component_paths) this->library->PathAdd(path);
         }
         catch(std::string e)
         {
@@ -121,5 +125,15 @@ namespace ComponentLoader
         }
 
         return component_loaders[component]->ComponentGet();
+    }
+
+    std::vector<std::string> PathsGet()
+    {
+        return component_paths;
+    }
+
+    void PathAdd(std::string path)
+    {
+        component_paths.push_back(path);
     }
 }
