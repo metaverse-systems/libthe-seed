@@ -21,8 +21,12 @@ namespace ComponentLoader
     };
 
     extern std::map<std::string, ComponentLoader::Loader *> component_loaders;
+    extern std::vector<std::string> component_paths;
 
     ecs::Component *Create(std::string component);
     ecs::Component *Create(std::string component, void *data);
     ComponentCreator Get(std::string);
+
+    std::vector<std::string> PathsGet();
+    void PathAdd(std::string);
 }

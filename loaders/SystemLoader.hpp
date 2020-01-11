@@ -21,8 +21,12 @@ namespace SystemLoader
     };
 
     extern std::map<std::string, SystemLoader::Loader *> system_loaders;
+    extern std::vector<std::string> system_paths;
 
     ecs::System *Create(std::string system);
     ecs::System *Create(std::string system, void *data);
     SystemCreator Get(std::string system);
+
+    std::vector<std::string> PathsGet();
+    void PathAdd(std::string);
 }

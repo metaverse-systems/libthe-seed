@@ -3,6 +3,9 @@
 
 namespace SystemLoader
 {
+    std::map<std::string, SystemLoader::Loader *> system_loaders;
+    std::vector<std::string> system_paths;
+
     Loader::Loader(std::string library)
     {
         try
@@ -11,6 +14,8 @@ namespace SystemLoader
             this->library->PathAdd("./");
             this->library->PathAdd("../systems/" + library + "/src/.libs/");
             this->library->PathAdd("../../../systems/" + library + "/src/.libs/");
+
+            for(auto path : system_paths) this->library->PathAdd(path);
         }
         catch(std::string e)
         {
@@ -71,8 +76,6 @@ namespace SystemLoader
         }
         return s;
     }
-
-    std::map<std::string, SystemLoader::Loader *> system_loaders;
 
     ecs::System *Create(std::string system)
     {
@@ -139,5 +142,15 @@ namespace SystemLoader
         }
 
         return system_loaders[system]->SystemGet();
+    }
+
+    std::vector<std::string> PathsGet()
+    {
+        return system_paths;
+    }
+
+    void PathAdd(std::string path)
+    {
+        system_paths.push_back(path);
     }
 }
