@@ -33,7 +33,9 @@ int main(int argc, char *argv[])
     // Load entities from file
     JSONLoader::FileParse(world, "world.json");
 
-    std::cout << world->Export() << std::endl;
+    Json::StreamWriterBuilder builder;
+    const std::string output = Json::writeString(builder, world->Export());
+    std::cout << output << std::endl;
 
     while(ECS->IsRunning())
     {
