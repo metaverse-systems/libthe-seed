@@ -56,3 +56,4 @@ Makefile
 libtool
 *.exe
 *.dll
+node_modules
