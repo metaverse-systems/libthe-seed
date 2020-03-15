@@ -1,5 +1,5 @@
-#include "JSONLoader.hpp"
-#include "ComponentLoader.hpp"
+#include <libthe-seed/JSONLoader.hpp>
+#include <libthe-seed/ComponentLoader.hpp>
 #include <fstream>
 
 namespace JSONLoader

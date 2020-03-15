@@ -2,9 +2,9 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.69])
-AC_INIT([the-seed], [0.0.2], [tim@metaverse.systems])
+AC_INIT([libthe-seed], [0.0.2], [tim@metaverse.systems])
 LT_INIT
-AC_CONFIG_SRCDIR([loaders/LibraryLoader.cpp])
+AC_CONFIG_SRCDIR([src/LibraryLoader.cpp])
 AC_CONFIG_HEADERS([config.h])
 
 AC_CONFIG_MACRO_DIR([m4])

@@ -1,4 +1,4 @@
-#include "ComponentLoader.hpp"
+#include <libthe-seed/ComponentLoader.hpp>
 #include <iostream>
 
 namespace ComponentLoader

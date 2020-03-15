@@ -1,4 +1,4 @@
-#include "SystemLoader.hpp"
+#include <libthe-seed/SystemLoader.hpp>
 #include <iostream>
 
 namespace SystemLoader

@@ -1,4 +1,4 @@
-#include "ResourcePak.hpp"
+#include <libthe-seed/ResourcePak.hpp>
 #include <fstream>
 
 ResourcePak::ResourcePak(std::string resource_pak)

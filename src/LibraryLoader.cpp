@@ -4,7 +4,7 @@
     #include <dlfcn.h>
 #endif
 
-#include "LibraryLoader.hpp"
+#include <libthe-seed/LibraryLoader.hpp>
 #include <fstream>
 #include <iostream>
 
