@@ -2,12 +2,15 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.69])
-AC_INIT([the-seed], [0.0.1], [tim@metaverse.systems])
+AC_INIT([the-seed], [0.0.2], [tim@metaverse.systems])
 LT_INIT
 AC_CONFIG_SRCDIR([loaders/LibraryLoader.cpp])
 AC_CONFIG_HEADERS([config.h])
 
 AC_CONFIG_MACRO_DIR([m4])
+
+PKG_PROG_PKG_CONFIG
+PKG_INSTALLDIR
 
 # Checks for programs.
 AC_PROG_CXX
@@ -31,6 +34,6 @@ AC_CHECK_HEADER([windows.h],
 # Checks for library functions.
 
 AC_CONFIG_FILES([Makefile
-                 loaders/Makefile
-                 MMG/Makefile])
+                 the-seed.pc
+                 src/Makefile])
 AC_OUTPUT
