@@ -36,7 +36,8 @@ void ResourcePak::load_file()
         throw std::runtime_error(err);
     }
 
-    this->header_size = header["header_size"].asUInt();
+    std::string header_size = header["header_size"].asString();
+    this->header_size = std::stoul(header_size);
     uint64_t pointer = this->header_size;
     for(auto &r : header["resources"])
     {

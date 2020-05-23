@@ -12,8 +12,7 @@ namespace SystemLoader
         {
             this->library = new LibraryLoader(library);
             this->library->PathAdd("./");
-            this->library->PathAdd("../systems/" + library + "/src/.libs/");
-            this->library->PathAdd("../../../systems/" + library + "/src/.libs/");
+            this->library->PathAdd("../../" + library + "/src/.libs/");
 
             for(auto path : system_paths) this->library->PathAdd(path);
         }

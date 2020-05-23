@@ -32,11 +32,21 @@ std::vector<std::string> LibraryLoader::PathsGet()
 #else
         std::string full_path = p + "/lib" + this->name + ".so";
 #endif
+
         std::ifstream test_path(full_path);
         if(test_path.is_open()) 
         {
             valid_paths.push_back(full_path);
             test_path.close();
+        }
+    }
+
+    if(valid_paths.size() == 0)
+    {
+        std::cout << "Could not find " + this->name + " shared object in the following paths:" << std::endl;
+        for(auto &p : this->paths)
+        {
+            std::cout << p << std::endl;
         }
     }
 

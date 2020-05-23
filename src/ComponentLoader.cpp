@@ -7,12 +7,39 @@ namespace ComponentLoader
 
     Loader::Loader(std::string library)
     {
+        std::string org;
+
+        if(library.find("/") != std::string::npos)
+        {
+            std::vector<std::string> name;
+            std::string temp;
+            for(size_t counter = 0; counter < library.size(); counter++)
+            {
+                if(library[counter] == '/')
+                {
+                    name.push_back(temp);
+                    temp = "";
+                    continue;
+                }
+
+                temp += library[counter];
+            }
+
+            name.push_back(temp);
+            org = name[0];
+            library = name[1];
+        }
+
         try
         {
             this->library = new LibraryLoader(library);
             this->library->PathAdd(".");
-            this->library->PathAdd("../components/" + library + "/src/.libs/");
-            this->library->PathAdd("../../../components/" + library + "/src/.libs/");
+            this->library->PathAdd("../../" + library + "/src/.libs/");
+            if(org.size())
+            {
+                auto path = "../node_modules/" + org + "/" + library + "/src/.libs";
+                this->library->PathAdd(path);
+            }
 
             for(auto path : component_paths) this->library->PathAdd(path);
         }
