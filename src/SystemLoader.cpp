@@ -1,4 +1,5 @@
 #include <libthe-seed/SystemLoader.hpp>
+#include "NameParser.hpp"
 #include <iostream>
 
 namespace SystemLoader
@@ -8,11 +9,18 @@ namespace SystemLoader
 
     Loader::Loader(std::string library)
     {
+        auto name = NameParser(library);
+
         try
         {
-            this->library = new LibraryLoader(library);
+            this->library = new LibraryLoader(name.library);
             this->library->PathAdd("./");
-            this->library->PathAdd("../../" + library + "/src/.libs/");
+            this->library->PathAdd("../../" + name.library + "/src/.libs/");
+            if(name.org.size())
+            {
+                auto path = "../node_modules/" + name.org + "/" + name.library + "/src/.libs";
+                this->library->PathAdd(path);
+            }
 
             for(auto path : system_paths) this->library->PathAdd(path);
         }

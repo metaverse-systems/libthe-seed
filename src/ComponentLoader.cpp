@@ -1,4 +1,5 @@
 #include <libthe-seed/ComponentLoader.hpp>
+#include "NameParser.hpp"
 #include <iostream>
 
 namespace ComponentLoader
@@ -7,37 +8,16 @@ namespace ComponentLoader
 
     Loader::Loader(std::string library)
     {
-        std::string org;
-
-        if(library.find("/") != std::string::npos)
-        {
-            std::vector<std::string> name;
-            std::string temp;
-            for(size_t counter = 0; counter < library.size(); counter++)
-            {
-                if(library[counter] == '/')
-                {
-                    name.push_back(temp);
-                    temp = "";
-                    continue;
-                }
-
-                temp += library[counter];
-            }
-
-            name.push_back(temp);
-            org = name[0];
-            library = name[1];
-        }
+        auto name = NameParser(library);
 
         try
         {
-            this->library = new LibraryLoader(library);
+            this->library = new LibraryLoader(name.library);
             this->library->PathAdd(".");
-            this->library->PathAdd("../../" + library + "/src/.libs/");
-            if(org.size())
+            this->library->PathAdd("../../" + name.library + "/src/.libs/");
+            if(name.org.size())
             {
-                auto path = "../node_modules/" + org + "/" + library + "/src/.libs";
+                auto path = "../node_modules/" + name.org + "/" + name.library + "/src/.libs";
                 this->library->PathAdd(path);
             }
 

@@ -13,4 +13,5 @@ libthe_seed_la_SOURCES = LibraryLoader.cpp \
 		SystemLoader.cpp \
 		ComponentLoader.cpp \
 		JSONLoader.cpp \
-		ResourcePak.cpp
+		ResourcePak.cpp \
+		NameParser.cpp
