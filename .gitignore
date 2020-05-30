@@ -45,7 +45,7 @@ m4/ltversion.m4
 m4/lt~obsolete.m4
 autom4te.cache
 
-/ecs-cpp.pc
+/the-seed.pc
 /Doxyfile
 Makefile
 .libs
