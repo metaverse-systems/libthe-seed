@@ -35,5 +35,6 @@ AC_CHECK_HEADER([windows.h],
 
 AC_CONFIG_FILES([Makefile
                  the-seed.pc
-                 src/Makefile])
+                 src/Makefile
+                 Doxyfile])
 AC_OUTPUT
