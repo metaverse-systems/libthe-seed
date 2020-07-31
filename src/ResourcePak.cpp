@@ -41,7 +41,7 @@ void ResourcePak::load_file()
     uint64_t pointer = this->header_size;
     for(auto &r : header["resources"])
     {
-        Resource temp;
+        ecs::Resource temp;
         temp.ptr = (char *)(&this->raw[pointer]);
         temp.size = r["bytes"].asUInt();
         this->resource_map[r["name"].asString()] = temp;
@@ -49,7 +49,7 @@ void ResourcePak::load_file()
     }
 }
 
-Resource ResourcePak::get(std::string name)
+ecs::Resource ResourcePak::get(std::string name)
 {
     return this->resource_map[name];
 }
