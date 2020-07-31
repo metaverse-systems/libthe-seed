@@ -6,8 +6,6 @@
 
 #include <libthe-seed/LibraryLoader.hpp>
 #include <fstream>
-#include <iostream>
-
 
 LibraryLoader::LibraryLoader(std::string library)
 {
@@ -43,11 +41,12 @@ std::vector<std::string> LibraryLoader::PathsGet()
 
     if(valid_paths.size() == 0)
     {
-        std::cout << "Could not find " + this->name + " shared object in the following paths:" << std::endl;
+        std::string error = "Could not find " + this->name + " shared object in the following paths:\n";
         for(auto &p : this->paths)
         {
-            std::cout << p << std::endl;
+            error += p + "\n";
         }
+        throw std::runtime_error(error);
     }
 
     return valid_paths;
@@ -86,9 +85,7 @@ void LibraryLoader::Load()
 
     if(this->dl_handle == nullptr)
     {
-        std::cout << "Couldn't open shared object." << std::endl;
-        std::cout << error << std::endl;
-        throw error;
+        throw std::runtime_error(error);
     }
 }
 
@@ -126,8 +123,7 @@ void *LibraryLoader::FunctionGet(std::string FuncName)
 
     if(!ptr)
     {
-        std::cerr << error << std::endl;
-        throw std::string(error);
+        throw std::runtime_error(error);
     }
     return ptr;
 }

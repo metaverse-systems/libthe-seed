@@ -23,9 +23,8 @@ namespace ComponentLoader
 
             for(auto path : component_paths) this->library->PathAdd(path);
         }
-        catch(std::string e)
+        catch(std::runtime_error e)
         {
-            std::cout << "Exception in ComponentLoader::Loader::Loader()" << e << std::endl;
             throw e;
         }
     }
@@ -52,10 +51,8 @@ namespace ComponentLoader
         {
             ptr = this->library->FunctionGet("create_component");
         }
-        catch(std::string e)
+        catch(std::runtime_error e)
         {
-            std::cout << "ComponentLoader::Loader(\"" + this->library->name + "\")::ComponentCreate(&data): Couldn't find create_component in library.";
-            std::cout << e << std::endl;
             throw e;
         }
 
@@ -73,10 +70,9 @@ namespace ComponentLoader
             {
                 component_loaders[component] = new Loader(component);
             }
-            catch(std::string e)
+            catch(std::runtime_error e)
             {
-                std::cout << e << std::endl;
-                exit(1);
+                throw e;
             }
         }
 
@@ -84,10 +80,9 @@ namespace ComponentLoader
         {
             return component_loaders[component]->ComponentCreate();
         }
-        catch(std::string e)
+        catch(std::runtime_error e)
         {
-            std::cout << e << std::endl;
-            exit(1);
+            throw e;
         }
     }
 
@@ -99,10 +94,9 @@ namespace ComponentLoader
             {
                 component_loaders[component] = new Loader(component);
             }
-            catch(std::string e)
+            catch(std::runtime_error e)
             {
-                std::cout << e << std::endl;
-                exit(1);
+                throw e;
             }
         }
 
@@ -110,10 +104,9 @@ namespace ComponentLoader
         {
             return component_loaders[component]->ComponentCreate(data);
         }
-        catch(std::string e)
+        catch(std::runtime_error e)
         {
-            std::cout << e << std::endl;
-            exit(1);
+            throw e;
         }
     }
 
@@ -125,7 +118,7 @@ namespace ComponentLoader
             {
                 component_loaders[component] = new Loader(component);
             }
-            catch(std::string e)
+            catch(std::runtime_error e)
             {
                 throw e;
             }

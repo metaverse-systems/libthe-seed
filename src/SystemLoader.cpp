@@ -1,6 +1,5 @@
 #include <libthe-seed/SystemLoader.hpp>
 #include "NameParser.hpp"
-#include <iostream>
 
 namespace SystemLoader
 {
@@ -24,9 +23,8 @@ namespace SystemLoader
 
             for(auto path : system_paths) this->library->PathAdd(path);
         }
-        catch(std::string e)
+        catch(std::runtime_error e)
         {
-            std::cout << "Error in SystemLoader::Loader::Loader(\"" + library + "\")" << std::endl;
             throw e;
         }
     }
@@ -47,9 +45,8 @@ namespace SystemLoader
         {
             s = creator(nullptr);
         }
-        catch(std::string e)
+        catch(std::runtime_error e)
         {
-            e = "SystemLoader::Loader(\"" + this->library->name + "\")::SystemCreate(): Couldn't get create_system function. " + e;
             throw e;
         }
 
@@ -64,9 +61,8 @@ namespace SystemLoader
         {
             ptr = this->library->FunctionGet("create_system");
         }
-        catch(std::string e)
+        catch(std::runtime_error e)
         {
-            e = "SystemLoader::Loader(\"" + this->library->name + "\")::SystemCreate(void *): Couldn't get create_system function. " + e;
             throw e;
         }
 
@@ -76,9 +72,8 @@ namespace SystemLoader
         {
             s = creator(data);
         }
-        catch(std::string e)
+        catch(std::runtime_error e)
         {
-            std::cout << "Error in SystemLoader::Loader::SystemCreate(void *). " << e << std::endl;
             throw e;
         }
         return s;
@@ -92,10 +87,8 @@ namespace SystemLoader
             {
                 system_loaders[system] = new Loader(system);
             }
-            catch(std::string e)
+            catch(std::runtime_error e)
             {
-                std::cout << "SystemLoader::Create()" << std::endl;
-                std::cout << e << std::endl;
                 throw e;
             }
         }
@@ -111,11 +104,9 @@ namespace SystemLoader
             {
                 system_loaders[system] = new Loader(system);
             }
-            catch(std::string e)
+            catch(std::runtime_error e)
             {
-                std::cout << "SystemLoader::Create(,)" << std::endl;
-                std::cout << e << std::endl;
-                exit(1);
+                throw e;
             }
         }
 
@@ -125,10 +116,9 @@ namespace SystemLoader
         {
             sys = system_loaders[system]->SystemCreate(data);
         }
-        catch(std::string e)
+        catch(std::runtime_error e)
         {
-            std::cout << e << std::endl;
-            exit(1);
+            throw e;
         }
 
         return sys;
@@ -142,7 +132,7 @@ namespace SystemLoader
             {
                 system_loaders[system] = new Loader(system);
             }
-            catch(std::string e)
+            catch(std::runtime_error e)
             {
                 throw e;
             }
