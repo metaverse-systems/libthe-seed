@@ -12,6 +12,5 @@ class ResourcePak
     std::string name;
     uint64_t header_size = 0;
     char *raw = nullptr;
-    void load_file();
-    std::map<std::string, ecs::Resource> resource_map;
+    void Load(ecs::Container *);
 };
