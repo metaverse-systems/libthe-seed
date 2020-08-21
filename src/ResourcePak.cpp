@@ -17,14 +17,11 @@ ResourcePak::ResourcePak(std::string resource_pak)
         this->raw = new char[size];
         file.read(this->raw, size);
         file.close();
-        this->load_file();
         return;
     }
-
-    /* Load from directory */
 }
 
-void ResourcePak::load_file()
+void ResourcePak::Load(ecs::Container *container)
 {
     Json::Value header;
 
@@ -41,15 +38,10 @@ void ResourcePak::load_file()
     uint64_t pointer = this->header_size;
     for(auto &r : header["resources"])
     {
-        Resource temp;
+        ecs::Resource temp;
         temp.ptr = (char *)(&this->raw[pointer]);
         temp.size = r["bytes"].asUInt();
-        this->resource_map[r["name"].asString()] = temp;
+        container->ResourceAdd(r["name"].asString(), temp);
         pointer += temp.size;
     }
-}
-
-Resource ResourcePak::get(std::string name)
-{
-    return this->resource_map[name];
 }
