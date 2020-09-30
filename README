@@ -8,6 +8,8 @@
 
 * Build and install LIEF
 
+  https://github.com/lief-project/LIEF
+
 * Build and install libthe-seed
 
 ```
@@ -24,6 +26,7 @@ sudo make install
 export PKG_CONFIG_PATH=/usr/x86_64-w64-mingw32/lib/pkgconfig/
 cd libthe-seed
 ./autogen.sh
+make distclean
 ./configure --host=x86_64-w64-mingw32 --prefix=/usr/x86_64-w64-mingw32
 make
 sudo make install
