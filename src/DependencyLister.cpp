@@ -1,3 +1,4 @@
+#ifndef __WIN32
 #include <cstring>
 #include <LIEF/Abstract/Binary.hpp>
 #include <LIEF/Abstract/Parser.hpp>
@@ -19,3 +20,21 @@ extern "C"
         return;
     }
 }
+#else
+#include <stdexcept>
+
+extern "C"
+{
+    int depCount(char *filename)
+    {
+        throw std::runtime_error("depCount() not available in windows binary");
+        return -1;
+    }
+
+    void depGet(char *filename, char *library, int index)
+    {
+        throw std::runtime_error("depGet() not available in windows binary");
+        return;
+    }
+}
+#endif

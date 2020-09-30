@@ -1,35 +1,31 @@
-# the seed
+# libthe-seed
 
-## Requirements
+## Build library
 
-* https://github.com/metaversesystems/libecs-cpp
+* Build and install libecs-cpp
 
-* Autotools
+  https://github.com/metaverse-systems/libecs-cpp
 
-* Libtool
+* Build and install LIEF
 
-## Compiling
-
-```
-$ ./autogen.sh
-$ ./configure
-$ make
-```
-
-## Components
-
-To create a component, enter the ```./components``` directory:
+* Build and install libthe-seed
 
 ```
-$ cd components
-$ ./create_component.sh component_name email@address.com
+cd libthe-seed
+./autogen.sh
+./configure
+make
+sudo make install
 ```
 
-## Systems
-
-To create a system, enter the ```./systems``` directory:
+## Build library for Windows
 
 ```
-$ cd systems
-$ ./create_system.sh system_name email@address.com
+export PKG_CONFIG_PATH=/usr/x86_64-w64-mingw32/lib/pkgconfig/
+cd libthe-seed
+./autogen.sh
+./configure --host=x86_64-w64-mingw32 --prefix=/usr/x86_64-w64-mingw32
+make
+sudo make install
+unset PKG_CONFIG_PATH
 ```
