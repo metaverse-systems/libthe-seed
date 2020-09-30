@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['jsonloader_57',['JSONLoader',['../namespaceJSONLoader.html',1,'']]]
+  ['jsonloader_59',['JSONLoader',['../namespaceJSONLoader.html',1,'']]]
 ];

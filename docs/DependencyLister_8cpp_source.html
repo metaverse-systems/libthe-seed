@@ -70,33 +70,52 @@ $(function() {
 <div class="title">DependencyLister.cpp</div>  </div>
 </div><!--header-->
 <div class="contents">
-<a href="DependencyLister_8cpp.html">Go to the documentation of this file.</a><div class="fragment"><div class="line"><a name="l00001"></a><span class="lineno">    1</span>&#160;<span class="preprocessor">#include &lt;cstring&gt;</span></div>
-<div class="line"><a name="l00002"></a><span class="lineno">    2</span>&#160;<span class="preprocessor">#include &lt;LIEF/Abstract/Binary.hpp&gt;</span></div>
-<div class="line"><a name="l00003"></a><span class="lineno">    3</span>&#160;<span class="preprocessor">#include &lt;LIEF/Abstract/Parser.hpp&gt;</span></div>
-<div class="line"><a name="l00004"></a><span class="lineno">    4</span>&#160; </div>
-<div class="line"><a name="l00005"></a><span class="lineno">    5</span>&#160;<span class="keyword">extern</span> <span class="stringliteral">&quot;C&quot;</span></div>
-<div class="line"><a name="l00006"></a><span class="lineno">    6</span>&#160;{</div>
-<div class="line"><a name="l00007"></a><span class="lineno"><a class="line" href="DependencyLister_8cpp.html#a3d956b141914f730b6d476a48b6bce4b">    7</a></span>&#160;    <span class="keywordtype">int</span> <a class="code" href="DependencyLister_8cpp.html#a3d956b141914f730b6d476a48b6bce4b">depCount</a>(<span class="keywordtype">char</span> *filename)</div>
-<div class="line"><a name="l00008"></a><span class="lineno">    8</span>&#160;    {</div>
-<div class="line"><a name="l00009"></a><span class="lineno">    9</span>&#160;        std::unique_ptr&lt;const LIEF::Binary&gt; binary { LIEF::Parser::parse(filename) };</div>
-<div class="line"><a name="l00010"></a><span class="lineno">   10</span>&#160;        <span class="keywordflow">return</span> binary-&gt;imported_libraries().size();</div>
-<div class="line"><a name="l00011"></a><span class="lineno">   11</span>&#160;    }</div>
-<div class="line"><a name="l00012"></a><span class="lineno">   12</span>&#160; </div>
-<div class="line"><a name="l00013"></a><span class="lineno"><a class="line" href="DependencyLister_8cpp.html#ab4012fa7f060e0fd1d8696d9b9a7dfad">   13</a></span>&#160;    <span class="keywordtype">void</span> <a class="code" href="DependencyLister_8cpp.html#ab4012fa7f060e0fd1d8696d9b9a7dfad">depGet</a>(<span class="keywordtype">char</span> *filename, <span class="keywordtype">char</span> *library, <span class="keywordtype">int</span> index)</div>
-<div class="line"><a name="l00014"></a><span class="lineno">   14</span>&#160;    {</div>
-<div class="line"><a name="l00015"></a><span class="lineno">   15</span>&#160;        std::unique_ptr&lt;const LIEF::Binary&gt; binary { LIEF::Parser::parse(filename) };</div>
-<div class="line"><a name="l00016"></a><span class="lineno">   16</span>&#160; </div>
-<div class="line"><a name="l00017"></a><span class="lineno">   17</span>&#160;        std::string name = binary-&gt;imported_libraries()[index];</div>
-<div class="line"><a name="l00018"></a><span class="lineno">   18</span>&#160;        strcpy(library, name.c_str());</div>
-<div class="line"><a name="l00019"></a><span class="lineno">   19</span>&#160;        <span class="keywordflow">return</span>;</div>
-<div class="line"><a name="l00020"></a><span class="lineno">   20</span>&#160;    }</div>
-<div class="line"><a name="l00021"></a><span class="lineno">   21</span>&#160;}</div>
+<a href="DependencyLister_8cpp.html">Go to the documentation of this file.</a><div class="fragment"><div class="line"><a name="l00001"></a><span class="lineno">    1</span>&#160;<span class="preprocessor">#ifndef __WIN32</span></div>
+<div class="line"><a name="l00002"></a><span class="lineno">    2</span>&#160;<span class="preprocessor">#include &lt;cstring&gt;</span></div>
+<div class="line"><a name="l00003"></a><span class="lineno">    3</span>&#160;<span class="preprocessor">#include &lt;LIEF/Abstract/Binary.hpp&gt;</span></div>
+<div class="line"><a name="l00004"></a><span class="lineno">    4</span>&#160;<span class="preprocessor">#include &lt;LIEF/Abstract/Parser.hpp&gt;</span></div>
+<div class="line"><a name="l00005"></a><span class="lineno">    5</span>&#160; </div>
+<div class="line"><a name="l00006"></a><span class="lineno">    6</span>&#160;<span class="keyword">extern</span> <span class="stringliteral">&quot;C&quot;</span></div>
+<div class="line"><a name="l00007"></a><span class="lineno">    7</span>&#160;{</div>
+<div class="line"><a name="l00008"></a><span class="lineno"><a class="line" href="DependencyLister_8cpp.html#a3d956b141914f730b6d476a48b6bce4b">    8</a></span>&#160;    <span class="keywordtype">int</span> <a class="code" href="DependencyLister_8cpp.html#a3d956b141914f730b6d476a48b6bce4b">depCount</a>(<span class="keywordtype">char</span> *filename)</div>
+<div class="line"><a name="l00009"></a><span class="lineno">    9</span>&#160;    {</div>
+<div class="line"><a name="l00010"></a><span class="lineno">   10</span>&#160;        std::unique_ptr&lt;const LIEF::Binary&gt; binary { LIEF::Parser::parse(filename) };</div>
+<div class="line"><a name="l00011"></a><span class="lineno">   11</span>&#160;        <span class="keywordflow">return</span> binary-&gt;imported_libraries().size();</div>
+<div class="line"><a name="l00012"></a><span class="lineno">   12</span>&#160;    }</div>
+<div class="line"><a name="l00013"></a><span class="lineno">   13</span>&#160; </div>
+<div class="line"><a name="l00014"></a><span class="lineno"><a class="line" href="DependencyLister_8cpp.html#ab4012fa7f060e0fd1d8696d9b9a7dfad">   14</a></span>&#160;    <span class="keywordtype">void</span> <a class="code" href="DependencyLister_8cpp.html#ab4012fa7f060e0fd1d8696d9b9a7dfad">depGet</a>(<span class="keywordtype">char</span> *filename, <span class="keywordtype">char</span> *library, <span class="keywordtype">int</span> index)</div>
+<div class="line"><a name="l00015"></a><span class="lineno">   15</span>&#160;    {</div>
+<div class="line"><a name="l00016"></a><span class="lineno">   16</span>&#160;        std::unique_ptr&lt;const LIEF::Binary&gt; binary { LIEF::Parser::parse(filename) };</div>
+<div class="line"><a name="l00017"></a><span class="lineno">   17</span>&#160; </div>
+<div class="line"><a name="l00018"></a><span class="lineno">   18</span>&#160;        std::string name = binary-&gt;imported_libraries()[index];</div>
+<div class="line"><a name="l00019"></a><span class="lineno">   19</span>&#160;        strcpy(library, name.c_str());</div>
+<div class="line"><a name="l00020"></a><span class="lineno">   20</span>&#160;        <span class="keywordflow">return</span>;</div>
+<div class="line"><a name="l00021"></a><span class="lineno">   21</span>&#160;    }</div>
+<div class="line"><a name="l00022"></a><span class="lineno">   22</span>&#160;}</div>
+<div class="line"><a name="l00023"></a><span class="lineno">   23</span>&#160;<span class="preprocessor">#else</span></div>
+<div class="line"><a name="l00024"></a><span class="lineno">   24</span>&#160;<span class="preprocessor">#include &lt;stdexcept&gt;</span></div>
+<div class="line"><a name="l00025"></a><span class="lineno">   25</span>&#160; </div>
+<div class="line"><a name="l00026"></a><span class="lineno">   26</span>&#160;<span class="keyword">extern</span> <span class="stringliteral">&quot;C&quot;</span></div>
+<div class="line"><a name="l00027"></a><span class="lineno">   27</span>&#160;{</div>
+<div class="line"><a name="l00028"></a><span class="lineno">   28</span>&#160;    <span class="keywordtype">int</span> <a class="code" href="DependencyLister_8cpp.html#a3d956b141914f730b6d476a48b6bce4b">depCount</a>(<span class="keywordtype">char</span> *filename)</div>
+<div class="line"><a name="l00029"></a><span class="lineno">   29</span>&#160;    {</div>
+<div class="line"><a name="l00030"></a><span class="lineno">   30</span>&#160;        <span class="keywordflow">throw</span> std::runtime_error(<span class="stringliteral">&quot;depCount() not available in windows binary&quot;</span>);</div>
+<div class="line"><a name="l00031"></a><span class="lineno">   31</span>&#160;        <span class="keywordflow">return</span> -1;</div>
+<div class="line"><a name="l00032"></a><span class="lineno">   32</span>&#160;    }</div>
+<div class="line"><a name="l00033"></a><span class="lineno">   33</span>&#160; </div>
+<div class="line"><a name="l00034"></a><span class="lineno">   34</span>&#160;    <span class="keywordtype">void</span> <a class="code" href="DependencyLister_8cpp.html#ab4012fa7f060e0fd1d8696d9b9a7dfad">depGet</a>(<span class="keywordtype">char</span> *filename, <span class="keywordtype">char</span> *library, <span class="keywordtype">int</span> index)</div>
+<div class="line"><a name="l00035"></a><span class="lineno">   35</span>&#160;    {</div>
+<div class="line"><a name="l00036"></a><span class="lineno">   36</span>&#160;        <span class="keywordflow">throw</span> std::runtime_error(<span class="stringliteral">&quot;depGet() not available in windows binary&quot;</span>);</div>
+<div class="line"><a name="l00037"></a><span class="lineno">   37</span>&#160;        <span class="keywordflow">return</span>;</div>
+<div class="line"><a name="l00038"></a><span class="lineno">   38</span>&#160;    }</div>
+<div class="line"><a name="l00039"></a><span class="lineno">   39</span>&#160;}</div>
+<div class="line"><a name="l00040"></a><span class="lineno">   40</span>&#160;<span class="preprocessor">#endif</span></div>
 </div><!-- fragment --></div><!-- contents -->
-<div class="ttc" id="aDependencyLister_8cpp_html_a3d956b141914f730b6d476a48b6bce4b"><div class="ttname"><a href="DependencyLister_8cpp.html#a3d956b141914f730b6d476a48b6bce4b">depCount</a></div><div class="ttdeci">int depCount(char *filename)</div><div class="ttdef"><b>Definition:</b> <a href="DependencyLister_8cpp_source.html#l00007">DependencyLister.cpp:7</a></div></div>
-<div class="ttc" id="aDependencyLister_8cpp_html_ab4012fa7f060e0fd1d8696d9b9a7dfad"><div class="ttname"><a href="DependencyLister_8cpp.html#ab4012fa7f060e0fd1d8696d9b9a7dfad">depGet</a></div><div class="ttdeci">void depGet(char *filename, char *library, int index)</div><div class="ttdef"><b>Definition:</b> <a href="DependencyLister_8cpp_source.html#l00013">DependencyLister.cpp:13</a></div></div>
+<div class="ttc" id="aDependencyLister_8cpp_html_a3d956b141914f730b6d476a48b6bce4b"><div class="ttname"><a href="DependencyLister_8cpp.html#a3d956b141914f730b6d476a48b6bce4b">depCount</a></div><div class="ttdeci">int depCount(char *filename)</div><div class="ttdef"><b>Definition:</b> <a href="DependencyLister_8cpp_source.html#l00008">DependencyLister.cpp:8</a></div></div>
+<div class="ttc" id="aDependencyLister_8cpp_html_ab4012fa7f060e0fd1d8696d9b9a7dfad"><div class="ttname"><a href="DependencyLister_8cpp.html#ab4012fa7f060e0fd1d8696d9b9a7dfad">depGet</a></div><div class="ttdeci">void depGet(char *filename, char *library, int index)</div><div class="ttdef"><b>Definition:</b> <a href="DependencyLister_8cpp_source.html#l00014">DependencyLister.cpp:14</a></div></div>
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>
-Generated on Sun Sep 27 2020 18:48:34 for libthe-seed by&#160;<a href="http://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.8.20
+Generated on Wed Sep 30 2020 18:27:36 for libthe-seed by&#160;<a href="http://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.8.20
 </small></address>
 </body>
 </html>
