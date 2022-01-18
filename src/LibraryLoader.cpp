@@ -7,11 +7,6 @@
 #include <libthe-seed/LibraryLoader.hpp>
 #include <fstream>
 
-LibraryLoader::LibraryLoader(std::string library)
-{
-    this->name = library;
-}
-
 void LibraryLoader::PathAdd(std::string path)
 {
     this->paths.push_back(path);
@@ -21,14 +16,14 @@ std::vector<std::string> LibraryLoader::PathsGet()
 {
     std::vector<std::string> valid_paths;
 
-    for(auto &p : this->paths)
+    for(const auto &path : this->paths)
     {
 #ifdef _WIN32
-        std::string full_path = p + "\\lib" + this->name + "-0.dll";
+        std::string full_path = path + "\\lib" + this->name + "-0.dll";
 #elif __APPLE__
-        std::string full_path = p + "/lib" + this->name + ".dylib";
+        std::string full_path = path + "/lib" + this->name + ".dylib";
 #else
-        std::string full_path = p + "/lib" + this->name + ".so";
+        std::string full_path = path + "/lib" + this->name + ".so";
 #endif
 
         std::ifstream test_path(full_path);
@@ -42,9 +37,9 @@ std::vector<std::string> LibraryLoader::PathsGet()
     if(valid_paths.size() == 0)
     {
         std::string error = "Could not find " + this->name + " shared object in the following paths:\n";
-        for(auto &p : this->paths)
+        for(const auto &path : this->paths)
         {
-            error += p + "\n";
+            error += path + "\n";
         }
         throw std::runtime_error(error);
     }
@@ -54,28 +49,28 @@ std::vector<std::string> LibraryLoader::PathsGet()
 
 void LibraryLoader::Load()
 {
-    if(this->dl_handle != nullptr) return;
+    if(this->library_handle != nullptr) return;
     std::string error;
     std::vector<std::string> search_paths = this->PathsGet();
 
-    for(auto &path : search_paths)
+    for(const auto &path : search_paths)
     {
 #ifdef _WIN32
-        this->dl_handle = LoadLibrary(path.c_str());
-        if(this->dl_handle == nullptr)
+        this->library_handle = LoadLibrary(path.c_str());
+        if(this->library_handle == nullptr)
         {
             DWORD result = GetLastError();
-            LPSTR messageBuffer = nullptr;
+            LPSTR message_buffer = nullptr;
             size_t size = FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
-                                     NULL, result, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPSTR)&messageBuffer, 0, NULL);
-            error = std::string(messageBuffer);
-            LocalFree(messageBuffer);
+                                     NULL, result, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPSTR)&message_buffer, 0, NULL);
+            error = std::string(message_buffer);
+            LocalFree(message_buffer);
         }
         else break;
 #else
-        dlerror();
-        this->dl_handle = dlopen(path.c_str(), RTLD_LAZY);
-        if(this->dl_handle == nullptr) 
+        dlerror(); // Clear dlerror value
+        this->library_handle = dlopen(path.c_str(), RTLD_LAZY);
+        if(this->library_handle == nullptr) 
         {
             error = std::string(dlerror());
         }
@@ -83,7 +78,7 @@ void LibraryLoader::Load()
 #endif
     }
 
-    if(this->dl_handle == nullptr)
+    if(this->library_handle == nullptr)
     {
         throw std::runtime_error(error);
     }
@@ -92,9 +87,9 @@ void LibraryLoader::Load()
 LibraryLoader::~LibraryLoader()
 {
 #ifdef _WIN32
-    FreeLibrary((HMODULE)this->dl_handle);
+    FreeLibrary((HMODULE)this->library_handle);
 #else
-    dlclose(this->dl_handle);
+    dlclose(this->library_handle);
 #endif
 }
 
@@ -106,18 +101,18 @@ void *LibraryLoader::FunctionGet(std::string FuncName)
     std::string error;
 
 #ifdef _WIN32
-    ptr = (void *)GetProcAddress((HMODULE)this->dl_handle, FuncName.c_str());
+    ptr = (void *)GetProcAddress((HMODULE)this->library_handle, FuncName.c_str());
     if(!ptr)
     {
         DWORD result = GetLastError();
-        LPSTR messageBuffer = nullptr;
+        LPSTR message_buffer = nullptr;
         size_t size = FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
-                                 NULL, result, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPSTR)&messageBuffer, 0, NULL);
-        error = std::string(messageBuffer);
-        LocalFree(messageBuffer);
+                                 NULL, result, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPSTR)&message_buffer, 0, NULL);
+        error = std::string(message_buffer);
+        LocalFree(message_buffer);
     }
 #else
-    ptr = dlsym(this->dl_handle, FuncName.c_str());
+    ptr = dlsym(this->library_handle, FuncName.c_str());
     if(!ptr) error = std::string(dlerror());
 #endif
 

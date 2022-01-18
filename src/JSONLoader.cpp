@@ -2,59 +2,50 @@
 #include <libthe-seed/ComponentLoader.hpp>
 #include <fstream>
 
-namespace JSONLoader
+JSONLoader::JSONLoader(ecs::Container *container): container(container)
 {
-    Loader::Loader(ecs::Container *container, std::string data)
+}
+
+void JSONLoader::StringParse(std::string data)
+{
+    Json::Reader reader;
+    if(!reader.parse(data.c_str(), this->scene))
     {
-        this->container = container;
-        Json::Reader reader;
-        if(!reader.parse(data.c_str(), this->scene))
-        {
-            std::string err = "Couldn't parse scene: " + data;
-            throw std::runtime_error(err);
-        }
+        std::string err = "Couldn't parse scene: " + data;
+        throw std::runtime_error(err);
     }
-
-    void Loader::Parse()
+    for(auto entity : this->scene["entities"])
     {
-        for(auto entity : this->scene["entities"])
-        {
-            auto e = this->container->Entity(entity["Handle"].asString());
+        auto e = this->container->Entity(entity["Handle"].asString());
 
-            for(auto type : entity["Components"].getMemberNames())
+        for(auto type : entity["Components"].getMemberNames())
+        {
+            for(auto component : entity["Components"][type])
             {
-                for(auto component : entity["Components"][type])
-                {
-                    e->Component(ComponentLoader::Create(type, &component));
-                }
+                e->Component(ComponentLoader::Create(type, &component));
             }
         }
     }
+}
 
-    Loader::~Loader()
-    {
-    }
+void JSONLoader::FileParse(std::string filename)
+{
+    std::string data;
+    std::ifstream file;
+    std::streampos fsize, fstart = 0;
 
-    void StringParse(ecs::Container *container, std::string data)
-    {
-        Loader(container, data).Parse();
-    }
+    file.open(filename);
+    fstart = file.tellg();
+    file.seekg(0, std::ios::end);
+    fsize = file.tellg() - fstart;
+    file.seekg(0, std::ios::beg);
+    data.resize(fsize);
+    file.read(&data[0], fsize);
+    file.close();
 
-    void FileParse(ecs::Container *container, std::string filename)
-    {
-        std::string data;
-        std::ifstream file;
-        std::streampos fsize, fstart = 0;
+    this->StringParse(data);
+}
 
-        file.open(filename);
-        fstart = file.tellg();
-        file.seekg(0, std::ios::end);
-        fsize = file.tellg() - fstart;
-        file.seekg(0, std::ios::beg);
-        data.resize(fsize);
-        file.read(&data[0], fsize);
-        file.close();
-
-        StringParse(container, data);
-    }
+JSONLoader::~JSONLoader()
+{
 }

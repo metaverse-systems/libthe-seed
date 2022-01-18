@@ -3,19 +3,35 @@
 #include <string>
 #include <libecs-cpp/ecs.hpp>
 
-namespace JSONLoader
+/**
+ * @brief Loads Entities, Components, and Systems from JSON data.
+ * 
+ */
+class JSONLoader
 {
-    class Loader
-    {
-      public:
-        Loader(ecs::Container *, std::string data);
-        ~Loader();
-        void Parse();
-      private:
-        Json::Value scene;
-        ecs::Container *container = nullptr;
-    };
-
-    void StringParse(ecs::Container *, std::string data);
-    void FileParse(ecs::Container *, std::string filename);
-}
+  public:
+    /**
+     * @brief Construct a new JSONLoader object.
+     * 
+     * @param container A pointer to the ECS container that will 
+     *                  house the Entities, Components, and Systems
+     *                  imported from JSON data.
+     */
+    JSONLoader(ecs::Container *container);
+    ~JSONLoader();
+    /**
+     * @brief Parses ECS data from string.
+     * 
+     * @param data JSON formatted ECS data.
+     */
+    void StringParse(std::string data);
+    /**
+     * @brief Parses ECS data from a file.
+     * 
+     * @param filename JSON formatted file containing ECS data.
+     */
+    void FileParse(std::string filename);
+  private:
+    Json::Value scene;
+    ecs::Container *container = nullptr;
+};

@@ -1,10 +1,10 @@
 <map id="src/JSONLoader.cpp" name="src/JSONLoader.cpp">
-<area shape="rect" id="node1" title=" " alt="" coords="256,5,399,32"/>
-<area shape="rect" id="node2" href="$JSONLoader_8hpp.html" title=" " alt="" coords="5,80,193,107"/>
-<area shape="rect" id="node5" href="$ComponentLoader_8hpp.html" title=" " alt="" coords="218,80,437,107"/>
-<area shape="rect" id="node8" title=" " alt="" coords="461,80,527,107"/>
-<area shape="rect" id="node3" title=" " alt="" coords="277,229,332,256"/>
-<area shape="rect" id="node4" title=" " alt="" coords="137,155,267,181"/>
-<area shape="rect" id="node6" href="$LibraryLoader_8hpp.html" title=" " alt="" coords="343,155,467,181"/>
-<area shape="rect" id="node7" title=" " alt="" coords="375,229,434,256"/>
+<area shape="rect" id="node1" title=" " alt="" coords="282,5,430,32"/>
+<area shape="rect" id="node2" href="$JSONLoader_8hpp.html" title=" " alt="" coords="5,80,208,107"/>
+<area shape="rect" id="node5" href="$ComponentLoader_8hpp.html" title=" " alt="" coords="233,80,479,107"/>
+<area shape="rect" id="node8" title=" " alt="" coords="503,80,577,107"/>
+<area shape="rect" id="node3" title=" " alt="" coords="296,229,355,256"/>
+<area shape="rect" id="node4" title=" " alt="" coords="145,155,287,181"/>
+<area shape="rect" id="node6" href="$LibraryLoader_8hpp.html" title=" " alt="" coords="363,155,501,181"/>
+<area shape="rect" id="node7" title=" " alt="" coords="401,229,463,256"/>
 </map>

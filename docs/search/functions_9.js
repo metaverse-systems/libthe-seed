@@ -1,5 +1,6 @@
 var searchData=
 [
-  ['_7elibraryloader_94',['~LibraryLoader',['../classLibraryLoader.html#aa5ae9c586699873106b51085f37560cf',1,'LibraryLoader']]],
-  ['_7eloader_95',['~Loader',['../classComponentLoader_1_1Loader.html#ad0228ea93ca1a7a3af22db8d610b46fe',1,'ComponentLoader::Loader::~Loader()'],['../classJSONLoader_1_1Loader.html#af2bb2a900bd63744654b720d9adcfcfa',1,'JSONLoader::Loader::~Loader()'],['../classSystemLoader_1_1Loader.html#a877d0d2da067f3e16a14359e12d72915',1,'SystemLoader::Loader::~Loader()']]]
+  ['stringparse_89',['StringParse',['../classJSONLoader.html#ab74683b0bd9b3b0fb7a791800dbad481',1,'JSONLoader']]],
+  ['systemcreate_90',['SystemCreate',['../classSystemLoader_1_1Loader.html#a8d783714e0a781217428a64cfd5d6238',1,'SystemLoader::Loader::SystemCreate()'],['../classSystemLoader_1_1Loader.html#a4937c3c07189697d23d8468850e0e024',1,'SystemLoader::Loader::SystemCreate(void *data)']]],
+  ['systemget_91',['SystemGet',['../classSystemLoader_1_1Loader.html#ac8b56d76e82f991f15e0c2bd28d2f80d',1,'SystemLoader::Loader']]]
 ];

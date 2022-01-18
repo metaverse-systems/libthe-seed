@@ -8,6 +8,5 @@ var searchData=
   ['componentloader_5',['ComponentLoader',['../namespaceComponentLoader.html',1,'']]],
   ['componentloader_2ecpp_6',['ComponentLoader.cpp',['../ComponentLoader_8cpp.html',1,'']]],
   ['componentloader_2ehpp_7',['ComponentLoader.hpp',['../ComponentLoader_8hpp.html',1,'']]],
-  ['container_8',['container',['../classJSONLoader_1_1Loader.html#a052f341e1464caf70abd2bb3394b1057',1,'JSONLoader::Loader']]],
-  ['create_9',['Create',['../namespaceComponentLoader.html#a70d5c796577ce8c56a8e55e9c5e311f8',1,'ComponentLoader::Create(std::string component)'],['../namespaceComponentLoader.html#a0fbcfc718c5f45921286d325afbff6bd',1,'ComponentLoader::Create(std::string component, void *data)'],['../namespaceSystemLoader.html#a5d4082acf7b553c3c3e760b6a55ed9e6',1,'SystemLoader::Create(std::string system)'],['../namespaceSystemLoader.html#a40ca2221dc7e790d89bae95080c91bd2',1,'SystemLoader::Create(std::string system, void *data)']]]
+  ['create_8',['Create',['../namespaceComponentLoader.html#a70d5c796577ce8c56a8e55e9c5e311f8',1,'ComponentLoader::Create(std::string component)'],['../namespaceComponentLoader.html#a0fbcfc718c5f45921286d325afbff6bd',1,'ComponentLoader::Create(std::string component, void *data)'],['../namespaceSystemLoader.html#a5d4082acf7b553c3c3e760b6a55ed9e6',1,'SystemLoader::Create(std::string system)'],['../namespaceSystemLoader.html#a40ca2221dc7e790d89bae95080c91bd2',1,'SystemLoader::Create(std::string system, void *data)']]]
 ];
