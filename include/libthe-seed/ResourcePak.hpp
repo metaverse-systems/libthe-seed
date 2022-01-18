@@ -7,10 +7,28 @@
 class ResourcePak
 {
   public:
-    ResourcePak(std::string resource_pak);
-    ecs::Resource get(std::string resource_name);
-    std::string name;
+    /**
+     * @brief Construct a new ResourcePak object.
+     * 
+     * @param filename Path to resource pak to load.
+     */
+    ResourcePak(std::string filename);
+    /**
+     * @brief Load resource by name.
+     * 
+     * @param container Container to load resource into.
+     * @param name Name of resource to load.
+     */
+    void Load(ecs::Container *container, std::string name);
+    /**
+     * @brief Load all resources in Resource Pak.
+     * 
+     * @param container Container to load resource into.
+     */
+    void LoadAll(ecs::Container *container);
+  private:
+    const std::string filename;
     uint64_t header_size = 0;
     char *raw = nullptr;
-    void Load(ecs::Container *);
+    Json::Value header;
 };

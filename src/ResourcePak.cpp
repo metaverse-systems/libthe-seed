@@ -1,47 +1,55 @@
 #include <libthe-seed/ResourcePak.hpp>
 #include <fstream>
 
-ResourcePak::ResourcePak(std::string resource_pak)
+ResourcePak::ResourcePak(std::string filename): filename(filename)
 {
-    this->name = resource_pak;
-
     std::streampos size;
-    std::ifstream file(this->name + ".pak", std::ios::binary);
-    if(file.good())
+    std::ifstream file(this->filename, std::ios::binary);
+    if(!file.good())
     {
-        // get its size:
-        file.seekg(0, std::ios::end);
-        size = file.tellg();
-        file.seekg(0, std::ios::beg);
+        throw std::runtime_error("Couldn't open resource pak: " + filename);
+    }
 
-        this->raw = new char[size];
-        file.read(this->raw, size);
-        file.close();
-        return;
+    // get its size:
+    file.seekg(0, std::ios::end);
+    size = file.tellg();
+    file.seekg(0, std::ios::beg);
+
+    this->raw = new char[size];
+    file.read(this->raw, size);
+    file.close();
+
+    Json::Reader reader;
+    if(!reader.parse(this->raw, this->header))
+    {
+        throw std::runtime_error("Couldn't parse header for " + this->filename);
+    }
+
+    this->header_size = std::stoul(this->header["header_size"].asString());
+}
+
+void ResourcePak::Load(ecs::Container *container, std::string name)
+{
+    uint64_t pointer = this->header_size;
+    for(auto &resource : this->header["resources"])
+    {
+        if(resource["name"].asString() != name)
+        {
+            pointer += resource["bytes"].asUInt();
+            continue;
+        }
+
+        ecs::Resource temp;
+        temp.ptr = (char *)(&this->raw[pointer]);
+        temp.size = resource["bytes"].asUInt();
+        container->ResourceAdd(resource["name"].asString(), temp);
     }
 }
 
-void ResourcePak::Load(ecs::Container *container)
+void ResourcePak::LoadAll(ecs::Container *container)
 {
-    Json::Value header;
-
-    Json::Reader reader;
-    bool parsingSuccessful = reader.parse(this->raw, header);  
-    if(!parsingSuccessful)
+    for(auto &resource : this->header["resources"])
     {
-        std::string err = "Couldn't parse header for " + this->name;
-        throw std::runtime_error(err);
-    }
-
-    std::string header_size = header["header_size"].asString();
-    this->header_size = std::stoul(header_size);
-    uint64_t pointer = this->header_size;
-    for(auto &r : header["resources"])
-    {
-        ecs::Resource temp;
-        temp.ptr = (char *)(&this->raw[pointer]);
-        temp.size = r["bytes"].asUInt();
-        container->ResourceAdd(r["name"].asString(), temp);
-        pointer += temp.size;
+        this->Load(container, resource["name"].asString());
     }
 }

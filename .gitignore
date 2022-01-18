@@ -57,3 +57,4 @@ libtool
 *.exe
 *.dll
 node_modules
+.vscode

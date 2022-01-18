@@ -1,4 +1,5 @@
 var searchData=
 [
-  ['org_100',['org',['../classNameParser.html#a183b5c5b9ab6e5aee8e2843de39236a6',1,'NameParser']]]
+  ['system_5floaders_98',['system_loaders',['../namespaceSystemLoader.html#ab23954e9d34a19432f5be0a0c9dc182d',1,'SystemLoader']]],
+  ['system_5fpaths_99',['system_paths',['../namespaceSystemLoader.html#abdbbcaddf184a931b9322bd618972d74',1,'SystemLoader']]]
 ];

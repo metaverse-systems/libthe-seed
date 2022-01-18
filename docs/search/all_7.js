@@ -1,7 +1,4 @@
 var searchData=
 [
-  ['name_27',['name',['../classLibraryLoader.html#a6912037d160f30be260cb555e57f2314',1,'LibraryLoader::name()'],['../classResourcePak.html#a854d294b9ecaf4e6e143c84be9f349f6',1,'ResourcePak::name()']]],
-  ['nameparser_28',['NameParser',['../classNameParser.html',1,'NameParser'],['../classNameParser.html#a4c23e3c4cd4d6d087c37535ddb26c891',1,'NameParser::NameParser()']]],
-  ['nameparser_2ecpp_29',['NameParser.cpp',['../NameParser_8cpp.html',1,'']]],
-  ['nameparser_2ehpp_30',['NameParser.hpp',['../NameParser_8hpp.html',1,'']]]
+  ['org_30',['org',['../classNameParser.html#a183b5c5b9ab6e5aee8e2843de39236a6',1,'NameParser']]]
 ];

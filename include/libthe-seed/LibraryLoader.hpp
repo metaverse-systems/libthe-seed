@@ -24,7 +24,7 @@ class LibraryLoader
      * @param FuncName The name of the function to load.
      * @return void* A pointer to the function.
      */
-    void *FunctionGet(std::string FuncName);
+    void *FunctionGet(std::string FunctionName);
     /**
      * @brief Adds a path to the library path search list.
      * 

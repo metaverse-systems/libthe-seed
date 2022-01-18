@@ -84,9 +84,9 @@ Public Member Functions</h2></td></tr>
 <tr class="separator:aaf7e761c07e4d34c6e0eb77145d32eb7"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aa5ae9c586699873106b51085f37560cf"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classLibraryLoader.html#aa5ae9c586699873106b51085f37560cf">~LibraryLoader</a> ()</td></tr>
 <tr class="separator:aa5ae9c586699873106b51085f37560cf"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ac9a4375227dc6d886784b86ba8b7fa7c"><td class="memItemLeft" align="right" valign="top">void *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classLibraryLoader.html#ac9a4375227dc6d886784b86ba8b7fa7c">FunctionGet</a> (std::string FuncName)</td></tr>
-<tr class="memdesc:ac9a4375227dc6d886784b86ba8b7fa7c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get pointer to function in library.  <a href="classLibraryLoader.html#ac9a4375227dc6d886784b86ba8b7fa7c">More...</a><br /></td></tr>
-<tr class="separator:ac9a4375227dc6d886784b86ba8b7fa7c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa733f6146228949cccccded5e4a0520e"><td class="memItemLeft" align="right" valign="top">void *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classLibraryLoader.html#aa733f6146228949cccccded5e4a0520e">FunctionGet</a> (std::string FunctionName)</td></tr>
+<tr class="memdesc:aa733f6146228949cccccded5e4a0520e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get pointer to function in library.  <a href="classLibraryLoader.html#aa733f6146228949cccccded5e4a0520e">More...</a><br /></td></tr>
+<tr class="separator:aa733f6146228949cccccded5e4a0520e"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a799ecd826e2efcf674628b6f73267d2e"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classLibraryLoader.html#a799ecd826e2efcf674628b6f73267d2e">PathAdd</a> (std::string path)</td></tr>
 <tr class="memdesc:a799ecd826e2efcf674628b6f73267d2e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Adds a path to the library path search list.  <a href="classLibraryLoader.html#a799ecd826e2efcf674628b6f73267d2e">More...</a><br /></td></tr>
 <tr class="separator:a799ecd826e2efcf674628b6f73267d2e"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -163,8 +163,8 @@ Public Attributes</h2></td></tr>
 </div>
 </div>
 <h2 class="groupheader">Member Function Documentation</h2>
-<a id="ac9a4375227dc6d886784b86ba8b7fa7c"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ac9a4375227dc6d886784b86ba8b7fa7c">&#9670;&nbsp;</a></span>FunctionGet()</h2>
+<a id="aa733f6146228949cccccded5e4a0520e"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aa733f6146228949cccccded5e4a0520e">&#9670;&nbsp;</a></span>FunctionGet()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -173,7 +173,7 @@ Public Attributes</h2></td></tr>
           <td class="memname">void * LibraryLoader::FunctionGet </td>
           <td>(</td>
           <td class="paramtype">std::string&#160;</td>
-          <td class="paramname"><em>FuncName</em></td><td>)</td>
+          <td class="paramname"><em>FunctionName</em></td><td>)</td>
           <td></td>
         </tr>
       </table>
@@ -194,7 +194,7 @@ Public Attributes</h2></td></tr>
 <div class="line"><a name="l00101"></a><span class="lineno">  101</span>&#160;    std::string error;</div>
 <div class="line"><a name="l00102"></a><span class="lineno">  102</span>&#160; </div>
 <div class="line"><a name="l00103"></a><span class="lineno">  103</span>&#160;<span class="preprocessor">#ifdef _WIN32</span></div>
-<div class="line"><a name="l00104"></a><span class="lineno">  104</span>&#160;    ptr = (<span class="keywordtype">void</span> *)GetProcAddress((HMODULE)this-&gt;library_handle, FuncName.c_str());</div>
+<div class="line"><a name="l00104"></a><span class="lineno">  104</span>&#160;    ptr = (<span class="keywordtype">void</span> *)GetProcAddress((HMODULE)this-&gt;library_handle, FunctionName.c_str());</div>
 <div class="line"><a name="l00105"></a><span class="lineno">  105</span>&#160;    <span class="keywordflow">if</span>(!ptr)</div>
 <div class="line"><a name="l00106"></a><span class="lineno">  106</span>&#160;    {</div>
 <div class="line"><a name="l00107"></a><span class="lineno">  107</span>&#160;        DWORD result = GetLastError();</div>
@@ -205,7 +205,7 @@ Public Attributes</h2></td></tr>
 <div class="line"><a name="l00112"></a><span class="lineno">  112</span>&#160;        LocalFree(message_buffer);</div>
 <div class="line"><a name="l00113"></a><span class="lineno">  113</span>&#160;    }</div>
 <div class="line"><a name="l00114"></a><span class="lineno">  114</span>&#160;<span class="preprocessor">#else</span></div>
-<div class="line"><a name="l00115"></a><span class="lineno">  115</span>&#160;    ptr = dlsym(this-&gt;library_handle, FuncName.c_str());</div>
+<div class="line"><a name="l00115"></a><span class="lineno">  115</span>&#160;    ptr = dlsym(this-&gt;library_handle, FunctionName.c_str());</div>
 <div class="line"><a name="l00116"></a><span class="lineno">  116</span>&#160;    <span class="keywordflow">if</span>(!ptr) error = std::string(dlerror());</div>
 <div class="line"><a name="l00117"></a><span class="lineno">  117</span>&#160;<span class="preprocessor">#endif</span></div>
 <div class="line"><a name="l00118"></a><span class="lineno">  118</span>&#160; </div>
@@ -273,7 +273,7 @@ Public Attributes</h2></td></tr>
 </div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>
-Generated on Mon Jan 17 2022 23:15:15 for libthe-seed by&#160;<a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.9.1
+Generated on Tue Jan 18 2022 01:18:31 for libthe-seed by&#160;<a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.9.1
 </small></address>
 </body>
 </html>

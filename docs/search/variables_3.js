@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['name_99',['name',['../classLibraryLoader.html#a6912037d160f30be260cb555e57f2314',1,'LibraryLoader::name()'],['../classResourcePak.html#a854d294b9ecaf4e6e143c84be9f349f6',1,'ResourcePak::name()']]]
+  ['org_97',['org',['../classNameParser.html#a183b5c5b9ab6e5aee8e2843de39236a6',1,'NameParser']]]
 ];

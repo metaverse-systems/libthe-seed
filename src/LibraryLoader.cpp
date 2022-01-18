@@ -93,7 +93,7 @@ LibraryLoader::~LibraryLoader()
 #endif
 }
 
-void *LibraryLoader::FunctionGet(std::string FuncName)
+void *LibraryLoader::FunctionGet(std::string FunctionName)
 {
     this->Load();
 
@@ -101,7 +101,7 @@ void *LibraryLoader::FunctionGet(std::string FuncName)
     std::string error;
 
 #ifdef _WIN32
-    ptr = (void *)GetProcAddress((HMODULE)this->library_handle, FuncName.c_str());
+    ptr = (void *)GetProcAddress((HMODULE)this->library_handle, FunctionName.c_str());
     if(!ptr)
     {
         DWORD result = GetLastError();
@@ -112,7 +112,7 @@ void *LibraryLoader::FunctionGet(std::string FuncName)
         LocalFree(message_buffer);
     }
 #else
-    ptr = dlsym(this->library_handle, FuncName.c_str());
+    ptr = dlsym(this->library_handle, FunctionName.c_str());
     if(!ptr) error = std::string(dlerror());
 #endif
 

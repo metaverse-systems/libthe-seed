@@ -65,7 +65,6 @@ $(function() {
 <div class="header">
   <div class="summary">
 <a href="#pub-methods">Public Member Functions</a> &#124;
-<a href="#pub-attribs">Public Attributes</a> &#124;
 <a href="classResourcePak-members.html">List of all members</a>  </div>
   <div class="headertitle">
 <div class="title">ResourcePak Class Reference</div>  </div>
@@ -76,28 +75,22 @@ $(function() {
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
-<tr class="memitem:a0e94e1d8c16113cd9c07519c008f6216"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classResourcePak.html#a0e94e1d8c16113cd9c07519c008f6216">ResourcePak</a> (std::string resource_pak)</td></tr>
-<tr class="separator:a0e94e1d8c16113cd9c07519c008f6216"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:af1a9e67da218cd9669649d3ceb48ea5b"><td class="memItemLeft" align="right" valign="top">ecs::Resource&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classResourcePak.html#af1a9e67da218cd9669649d3ceb48ea5b">get</a> (std::string resource_name)</td></tr>
-<tr class="separator:af1a9e67da218cd9669649d3ceb48ea5b"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a54b6effb004e34f550336697bb2189a7"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classResourcePak.html#a54b6effb004e34f550336697bb2189a7">Load</a> (ecs::Container *)</td></tr>
-<tr class="separator:a54b6effb004e34f550336697bb2189a7"><td class="memSeparator" colspan="2">&#160;</td></tr>
-</table><table class="memberdecls">
-<tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pub-attribs"></a>
-Public Attributes</h2></td></tr>
-<tr class="memitem:a854d294b9ecaf4e6e143c84be9f349f6"><td class="memItemLeft" align="right" valign="top">std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classResourcePak.html#a854d294b9ecaf4e6e143c84be9f349f6">name</a></td></tr>
-<tr class="separator:a854d294b9ecaf4e6e143c84be9f349f6"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a9158a9a5b4b3a1e9e54b038900e2d39d"><td class="memItemLeft" align="right" valign="top">uint64_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classResourcePak.html#a9158a9a5b4b3a1e9e54b038900e2d39d">header_size</a> = 0</td></tr>
-<tr class="separator:a9158a9a5b4b3a1e9e54b038900e2d39d"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ab26f4255f9c4dc9c4aeb21dafd79825a"><td class="memItemLeft" align="right" valign="top">char *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classResourcePak.html#ab26f4255f9c4dc9c4aeb21dafd79825a">raw</a> = nullptr</td></tr>
-<tr class="separator:ab26f4255f9c4dc9c4aeb21dafd79825a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a20d321f92d49c85e08cb9f0b38f08e12"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classResourcePak.html#a20d321f92d49c85e08cb9f0b38f08e12">ResourcePak</a> (std::string filename)</td></tr>
+<tr class="memdesc:a20d321f92d49c85e08cb9f0b38f08e12"><td class="mdescLeft">&#160;</td><td class="mdescRight">Construct a new <a class="el" href="classResourcePak.html">ResourcePak</a> object.  <a href="classResourcePak.html#a20d321f92d49c85e08cb9f0b38f08e12">More...</a><br /></td></tr>
+<tr class="separator:a20d321f92d49c85e08cb9f0b38f08e12"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac91fc80c1bcafccbc5e52f28015caa29"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classResourcePak.html#ac91fc80c1bcafccbc5e52f28015caa29">Load</a> (ecs::Container *container, std::string name)</td></tr>
+<tr class="memdesc:ac91fc80c1bcafccbc5e52f28015caa29"><td class="mdescLeft">&#160;</td><td class="mdescRight">Load resource by name.  <a href="classResourcePak.html#ac91fc80c1bcafccbc5e52f28015caa29">More...</a><br /></td></tr>
+<tr class="separator:ac91fc80c1bcafccbc5e52f28015caa29"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad796452c62d45b03698d282008a3ef3d"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classResourcePak.html#ad796452c62d45b03698d282008a3ef3d">LoadAll</a> (ecs::Container *container)</td></tr>
+<tr class="memdesc:ad796452c62d45b03698d282008a3ef3d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Load all resources in Resource Pak.  <a href="classResourcePak.html#ad796452c62d45b03698d282008a3ef3d">More...</a><br /></td></tr>
+<tr class="separator:ad796452c62d45b03698d282008a3ef3d"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock">
 <p class="definition">Definition at line <a class="el" href="ResourcePak_8hpp_source.html#l00007">7</a> of file <a class="el" href="ResourcePak_8hpp_source.html">ResourcePak.hpp</a>.</p>
 </div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
-<a id="a0e94e1d8c16113cd9c07519c008f6216"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a0e94e1d8c16113cd9c07519c008f6216">&#9670;&nbsp;</a></span>ResourcePak()</h2>
+<a id="a20d321f92d49c85e08cb9f0b38f08e12"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a20d321f92d49c85e08cb9f0b38f08e12">&#9670;&nbsp;</a></span>ResourcePak()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -106,59 +99,51 @@ Public Attributes</h2></td></tr>
           <td class="memname">ResourcePak::ResourcePak </td>
           <td>(</td>
           <td class="paramtype">std::string&#160;</td>
-          <td class="paramname"><em>resource_pak</em></td><td>)</td>
+          <td class="paramname"><em>filename</em></td><td>)</td>
           <td></td>
         </tr>
       </table>
 </div><div class="memdoc">
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">filename</td><td>Path to resource pak to load. </td></tr>
+  </table>
+  </dd>
+</dl>
 
 <p class="definition">Definition at line <a class="el" href="ResourcePak_8cpp_source.html#l00004">4</a> of file <a class="el" href="ResourcePak_8cpp_source.html">ResourcePak.cpp</a>.</p>
-<div class="fragment"><div class="line"><a name="l00005"></a><span class="lineno">    5</span>&#160;{</div>
-<div class="line"><a name="l00006"></a><span class="lineno">    6</span>&#160;    this-&gt;<a class="code" href="classResourcePak.html#a854d294b9ecaf4e6e143c84be9f349f6">name</a> = resource_pak;</div>
-<div class="line"><a name="l00007"></a><span class="lineno">    7</span>&#160; </div>
-<div class="line"><a name="l00008"></a><span class="lineno">    8</span>&#160;    std::streampos size;</div>
-<div class="line"><a name="l00009"></a><span class="lineno">    9</span>&#160;    std::ifstream file(this-&gt;<a class="code" href="classResourcePak.html#a854d294b9ecaf4e6e143c84be9f349f6">name</a> + <span class="stringliteral">&quot;.pak&quot;</span>, std::ios::binary);</div>
-<div class="line"><a name="l00010"></a><span class="lineno">   10</span>&#160;    <span class="keywordflow">if</span>(file.good())</div>
-<div class="line"><a name="l00011"></a><span class="lineno">   11</span>&#160;    {</div>
-<div class="line"><a name="l00012"></a><span class="lineno">   12</span>&#160;        <span class="comment">// get its size:</span></div>
-<div class="line"><a name="l00013"></a><span class="lineno">   13</span>&#160;        file.seekg(0, std::ios::end);</div>
-<div class="line"><a name="l00014"></a><span class="lineno">   14</span>&#160;        size = file.tellg();</div>
-<div class="line"><a name="l00015"></a><span class="lineno">   15</span>&#160;        file.seekg(0, std::ios::beg);</div>
-<div class="line"><a name="l00016"></a><span class="lineno">   16</span>&#160; </div>
-<div class="line"><a name="l00017"></a><span class="lineno">   17</span>&#160;        this-&gt;<a class="code" href="classResourcePak.html#ab26f4255f9c4dc9c4aeb21dafd79825a">raw</a> = <span class="keyword">new</span> <span class="keywordtype">char</span>[size];</div>
-<div class="line"><a name="l00018"></a><span class="lineno">   18</span>&#160;        file.read(this-&gt;<a class="code" href="classResourcePak.html#ab26f4255f9c4dc9c4aeb21dafd79825a">raw</a>, size);</div>
-<div class="line"><a name="l00019"></a><span class="lineno">   19</span>&#160;        file.close();</div>
-<div class="line"><a name="l00020"></a><span class="lineno">   20</span>&#160;        <span class="keywordflow">return</span>;</div>
-<div class="line"><a name="l00021"></a><span class="lineno">   21</span>&#160;    }</div>
-<div class="line"><a name="l00022"></a><span class="lineno">   22</span>&#160;}</div>
-<div class="ttc" id="aclassResourcePak_html_a854d294b9ecaf4e6e143c84be9f349f6"><div class="ttname"><a href="classResourcePak.html#a854d294b9ecaf4e6e143c84be9f349f6">ResourcePak::name</a></div><div class="ttdeci">std::string name</div><div class="ttdef"><b>Definition:</b> <a href="ResourcePak_8hpp_source.html#l00012">ResourcePak.hpp:12</a></div></div>
-<div class="ttc" id="aclassResourcePak_html_ab26f4255f9c4dc9c4aeb21dafd79825a"><div class="ttname"><a href="classResourcePak.html#ab26f4255f9c4dc9c4aeb21dafd79825a">ResourcePak::raw</a></div><div class="ttdeci">char * raw</div><div class="ttdef"><b>Definition:</b> <a href="ResourcePak_8hpp_source.html#l00014">ResourcePak.hpp:14</a></div></div>
+<div class="fragment"><div class="line"><a name="l00004"></a><span class="lineno">    4</span>&#160;                                          : filename(filename)</div>
+<div class="line"><a name="l00005"></a><span class="lineno">    5</span>&#160;{</div>
+<div class="line"><a name="l00006"></a><span class="lineno">    6</span>&#160;    std::streampos size;</div>
+<div class="line"><a name="l00007"></a><span class="lineno">    7</span>&#160;    std::ifstream file(this-&gt;filename, std::ios::binary);</div>
+<div class="line"><a name="l00008"></a><span class="lineno">    8</span>&#160;    <span class="keywordflow">if</span>(!file.good())</div>
+<div class="line"><a name="l00009"></a><span class="lineno">    9</span>&#160;    {</div>
+<div class="line"><a name="l00010"></a><span class="lineno">   10</span>&#160;        <span class="keywordflow">throw</span> std::runtime_error(<span class="stringliteral">&quot;Couldn&#39;t open resource pak: &quot;</span> + filename);</div>
+<div class="line"><a name="l00011"></a><span class="lineno">   11</span>&#160;    }</div>
+<div class="line"><a name="l00012"></a><span class="lineno">   12</span>&#160; </div>
+<div class="line"><a name="l00013"></a><span class="lineno">   13</span>&#160;    <span class="comment">// get its size:</span></div>
+<div class="line"><a name="l00014"></a><span class="lineno">   14</span>&#160;    file.seekg(0, std::ios::end);</div>
+<div class="line"><a name="l00015"></a><span class="lineno">   15</span>&#160;    size = file.tellg();</div>
+<div class="line"><a name="l00016"></a><span class="lineno">   16</span>&#160;    file.seekg(0, std::ios::beg);</div>
+<div class="line"><a name="l00017"></a><span class="lineno">   17</span>&#160; </div>
+<div class="line"><a name="l00018"></a><span class="lineno">   18</span>&#160;    this-&gt;raw = <span class="keyword">new</span> <span class="keywordtype">char</span>[size];</div>
+<div class="line"><a name="l00019"></a><span class="lineno">   19</span>&#160;    file.read(this-&gt;raw, size);</div>
+<div class="line"><a name="l00020"></a><span class="lineno">   20</span>&#160;    file.close();</div>
+<div class="line"><a name="l00021"></a><span class="lineno">   21</span>&#160; </div>
+<div class="line"><a name="l00022"></a><span class="lineno">   22</span>&#160;    Json::Reader reader;</div>
+<div class="line"><a name="l00023"></a><span class="lineno">   23</span>&#160;    <span class="keywordflow">if</span>(!reader.parse(this-&gt;raw, this-&gt;header))</div>
+<div class="line"><a name="l00024"></a><span class="lineno">   24</span>&#160;    {</div>
+<div class="line"><a name="l00025"></a><span class="lineno">   25</span>&#160;        <span class="keywordflow">throw</span> std::runtime_error(<span class="stringliteral">&quot;Couldn&#39;t parse header for &quot;</span> + this-&gt;filename);</div>
+<div class="line"><a name="l00026"></a><span class="lineno">   26</span>&#160;    }</div>
+<div class="line"><a name="l00027"></a><span class="lineno">   27</span>&#160; </div>
+<div class="line"><a name="l00028"></a><span class="lineno">   28</span>&#160;    this-&gt;header_size = std::stoul(this-&gt;header[<span class="stringliteral">&quot;header_size&quot;</span>].asString());</div>
+<div class="line"><a name="l00029"></a><span class="lineno">   29</span>&#160;}</div>
 </div><!-- fragment -->
-<p class="reference">References <a class="el" href="ResourcePak_8hpp_source.html#l00012">name</a>, and <a class="el" href="ResourcePak_8hpp_source.html#l00014">raw</a>.</p>
-
 </div>
 </div>
 <h2 class="groupheader">Member Function Documentation</h2>
-<a id="af1a9e67da218cd9669649d3ceb48ea5b"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#af1a9e67da218cd9669649d3ceb48ea5b">&#9670;&nbsp;</a></span>get()</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">ecs::Resource ResourcePak::get </td>
-          <td>(</td>
-          <td class="paramtype">std::string&#160;</td>
-          <td class="paramname"><em>resource_name</em></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-</div>
-</div>
-<a id="a54b6effb004e34f550336697bb2189a7"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a54b6effb004e34f550336697bb2189a7">&#9670;&nbsp;</a></span>Load()</h2>
+<a id="ac91fc80c1bcafccbc5e52f28015caa29"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ac91fc80c1bcafccbc5e52f28015caa29">&#9670;&nbsp;</a></span>Load()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -167,94 +152,83 @@ Public Attributes</h2></td></tr>
           <td class="memname">void ResourcePak::Load </td>
           <td>(</td>
           <td class="paramtype">ecs::Container *&#160;</td>
+          <td class="paramname"><em>container</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">std::string&#160;</td>
+          <td class="paramname"><em>name</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">container</td><td>Container to load resource into. </td></tr>
+    <tr><td class="paramname">name</td><td>Name of resource to load. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="ResourcePak_8cpp_source.html#l00031">31</a> of file <a class="el" href="ResourcePak_8cpp_source.html">ResourcePak.cpp</a>.</p>
+<div class="fragment"><div class="line"><a name="l00032"></a><span class="lineno">   32</span>&#160;{</div>
+<div class="line"><a name="l00033"></a><span class="lineno">   33</span>&#160;    uint64_t pointer = this-&gt;header_size;</div>
+<div class="line"><a name="l00034"></a><span class="lineno">   34</span>&#160;    <span class="keywordflow">for</span>(<span class="keyword">auto</span> &amp;resource : this-&gt;header[<span class="stringliteral">&quot;resources&quot;</span>])</div>
+<div class="line"><a name="l00035"></a><span class="lineno">   35</span>&#160;    {</div>
+<div class="line"><a name="l00036"></a><span class="lineno">   36</span>&#160;        <span class="keywordflow">if</span>(resource[<span class="stringliteral">&quot;name&quot;</span>].asString() != name)</div>
+<div class="line"><a name="l00037"></a><span class="lineno">   37</span>&#160;        {</div>
+<div class="line"><a name="l00038"></a><span class="lineno">   38</span>&#160;            pointer += resource[<span class="stringliteral">&quot;bytes&quot;</span>].asUInt();</div>
+<div class="line"><a name="l00039"></a><span class="lineno">   39</span>&#160;            <span class="keywordflow">continue</span>;</div>
+<div class="line"><a name="l00040"></a><span class="lineno">   40</span>&#160;        }</div>
+<div class="line"><a name="l00041"></a><span class="lineno">   41</span>&#160; </div>
+<div class="line"><a name="l00042"></a><span class="lineno">   42</span>&#160;        ecs::Resource temp;</div>
+<div class="line"><a name="l00043"></a><span class="lineno">   43</span>&#160;        temp.ptr = (<span class="keywordtype">char</span> *)(&amp;this-&gt;raw[pointer]);</div>
+<div class="line"><a name="l00044"></a><span class="lineno">   44</span>&#160;        temp.size = resource[<span class="stringliteral">&quot;bytes&quot;</span>].asUInt();</div>
+<div class="line"><a name="l00045"></a><span class="lineno">   45</span>&#160;        container-&gt;ResourceAdd(resource[<span class="stringliteral">&quot;name&quot;</span>].asString(), temp);</div>
+<div class="line"><a name="l00046"></a><span class="lineno">   46</span>&#160;    }</div>
+<div class="line"><a name="l00047"></a><span class="lineno">   47</span>&#160;}</div>
+</div><!-- fragment -->
+<p class="reference">Referenced by <a class="el" href="ResourcePak_8cpp_source.html#l00049">LoadAll()</a>.</p>
+
+</div>
+</div>
+<a id="ad796452c62d45b03698d282008a3ef3d"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ad796452c62d45b03698d282008a3ef3d">&#9670;&nbsp;</a></span>LoadAll()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void ResourcePak::LoadAll </td>
+          <td>(</td>
+          <td class="paramtype">ecs::Container *&#160;</td>
           <td class="paramname"><em>container</em></td><td>)</td>
           <td></td>
         </tr>
       </table>
 </div><div class="memdoc">
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">container</td><td>Container to load resource into. </td></tr>
+  </table>
+  </dd>
+</dl>
 
-<p class="definition">Definition at line <a class="el" href="ResourcePak_8cpp_source.html#l00024">24</a> of file <a class="el" href="ResourcePak_8cpp_source.html">ResourcePak.cpp</a>.</p>
-<div class="fragment"><div class="line"><a name="l00025"></a><span class="lineno">   25</span>&#160;{</div>
-<div class="line"><a name="l00026"></a><span class="lineno">   26</span>&#160;    Json::Value header;</div>
-<div class="line"><a name="l00027"></a><span class="lineno">   27</span>&#160; </div>
-<div class="line"><a name="l00028"></a><span class="lineno">   28</span>&#160;    Json::Reader reader;</div>
-<div class="line"><a name="l00029"></a><span class="lineno">   29</span>&#160;    <span class="keywordtype">bool</span> parsingSuccessful = reader.parse(this-&gt;<a class="code" href="classResourcePak.html#ab26f4255f9c4dc9c4aeb21dafd79825a">raw</a>, header);  </div>
-<div class="line"><a name="l00030"></a><span class="lineno">   30</span>&#160;    <span class="keywordflow">if</span>(!parsingSuccessful)</div>
-<div class="line"><a name="l00031"></a><span class="lineno">   31</span>&#160;    {</div>
-<div class="line"><a name="l00032"></a><span class="lineno">   32</span>&#160;        std::string err = <span class="stringliteral">&quot;Couldn&#39;t parse header for &quot;</span> + this-&gt;<a class="code" href="classResourcePak.html#a854d294b9ecaf4e6e143c84be9f349f6">name</a>;</div>
-<div class="line"><a name="l00033"></a><span class="lineno">   33</span>&#160;        <span class="keywordflow">throw</span> std::runtime_error(err);</div>
-<div class="line"><a name="l00034"></a><span class="lineno">   34</span>&#160;    }</div>
-<div class="line"><a name="l00035"></a><span class="lineno">   35</span>&#160; </div>
-<div class="line"><a name="l00036"></a><span class="lineno">   36</span>&#160;    std::string <a class="code" href="classResourcePak.html#a9158a9a5b4b3a1e9e54b038900e2d39d">header_size</a> = header[<span class="stringliteral">&quot;header_size&quot;</span>].asString();</div>
-<div class="line"><a name="l00037"></a><span class="lineno">   37</span>&#160;    this-&gt;header_size = std::stoul(<a class="code" href="classResourcePak.html#a9158a9a5b4b3a1e9e54b038900e2d39d">header_size</a>);</div>
-<div class="line"><a name="l00038"></a><span class="lineno">   38</span>&#160;    uint64_t pointer = this-&gt;<a class="code" href="classResourcePak.html#a9158a9a5b4b3a1e9e54b038900e2d39d">header_size</a>;</div>
-<div class="line"><a name="l00039"></a><span class="lineno">   39</span>&#160;    <span class="keywordflow">for</span>(<span class="keyword">auto</span> &amp;r : header[<span class="stringliteral">&quot;resources&quot;</span>])</div>
-<div class="line"><a name="l00040"></a><span class="lineno">   40</span>&#160;    {</div>
-<div class="line"><a name="l00041"></a><span class="lineno">   41</span>&#160;        ecs::Resource temp;</div>
-<div class="line"><a name="l00042"></a><span class="lineno">   42</span>&#160;        temp.ptr = (<span class="keywordtype">char</span> *)(&amp;this-&gt;<a class="code" href="classResourcePak.html#ab26f4255f9c4dc9c4aeb21dafd79825a">raw</a>[pointer]);</div>
-<div class="line"><a name="l00043"></a><span class="lineno">   43</span>&#160;        temp.size = r[<span class="stringliteral">&quot;bytes&quot;</span>].asUInt();</div>
-<div class="line"><a name="l00044"></a><span class="lineno">   44</span>&#160;        container-&gt;ResourceAdd(r[<span class="stringliteral">&quot;name&quot;</span>].asString(), temp);</div>
-<div class="line"><a name="l00045"></a><span class="lineno">   45</span>&#160;        pointer += temp.size;</div>
-<div class="line"><a name="l00046"></a><span class="lineno">   46</span>&#160;    }</div>
-<div class="line"><a name="l00047"></a><span class="lineno">   47</span>&#160;}</div>
-<div class="ttc" id="aclassResourcePak_html_a9158a9a5b4b3a1e9e54b038900e2d39d"><div class="ttname"><a href="classResourcePak.html#a9158a9a5b4b3a1e9e54b038900e2d39d">ResourcePak::header_size</a></div><div class="ttdeci">uint64_t header_size</div><div class="ttdef"><b>Definition:</b> <a href="ResourcePak_8hpp_source.html#l00013">ResourcePak.hpp:13</a></div></div>
+<p class="definition">Definition at line <a class="el" href="ResourcePak_8cpp_source.html#l00049">49</a> of file <a class="el" href="ResourcePak_8cpp_source.html">ResourcePak.cpp</a>.</p>
+<div class="fragment"><div class="line"><a name="l00050"></a><span class="lineno">   50</span>&#160;{</div>
+<div class="line"><a name="l00051"></a><span class="lineno">   51</span>&#160;    <span class="keywordflow">for</span>(<span class="keyword">auto</span> &amp;resource : this-&gt;header[<span class="stringliteral">&quot;resources&quot;</span>])</div>
+<div class="line"><a name="l00052"></a><span class="lineno">   52</span>&#160;    {</div>
+<div class="line"><a name="l00053"></a><span class="lineno">   53</span>&#160;        this-&gt;<a class="code" href="classResourcePak.html#ac91fc80c1bcafccbc5e52f28015caa29">Load</a>(container, resource[<span class="stringliteral">&quot;name&quot;</span>].asString());</div>
+<div class="line"><a name="l00054"></a><span class="lineno">   54</span>&#160;    }</div>
+<div class="line"><a name="l00055"></a><span class="lineno">   55</span>&#160;}</div>
+<div class="ttc" id="aclassResourcePak_html_ac91fc80c1bcafccbc5e52f28015caa29"><div class="ttname"><a href="classResourcePak.html#ac91fc80c1bcafccbc5e52f28015caa29">ResourcePak::Load</a></div><div class="ttdeci">void Load(ecs::Container *container, std::string name)</div><div class="ttdoc">Load resource by name.</div><div class="ttdef"><b>Definition:</b> <a href="ResourcePak_8cpp_source.html#l00031">ResourcePak.cpp:31</a></div></div>
 </div><!-- fragment -->
-<p class="reference">References <a class="el" href="ResourcePak_8hpp_source.html#l00013">header_size</a>, <a class="el" href="ResourcePak_8hpp_source.html#l00012">name</a>, and <a class="el" href="ResourcePak_8hpp_source.html#l00014">raw</a>.</p>
-
-</div>
-</div>
-<h2 class="groupheader">Member Data Documentation</h2>
-<a id="a9158a9a5b4b3a1e9e54b038900e2d39d"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a9158a9a5b4b3a1e9e54b038900e2d39d">&#9670;&nbsp;</a></span>header_size</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">uint64_t ResourcePak::header_size = 0</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p class="definition">Definition at line <a class="el" href="ResourcePak_8hpp_source.html#l00013">13</a> of file <a class="el" href="ResourcePak_8hpp_source.html">ResourcePak.hpp</a>.</p>
-
-<p class="reference">Referenced by <a class="el" href="ResourcePak_8cpp_source.html#l00024">Load()</a>.</p>
-
-</div>
-</div>
-<a id="a854d294b9ecaf4e6e143c84be9f349f6"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a854d294b9ecaf4e6e143c84be9f349f6">&#9670;&nbsp;</a></span>name</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">std::string ResourcePak::name</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p class="definition">Definition at line <a class="el" href="ResourcePak_8hpp_source.html#l00012">12</a> of file <a class="el" href="ResourcePak_8hpp_source.html">ResourcePak.hpp</a>.</p>
-
-<p class="reference">Referenced by <a class="el" href="ResourcePak_8cpp_source.html#l00024">Load()</a>, and <a class="el" href="ResourcePak_8cpp_source.html#l00004">ResourcePak()</a>.</p>
-
-</div>
-</div>
-<a id="ab26f4255f9c4dc9c4aeb21dafd79825a"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ab26f4255f9c4dc9c4aeb21dafd79825a">&#9670;&nbsp;</a></span>raw</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">char* ResourcePak::raw = nullptr</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p class="definition">Definition at line <a class="el" href="ResourcePak_8hpp_source.html#l00014">14</a> of file <a class="el" href="ResourcePak_8hpp_source.html">ResourcePak.hpp</a>.</p>
-
-<p class="reference">Referenced by <a class="el" href="ResourcePak_8cpp_source.html#l00024">Load()</a>, and <a class="el" href="ResourcePak_8cpp_source.html#l00004">ResourcePak()</a>.</p>
+<p class="reference">References <a class="el" href="ResourcePak_8cpp_source.html#l00031">Load()</a>.</p>
 
 </div>
 </div>
@@ -265,7 +239,7 @@ Public Attributes</h2></td></tr>
 </div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>
-Generated on Mon Jan 17 2022 23:15:15 for libthe-seed by&#160;<a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.9.1
+Generated on Tue Jan 18 2022 01:18:31 for libthe-seed by&#160;<a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.9.1
 </small></address>
 </body>
 </html>
