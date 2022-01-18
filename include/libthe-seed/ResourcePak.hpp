@@ -4,6 +4,10 @@
 #include <map>
 #include <libecs-cpp/ecs.hpp>
 
+/**
+ * @brief Loads resources (images, sounds, etc.) from .pak files.
+ * 
+ */
 class ResourcePak
 {
   public:
