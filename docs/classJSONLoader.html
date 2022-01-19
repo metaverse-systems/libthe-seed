@@ -91,7 +91,8 @@ Public Member Functions</h2></td></tr>
 <tr class="separator:a05068ffaaa64183f6888196d058ae657"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
-<div class="textblock">
+<div class="textblock"><p>Loads Entities, Components, and Systems from JSON data. </p>
+
 <p class="definition">Definition at line <a class="el" href="JSONLoader_8hpp_source.html#l00010">10</a> of file <a class="el" href="JSONLoader_8hpp_source.html">JSONLoader.hpp</a>.</p>
 </div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
 <a id="a14007c3388ae86bf3ae807b4e6302dfc"></a>
@@ -109,6 +110,8 @@ Public Member Functions</h2></td></tr>
         </tr>
       </table>
 </div><div class="memdoc">
+
+<p>Construct a new <a class="el" href="classJSONLoader.html" title="Loads Entities, Components, and Systems from JSON data.">JSONLoader</a> object. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">container</td><td>A pointer to the ECS container that will house the Entities, Components, and Systems imported from JSON data. </td></tr>
@@ -117,10 +120,7 @@ Public Member Functions</h2></td></tr>
 </dl>
 
 <p class="definition">Definition at line <a class="el" href="JSONLoader_8cpp_source.html#l00005">5</a> of file <a class="el" href="JSONLoader_8cpp_source.html">JSONLoader.cpp</a>.</p>
-<div class="fragment"><div class="line"><a name="l00005"></a><span class="lineno">    5</span>&#160;                                             : container(container)</div>
-<div class="line"><a name="l00006"></a><span class="lineno">    6</span>&#160;{</div>
-<div class="line"><a name="l00007"></a><span class="lineno">    7</span>&#160;}</div>
-</div><!-- fragment -->
+
 </div>
 </div>
 <a id="a4cfbf0494997ed64eb9888cc5c68cf1f"></a>
@@ -139,9 +139,7 @@ Public Member Functions</h2></td></tr>
 </div><div class="memdoc">
 
 <p class="definition">Definition at line <a class="el" href="JSONLoader_8cpp_source.html#l00049">49</a> of file <a class="el" href="JSONLoader_8cpp_source.html">JSONLoader.cpp</a>.</p>
-<div class="fragment"><div class="line"><a name="l00050"></a><span class="lineno">   50</span>&#160;{</div>
-<div class="line"><a name="l00051"></a><span class="lineno">   51</span>&#160;}</div>
-</div><!-- fragment -->
+
 </div>
 </div>
 <h2 class="groupheader">Member Function Documentation</h2>
@@ -160,6 +158,8 @@ Public Member Functions</h2></td></tr>
         </tr>
       </table>
 </div><div class="memdoc">
+
+<p>Parses ECS data from a file. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">filename</td><td>JSON formatted file containing ECS data. </td></tr>
@@ -168,24 +168,7 @@ Public Member Functions</h2></td></tr>
 </dl>
 
 <p class="definition">Definition at line <a class="el" href="JSONLoader_8cpp_source.html#l00031">31</a> of file <a class="el" href="JSONLoader_8cpp_source.html">JSONLoader.cpp</a>.</p>
-<div class="fragment"><div class="line"><a name="l00032"></a><span class="lineno">   32</span>&#160;{</div>
-<div class="line"><a name="l00033"></a><span class="lineno">   33</span>&#160;    std::string data;</div>
-<div class="line"><a name="l00034"></a><span class="lineno">   34</span>&#160;    std::ifstream file;</div>
-<div class="line"><a name="l00035"></a><span class="lineno">   35</span>&#160;    std::streampos fsize, fstart = 0;</div>
-<div class="line"><a name="l00036"></a><span class="lineno">   36</span>&#160; </div>
-<div class="line"><a name="l00037"></a><span class="lineno">   37</span>&#160;    file.open(filename);</div>
-<div class="line"><a name="l00038"></a><span class="lineno">   38</span>&#160;    fstart = file.tellg();</div>
-<div class="line"><a name="l00039"></a><span class="lineno">   39</span>&#160;    file.seekg(0, std::ios::end);</div>
-<div class="line"><a name="l00040"></a><span class="lineno">   40</span>&#160;    fsize = file.tellg() - fstart;</div>
-<div class="line"><a name="l00041"></a><span class="lineno">   41</span>&#160;    file.seekg(0, std::ios::beg);</div>
-<div class="line"><a name="l00042"></a><span class="lineno">   42</span>&#160;    data.resize(fsize);</div>
-<div class="line"><a name="l00043"></a><span class="lineno">   43</span>&#160;    file.read(&amp;data[0], fsize);</div>
-<div class="line"><a name="l00044"></a><span class="lineno">   44</span>&#160;    file.close();</div>
-<div class="line"><a name="l00045"></a><span class="lineno">   45</span>&#160; </div>
-<div class="line"><a name="l00046"></a><span class="lineno">   46</span>&#160;    this-&gt;<a class="code" href="classJSONLoader.html#ab74683b0bd9b3b0fb7a791800dbad481">StringParse</a>(data);</div>
-<div class="line"><a name="l00047"></a><span class="lineno">   47</span>&#160;}</div>
-<div class="ttc" id="aclassJSONLoader_html_ab74683b0bd9b3b0fb7a791800dbad481"><div class="ttname"><a href="classJSONLoader.html#ab74683b0bd9b3b0fb7a791800dbad481">JSONLoader::StringParse</a></div><div class="ttdeci">void StringParse(std::string data)</div><div class="ttdoc">Parses ECS data from string.</div><div class="ttdef"><b>Definition:</b> <a href="JSONLoader_8cpp_source.html#l00009">JSONLoader.cpp:9</a></div></div>
-</div><!-- fragment -->
+
 <p class="reference">References <a class="el" href="JSONLoader_8cpp_source.html#l00009">StringParse()</a>.</p>
 
 </div>
@@ -205,6 +188,8 @@ Public Member Functions</h2></td></tr>
         </tr>
       </table>
 </div><div class="memdoc">
+
+<p>Parses ECS data from string. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">data</td><td>JSON formatted ECS data. </td></tr>
@@ -213,28 +198,7 @@ Public Member Functions</h2></td></tr>
 </dl>
 
 <p class="definition">Definition at line <a class="el" href="JSONLoader_8cpp_source.html#l00009">9</a> of file <a class="el" href="JSONLoader_8cpp_source.html">JSONLoader.cpp</a>.</p>
-<div class="fragment"><div class="line"><a name="l00010"></a><span class="lineno">   10</span>&#160;{</div>
-<div class="line"><a name="l00011"></a><span class="lineno">   11</span>&#160;    Json::Reader reader;</div>
-<div class="line"><a name="l00012"></a><span class="lineno">   12</span>&#160;    <span class="keywordflow">if</span>(!reader.parse(data.c_str(), this-&gt;scene))</div>
-<div class="line"><a name="l00013"></a><span class="lineno">   13</span>&#160;    {</div>
-<div class="line"><a name="l00014"></a><span class="lineno">   14</span>&#160;        std::string err = <span class="stringliteral">&quot;Couldn&#39;t parse scene: &quot;</span> + data;</div>
-<div class="line"><a name="l00015"></a><span class="lineno">   15</span>&#160;        <span class="keywordflow">throw</span> std::runtime_error(err);</div>
-<div class="line"><a name="l00016"></a><span class="lineno">   16</span>&#160;    }</div>
-<div class="line"><a name="l00017"></a><span class="lineno">   17</span>&#160;    <span class="keywordflow">for</span>(<span class="keyword">auto</span> entity : this-&gt;scene[<span class="stringliteral">&quot;entities&quot;</span>])</div>
-<div class="line"><a name="l00018"></a><span class="lineno">   18</span>&#160;    {</div>
-<div class="line"><a name="l00019"></a><span class="lineno">   19</span>&#160;        <span class="keyword">auto</span> e = this-&gt;container-&gt;Entity(entity[<span class="stringliteral">&quot;Handle&quot;</span>].asString());</div>
-<div class="line"><a name="l00020"></a><span class="lineno">   20</span>&#160; </div>
-<div class="line"><a name="l00021"></a><span class="lineno">   21</span>&#160;        <span class="keywordflow">for</span>(<span class="keyword">auto</span> type : entity[<span class="stringliteral">&quot;Components&quot;</span>].getMemberNames())</div>
-<div class="line"><a name="l00022"></a><span class="lineno">   22</span>&#160;        {</div>
-<div class="line"><a name="l00023"></a><span class="lineno">   23</span>&#160;            <span class="keywordflow">for</span>(<span class="keyword">auto</span> component : entity[<span class="stringliteral">&quot;Components&quot;</span>][type])</div>
-<div class="line"><a name="l00024"></a><span class="lineno">   24</span>&#160;            {</div>
-<div class="line"><a name="l00025"></a><span class="lineno">   25</span>&#160;                e-&gt;Component(<a class="code" href="namespaceComponentLoader.html#a70d5c796577ce8c56a8e55e9c5e311f8">ComponentLoader::Create</a>(type, &amp;component));</div>
-<div class="line"><a name="l00026"></a><span class="lineno">   26</span>&#160;            }</div>
-<div class="line"><a name="l00027"></a><span class="lineno">   27</span>&#160;        }</div>
-<div class="line"><a name="l00028"></a><span class="lineno">   28</span>&#160;    }</div>
-<div class="line"><a name="l00029"></a><span class="lineno">   29</span>&#160;}</div>
-<div class="ttc" id="anamespaceComponentLoader_html_a70d5c796577ce8c56a8e55e9c5e311f8"><div class="ttname"><a href="namespaceComponentLoader.html#a70d5c796577ce8c56a8e55e9c5e311f8">ComponentLoader::Create</a></div><div class="ttdeci">ecs::Component * Create(std::string component)</div><div class="ttdef"><b>Definition:</b> <a href="ComponentLoader_8cpp_source.html#l00065">ComponentLoader.cpp:65</a></div></div>
-</div><!-- fragment -->
+
 <p class="reference">References <a class="el" href="ComponentLoader_8cpp_source.html#l00065">ComponentLoader::Create()</a>.</p>
 
 <p class="reference">Referenced by <a class="el" href="JSONLoader_8cpp_source.html#l00031">FileParse()</a>.</p>
@@ -248,7 +212,7 @@ Public Member Functions</h2></td></tr>
 </div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>
-Generated on Tue Jan 18 2022 01:19:52 for libthe-seed by&#160;<a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.9.1
+Generated on Tue Jan 18 2022 13:13:09 for libthe-seed by&#160;<a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.9.1
 </small></address>
 </body>
 </html>
