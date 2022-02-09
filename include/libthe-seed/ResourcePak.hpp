@@ -24,6 +24,14 @@ class ResourcePak
      * @param name Name of resource to load.
      */
     void Load(ecs::Container *container, std::string name);
+
+    /**
+     * @brief Load resource by name.
+     *
+     * @param name Name of resource to load.
+     * @return Handle to Resource
+     */
+    ecs::Resource Load(std::string name);
     /**
      * @brief Load all resources in Resource Pak.
      * 
