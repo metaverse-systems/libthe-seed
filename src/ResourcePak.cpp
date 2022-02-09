@@ -29,7 +29,7 @@ ResourcePak::ResourcePak(std::string filename): filename(filename)
 
 void ResourcePak::Load(ecs::Container *container, std::string name)
 {
-    container->ResourceAdd(name, Load(name));
+    container->ResourceAdd(name, this->Load(name));
 }
 
 ecs::Resource ResourcePak::Load(std::string name)
