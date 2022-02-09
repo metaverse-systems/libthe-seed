@@ -3,7 +3,6 @@
 
 ResourcePak::ResourcePak(std::string filename): filename(filename)
 {
-    std::streampos size;
     std::ifstream file(this->filename, std::ios::binary);
     if(!file.good())
     {
@@ -12,7 +11,7 @@ ResourcePak::ResourcePak(std::string filename): filename(filename)
 
     // get its size:
     file.seekg(0, std::ios::end);
-    size = file.tellg();
+    auto size = file.tellg();
     file.seekg(0, std::ios::beg);
 
     this->raw = new char[size];
@@ -30,6 +29,11 @@ ResourcePak::ResourcePak(std::string filename): filename(filename)
 
 void ResourcePak::Load(ecs::Container *container, std::string name)
 {
+    container->ResourceAdd(name, Load(name));
+}
+
+ecs::Resource ResourcePak::Load(std::string name)
+{
     uint64_t pointer = this->header_size;
     for(auto &resource : this->header["resources"])
     {
@@ -42,8 +46,10 @@ void ResourcePak::Load(ecs::Container *container, std::string name)
         ecs::Resource temp;
         temp.ptr = (char *)(&this->raw[pointer]);
         temp.size = resource["bytes"].asUInt();
-        container->ResourceAdd(resource["name"].asString(), temp);
+        return temp;
     }
+
+    throw std::runtime_error("Resource " + name + " not found");
 }
 
 void ResourcePak::LoadAll(ecs::Container *container)
