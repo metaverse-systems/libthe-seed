@@ -29,102 +29,41 @@ namespace SystemLoader
         }
     }
 
-    SystemCreator Loader::SystemGet()
+    SystemCreator Loader::SystemCreatorGet()
     {
-        void *ptr = this->library->FunctionGet("create_system");
-        SystemCreator creator = reinterpret_cast<SystemCreator>(ptr);
+        auto ptr = this->library->FunctionGet("create_system");
+        auto creator = reinterpret_cast<SystemCreator>(ptr);
         return creator;
-    }
-
-    ecs::System *Loader::SystemCreate()
-    {
-        void *ptr = this->library->FunctionGet("create_system");
-        SystemCreator creator = reinterpret_cast<SystemCreator>(ptr);
-        ecs::System *s;
-        try
-        {
-            s = creator(nullptr);
-        }
-        catch(std::runtime_error e)
-        {
-            throw e;
-        }
-
-        return s;
     }
 
     ecs::System *Loader::SystemCreate(void *data)
     {
-        void *ptr;
-
-        try
-        {
-            ptr = this->library->FunctionGet("create_system");
-        }
-        catch(std::runtime_error e)
-        {
-            throw e;
-        }
-
-        SystemCreator creator = reinterpret_cast<SystemCreator>(ptr);
-        ecs::System *s;
-        try
-        {
-            s = creator(data);
-        }
-        catch(std::runtime_error e)
-        {
-            throw e;
-        }
-        return s;
+        auto ptr = this->library->FunctionGet("create_system");
+        auto creator = reinterpret_cast<SystemCreator>(ptr);
+        return creator(data);
     }
 
     ecs::System *Create(std::string system)
     {
         if(!system_loaders[system]) 
         {
-            try
-            {
-                system_loaders[system] = new Loader(system);
-            }
-            catch(std::runtime_error e)
-            {
-                throw e;
-            }
+            system_loaders[system] = new Loader(system);
         }
 
-        return system_loaders[system]->SystemCreate();
+        return system_loaders[system]->SystemCreate(nullptr);
     }
 
     ecs::System *Create(std::string system, void *data)
     {
         if(!system_loaders[system])
         {
-            try
-            {
-                system_loaders[system] = new Loader(system);
-            }
-            catch(std::runtime_error e)
-            {
-                throw e;
-            }
+            system_loaders[system] = new Loader(system);
         }
 
-        ecs::System *sys = nullptr;
-        
-        try
-        {
-            sys = system_loaders[system]->SystemCreate(data);
-        }
-        catch(std::runtime_error e)
-        {
-            throw e;
-        }
-
-        return sys;
+        return system_loaders[system]->SystemCreate(data);
     }
 
-    SystemCreator Get(std::string system)
+    SystemCreator CreatorGet(std::string system)
     {
         if(!system_loaders[system])
         {
@@ -138,7 +77,7 @@ namespace SystemLoader
             }
         }
 
-        return system_loaders[system]->SystemGet();
+        return system_loaders[system]->SystemCreatorGet();
     }
 
     std::vector<std::string> PathsGet()

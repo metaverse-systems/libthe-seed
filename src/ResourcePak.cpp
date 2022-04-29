@@ -18,13 +18,8 @@ ResourcePak::ResourcePak(std::string filename): filename(filename)
     file.read(this->raw, size);
     file.close();
 
-    Json::Reader reader;
-    if(!reader.parse(this->raw, this->header))
-    {
-        throw std::runtime_error("Couldn't parse header for " + this->filename);
-    }
-
-    this->header_size = std::stoul(this->header["header_size"].asString());
+    this->header = nlohmann::json::parse(this->raw);
+    this->header_size = std::stoul(this->header["header_size"].get<std::string>());
 }
 
 void ResourcePak::Load(ecs::Container *container, std::string name)
@@ -37,15 +32,15 @@ ecs::Resource ResourcePak::Load(std::string name)
     uint64_t pointer = this->header_size;
     for(auto &resource : this->header["resources"])
     {
-        if(resource["name"].asString() != name)
+        if(resource["name"].get<std::string>() != name)
         {
-            pointer += resource["bytes"].asUInt();
+            pointer += resource["bytes"].get<uint64_t>();
             continue;
         }
 
         ecs::Resource temp;
         temp.ptr = (char *)(&this->raw[pointer]);
-        temp.size = resource["bytes"].asUInt();
+        temp.size = resource["bytes"].get<uint64_t>();
         return temp;
     }
 
@@ -56,6 +51,6 @@ void ResourcePak::LoadAll(ecs::Container *container)
 {
     for(auto &resource : this->header["resources"])
     {
-        this->Load(container, resource["name"].asString());
+        this->Load(container, resource["name"].get<std::string>());
     }
 }

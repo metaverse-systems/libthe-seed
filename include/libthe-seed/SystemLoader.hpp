@@ -13,9 +13,8 @@ namespace SystemLoader
       public:
         Loader(std::string library);
         ~Loader();
-        ecs::System *SystemCreate();
         ecs::System *SystemCreate(void *data);
-        SystemCreator SystemGet();
+        SystemCreator SystemCreatorGet();
       private:
         LibraryLoader *library;
     };
@@ -25,7 +24,7 @@ namespace SystemLoader
 
     ecs::System *Create(std::string system);
     ecs::System *Create(std::string system, void *data);
-    SystemCreator Get(std::string system);
+    SystemCreator CreatorGet(std::string system);
 
     std::vector<std::string> PathsGet();
     void PathAdd(std::string);

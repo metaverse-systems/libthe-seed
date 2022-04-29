@@ -8,22 +8,14 @@ JSONLoader::JSONLoader(ecs::Container *container): container(container)
 
 void JSONLoader::StringParse(std::string data)
 {
-    Json::Reader reader;
-    if(!reader.parse(data.c_str(), this->scene))
-    {
-        std::string err = "Couldn't parse scene: " + data;
-        throw std::runtime_error(err);
-    }
+    this->scene = nlohmann::json::parse(data);
     for(auto entity : this->scene["entities"])
     {
-        auto e = this->container->Entity(entity["Handle"].asString());
+        auto e = this->container->Entity(entity["Handle"].get<std::string>());
 
-        for(auto type : entity["Components"].getMemberNames())
+        for(auto &[type, component] : entity["Components"].items())
         {
-            for(auto component : entity["Components"][type])
-            {
-                e->Component(ComponentLoader::Create(type, &component));
-            }
+            e->Component(ComponentLoader::Create(type, &component));
         }
     }
 }

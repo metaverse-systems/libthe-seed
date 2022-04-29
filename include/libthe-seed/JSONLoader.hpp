@@ -2,6 +2,7 @@
 
 #include <string>
 #include <libecs-cpp/ecs.hpp>
+#include <libecs-cpp/json.hpp>
 
 /**
  * @brief Loads Entities, Components, and Systems from JSON data.
@@ -32,6 +33,6 @@ class JSONLoader
      */
     void FileParse(std::string filename);
   private:
-    Json::Value scene;
+    nlohmann::json scene;
     ecs::Container *container = nullptr;
 };

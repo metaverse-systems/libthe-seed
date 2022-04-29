@@ -3,6 +3,7 @@
 #include <string>
 #include <map>
 #include <libecs-cpp/ecs.hpp>
+#include <libecs-cpp/json.hpp>
 
 /**
  * @brief Loads resources (images, sounds, etc.) from .pak files.
@@ -42,5 +43,5 @@ class ResourcePak
     const std::string filename;
     uint64_t header_size = 0;
     char *raw = nullptr;
-    Json::Value header;
+    nlohmann::json header;
 };

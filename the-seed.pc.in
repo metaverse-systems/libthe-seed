@@ -8,4 +8,4 @@ Description: ECS application framework
 Version: @PACKAGE_VERSION@
 Libs: -L${libdir} -lthe-seed
 Cflags: -I${includedir}
-Requires: ecs-cpp jsoncpp
+Requires: ecs-cpp
