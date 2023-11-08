@@ -56,8 +56,8 @@ void LibraryLoader::Load()
     for(const auto &path : search_paths)
     {
 #ifdef _WIN32
-        this->library_handle = LoadLibrary(path.c_str());
-        if(this->library_handle == nullptr)
+        HMODULE lib = LoadLibrary(path.c_str());
+        if(lib == nullptr)
         {
             DWORD result = GetLastError();
             LPSTR message_buffer = nullptr;
@@ -66,31 +66,25 @@ void LibraryLoader::Load()
             error = std::string(message_buffer);
             LocalFree(message_buffer);
         }
-        else break;
 #else
         dlerror(); // Clear dlerror value
-        this->library_handle = dlopen(path.c_str(), RTLD_LAZY);
-        if(this->library_handle == nullptr) 
+        void *lib = dlopen(path.c_str(), RTLD_LAZY);
+        if(lib == nullptr) 
         {
             error = std::string(dlerror());
         }
-        else break;
 #endif
+        else
+        {
+            this->library_handle.reset(lib);
+            break;
+        }
     }
 
     if(this->library_handle == nullptr)
     {
         throw std::runtime_error(error);
     }
-}
-
-LibraryLoader::~LibraryLoader()
-{
-#ifdef _WIN32
-    FreeLibrary((HMODULE)this->library_handle);
-#else
-    dlclose(this->library_handle);
-#endif
 }
 
 void *LibraryLoader::FunctionGet(std::string FunctionName)
@@ -101,7 +95,7 @@ void *LibraryLoader::FunctionGet(std::string FunctionName)
     std::string error;
 
 #ifdef _WIN32
-    ptr = (void *)GetProcAddress((HMODULE)this->library_handle, FunctionName.c_str());
+    ptr = (void *)GetProcAddress((HMODULE)this->library_handle.get(), FunctionName.c_str());
     if(!ptr)
     {
         DWORD result = GetLastError();
@@ -112,7 +106,7 @@ void *LibraryLoader::FunctionGet(std::string FunctionName)
         LocalFree(message_buffer);
     }
 #else
-    ptr = dlsym(this->library_handle, FunctionName.c_str());
+    ptr = dlsym(this->library_handle.get(), FunctionName.c_str());
     if(!ptr) error = std::string(dlerror());
 #endif
 
