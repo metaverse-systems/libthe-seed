@@ -1,30 +1,36 @@
 #include "NameParser.hpp"
 #include <vector>
+#include <stdexcept>
 
 NameParser::NameParser(std::string src)
 {
-    if(src.find("/") != std::string::npos)
+    // Check for leading slash or multiple slashes.
+    if(src.empty() || src.front() == '/' || src.find("//") != std::string::npos) 
     {
-        std::vector<std::string> dest;
-        std::string temp;
-        for(size_t counter = 0; counter < src.size(); counter++)
-        {
-            if(src[counter] == '/')
-            {
-                dest.push_back(temp);
-                temp = "";
-                continue;
-            }
-
-            temp += src[counter];
-        }
-
-        dest.push_back(temp);
-
-        this->org = dest[0];
-        this->library = dest[1];
-        return;
+        throw std::invalid_argument("Input string cannot start with a slash or contain multiple consecutive slashes.");
     }
 
-    this->library = src;
+    size_t slash_pos = src.find("/");
+    if(slash_pos == std::string::npos) 
+    {
+        // No slash found, entire string is considered the library name.
+        this->org = ""; // Set organization to an empty string
+        this->library = src;
+    }
+    else if(slash_pos == src.length() - 1) 
+    {
+        // Slash is at the end of the string, indicating no library name is provided.
+        throw std::invalid_argument("Input string cannot end with a slash.");
+    }
+    else 
+    {
+        // Split the string into organization and library.
+        this->org = src.substr(0, slash_pos);
+        this->library = src.substr(slash_pos + 1);
+
+        // Check if there is another slash after the first one.
+        if (this->library.find("/") != std::string::npos) {
+            throw std::invalid_argument("Input string cannot contain multiple slashes.");
+        }
+    }
 }
