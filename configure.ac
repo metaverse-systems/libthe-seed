@@ -20,6 +20,7 @@ AM_INIT_AUTOMAKE([subdir-objects])
 AC_CHECK_LIB([pthread], [pthread_exit])
 
 PKG_CHECK_MODULES([LIBECS], ecs-cpp)
+PKG_CHECK_MODULES([CATCH2], catch2)
 
 # Checks for header files.
 
@@ -38,5 +39,6 @@ AC_CHECK_HEADER([windows.h],
 AC_CONFIG_FILES([Makefile
                  the-seed.pc
                  src/Makefile
-                 Doxyfile])
+                 Doxyfile
+		 tests/Makefile])
 AC_OUTPUT
