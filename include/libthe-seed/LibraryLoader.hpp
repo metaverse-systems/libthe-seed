@@ -53,6 +53,7 @@ class LibraryLoader
     void PathAdd(std::string path);
     const std::vector<std::string> PathsGet();
     const std::string name;
+    static const std::string GetLastErrorAsString();
   private:
     std::unique_ptr<void, LibraryDeleter> library_handle;
     void Load();

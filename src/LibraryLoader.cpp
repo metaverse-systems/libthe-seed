@@ -57,23 +57,13 @@ void LibraryLoader::Load()
     {
 #ifdef _WIN32
         HMODULE lib = LoadLibrary(path.c_str());
+#else
+        void *lib = dlopen(path.c_str(), RTLD_LAZY);
+#endif
         if(lib == nullptr)
         {
-            DWORD result = GetLastError();
-            LPSTR message_buffer = nullptr;
-            size_t size = FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
-                                     NULL, result, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPSTR)&message_buffer, 0, NULL);
-            error = std::string(message_buffer);
-            LocalFree(message_buffer);
+            error = LibraryLoader::GetLastErrorAsString();
         }
-#else
-        dlerror(); // Clear dlerror value
-        void *lib = dlopen(path.c_str(), RTLD_LAZY);
-        if(lib == nullptr) 
-        {
-            error = std::string(dlerror());
-        }
-#endif
         else
         {
             this->library_handle.reset(lib);
@@ -96,23 +86,36 @@ void *LibraryLoader::FunctionGet(std::string FunctionName)
 
 #ifdef _WIN32
     ptr = (void *)GetProcAddress((HMODULE)this->library_handle.get(), FunctionName.c_str());
-    if(!ptr)
-    {
-        DWORD result = GetLastError();
-        LPSTR message_buffer = nullptr;
-        size_t size = FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
-                                 NULL, result, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPSTR)&message_buffer, 0, NULL);
-        error = std::string(message_buffer);
-        LocalFree(message_buffer);
-    }
 #else
     ptr = dlsym(this->library_handle.get(), FunctionName.c_str());
-    if(!ptr) error = std::string(dlerror());
 #endif
 
     if(!ptr)
     {
-        throw std::runtime_error(error);
+        throw std::runtime_error(LibraryLoader::GetLastErrorAsString());
     }
     return ptr;
+}
+
+const std::string LibraryLoader::GetLastErrorAsString()
+{
+#ifdef _WIN32
+    DWORD errorMessageID = ::GetLastError();
+    if (errorMessageID == 0) {
+        return {}; // No error message has been recorded
+    }
+    
+    LPSTR messageBuffer = nullptr;
+    size_t size = FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+                                NULL, errorMessageID, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPSTR)&messageBuffer, 0, NULL);
+    std::string message(messageBuffer, size);
+    LocalFree(messageBuffer);
+    return message;
+#else
+    const char *errorMessage = dlerror();
+    if (errorMessage == nullptr) {
+        return {}; // No error message has been recorded
+    }
+    return std::string(errorMessage);
+#endif
 }
