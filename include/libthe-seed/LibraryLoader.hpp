@@ -31,10 +31,10 @@ class LibraryLoader
      * @param path Path to add.
      */
     void PathAdd(std::string path);
+    const std::vector<std::string> PathsGet();
     const std::string name;
   private:
     void *library_handle = nullptr;
     void Load();
-    std::vector<std::string> PathsGet();
     std::vector<std::string> paths;
 };

@@ -12,7 +12,7 @@ void LibraryLoader::PathAdd(std::string path)
     this->paths.push_back(path);
 }
 
-std::vector<std::string> LibraryLoader::PathsGet()
+const std::vector<std::string> LibraryLoader::PathsGet()
 {
     std::vector<std::string> valid_paths;
 
