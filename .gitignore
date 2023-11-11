@@ -50,9 +50,15 @@ autom4te.cache
 Makefile
 .libs
 .deps
+*.a
+*.so
+*.so.0
+*.so.0.0.0
+*.Plo
 *.o
 *.la
 *.lo
+*.lai
 libtool
 *.exe
 *.dll
