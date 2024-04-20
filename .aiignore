@@ -1,0 +1,16 @@
+.git
+INSTALL
+docs
+external
+tests
+m4
+ltmain.sh
+config.log
+missing
+config.sub
+install-sh
+Makefile.in
+Makefile
+config.guess
+Doxyfile
+src/Makefile.in

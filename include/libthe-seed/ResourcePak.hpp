@@ -42,6 +42,6 @@ class ResourcePak
   private:
     const std::string filename;
     uint64_t header_size = 0;
-    char *raw = nullptr;
+    std::vector<char> raw;
     nlohmann::json header;
 };

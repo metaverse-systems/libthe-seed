@@ -17,10 +17,10 @@ namespace ComponentLoader
         ecs::Component *ComponentCreate(void *data);
         ComponentCreator ComponentGet();
       private:
-        LibraryLoader *library;
+        std::unique_ptr<LibraryLoader> library;
     };
 
-    extern std::map<std::string, ComponentLoader::Loader *> component_loaders;
+    extern std::map<std::string, std::unique_ptr<ComponentLoader::Loader>> component_loaders;
     extern std::vector<std::string> component_paths;
 
     ecs::Component *Create(std::string component);

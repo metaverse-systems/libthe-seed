@@ -9,122 +9,69 @@ namespace ComponentLoader
     Loader::Loader(std::string library)
     {
         auto name = NameParser(library);
+        this->library = std::make_unique<LibraryLoader>(name.library);
 
-        try
-        {
-            this->library = new LibraryLoader(name.library);
-            this->library->PathAdd(".");
-            this->library->PathAdd("../../" + name.library + "/src/.libs/");
-            if(name.org.size())
-            {
-                auto path = "../node_modules/" + name.org + "/" + name.library + "/src/.libs";
-                this->library->PathAdd(path);
-            }
+          this->library->PathAdd(".");
+          this->library->PathAdd("../../" + name.library + "/src/.libs/");
+          if(!name.org.empty())
+          {
+              auto path = "../node_modules/" + name.org + "/" + name.library + "/src/.libs";
+              this->library->PathAdd(path);
+          }
 
-            for(auto path : component_paths) this->library->PathAdd(path);
-        }
-        catch(std::runtime_error e)
-        {
-            throw e;
-        }
+          for(auto path : component_paths) this->library->PathAdd(path);
     }
 
     ComponentCreator Loader::ComponentGet()
     {
         void *ptr = this->library->FunctionGet("create_component");
-        ComponentCreator creator = reinterpret_cast<ComponentCreator>(ptr);
-        return creator;
+        return reinterpret_cast<ComponentCreator>(ptr);
     }
 
     ecs::Component *Loader::ComponentCreate()
     {
-        void *ptr = this->library->FunctionGet("create_component");
-        ComponentCreator creator = reinterpret_cast<ComponentCreator>(ptr);
-        return creator(nullptr);
+        return this->ComponentCreate(nullptr);
     }
 
     ecs::Component *Loader::ComponentCreate(void *data)
     {
-        void *ptr;
-
-        try
-        {
-            ptr = this->library->FunctionGet("create_component");
-        }
-        catch(std::runtime_error e)
-        {
-            throw e;
-        }
-
-        ComponentCreator creator = reinterpret_cast<ComponentCreator>(ptr);
+        auto creator = this->ComponentGet();
         return creator(data);
     }
 
-    std::map<std::string, ComponentLoader::Loader *> component_loaders;
+    std::map<std::string, std::unique_ptr<ComponentLoader::Loader>> component_loaders;
 
-    ecs::Component *Create(std::string component)
+    ecs::Component *Create(const std::string &component)
     {
-        if(!component_loaders[component]) 
+        auto &loader = component_loaders[component];
+        if(!loader) 
         {
-            try
-            {
-                component_loaders[component] = new Loader(component);
-            }
-            catch(std::runtime_error e)
-            {
-                throw e;
-            }
+            loader = std::make_unique<Loader>(component);
         }
 
-        try
-        {
-            return component_loaders[component]->ComponentCreate();
-        }
-        catch(std::runtime_error e)
-        {
-            throw e;
-        }
+        return loader->ComponentCreate();
     }
 
     ecs::Component *Create(std::string component, void *data)
     {
-        if(!component_loaders[component])
-        {
-            try
-            {
-                component_loaders[component] = new Loader(component);
-            }
-            catch(std::runtime_error e)
-            {
-                throw e;
-            }
-        }
+        auto &loader = component_loaders[component];
+        if(!loader)
+        {   
+            loader = std::make_unique<Loader>(component);
+        }   
 
-        try
-        {
-            return component_loaders[component]->ComponentCreate(data);
-        }
-        catch(std::runtime_error e)
-        {
-            throw e;
-        }
+        return loader->ComponentCreate(data);
     }
 
     ComponentCreator Get(std::string component)
     {
-        if(!component_loaders[component])
+        auto &loader = component_loaders[component];
+        if(!loader)
         {
-            try
-            {
-                component_loaders[component] = new Loader(component);
-            }
-            catch(std::runtime_error e)
-            {
-                throw e;
-            }
+            loader = std::make_unique<Loader>(component);
         }
 
-        return component_loaders[component]->ComponentGet();
+        return loader->ComponentGet();
     }
 
     std::vector<std::string> PathsGet()

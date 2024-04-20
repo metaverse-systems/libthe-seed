@@ -14,11 +14,11 @@ ResourcePak::ResourcePak(std::string filename): filename(filename)
     auto size = file.tellg();
     file.seekg(0, std::ios::beg);
 
-    this->raw = new char[size];
-    file.read(this->raw, size);
+    this->raw.resize(size);
+    file.read(this->raw.data(), size);
     file.close();
 
-    this->header = nlohmann::json::parse(this->raw);
+    this->header = nlohmann::json::parse(this->raw.data());
     this->header_size = std::stoul(this->header["header_size"].get<std::string>());
 }
 
