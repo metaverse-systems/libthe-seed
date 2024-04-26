@@ -12,7 +12,6 @@ namespace ComponentLoader
     {
       public:
         Loader(std::string library);
-        ~Loader();
         ecs::Component *ComponentCreate();
         ecs::Component *ComponentCreate(void *data);
         ComponentCreator ComponentGet();

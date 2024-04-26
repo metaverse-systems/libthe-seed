@@ -18,8 +18,21 @@ ResourcePak::ResourcePak(std::string filename): filename(filename)
     file.read(this->raw.data(), size);
     file.close();
 
-    this->header = nlohmann::json::parse(this->raw.data());
-    this->header_size = std::stoul(this->header["header_size"].get<std::string>());
+    // copy from this->raw.data() until the first new line into rawHeader
+    std::string rawHeader;
+    for(auto &c : this->raw)
+    {
+        if(c == '\n')
+        {
+            break;
+        }
+        rawHeader += c;
+    }
+
+    this->header = nlohmann::json::parse(rawHeader);
+
+    std::cout << this->header << std::endl;
+    this->header_size = std::stoul(this->header["headerSize"].get<std::string>());
 }
 
 void ResourcePak::Load(ecs::Container *container, std::string name)
@@ -34,13 +47,13 @@ ecs::Resource ResourcePak::Load(std::string name)
     {
         if(resource["name"].get<std::string>() != name)
         {
-            pointer += resource["bytes"].get<uint64_t>();
+            pointer += resource["size"].get<uint64_t>();
             continue;
         }
 
         ecs::Resource temp;
         temp.ptr = (char *)(&this->raw[pointer]);
-        temp.size = resource["bytes"].get<uint64_t>();
+        temp.size = resource["size"].get<uint64_t>();
         return temp;
     }
 
