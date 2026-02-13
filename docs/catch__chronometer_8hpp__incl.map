@@ -1,0 +1,18 @@
+<map id="external/Catch2/src/catch2/benchmark/catch_chronometer.hpp" name="external/Catch2/src/catch2/benchmark/catch_chronometer.hpp">
+<area shape="rect" id="Node000001" title=" " alt="" coords="199,5,384,67"/>
+<area shape="rect" id="Node000002" href="$catch__clock_8hpp.html" title=" " alt="" coords="5,115,186,160"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="230,70,153,110,150,106,233,66"/>
+<area shape="rect" id="Node000004" href="$catch__optimizer_8hpp.html" title=" " alt="" coords="265,115,446,160"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="312,65,336,102,331,101,310,70"/>
+<area shape="rect" id="Node000005" href="$catch__move__and__forward_8hpp.html" title=" " alt="" coords="149,208,330,252"/>
+<area shape="poly" id="edge9_Node000001_Node000005" title=" " alt="" coords="275,65,255,116,247,155,243,193,238,191,242,154,250,114,272,70"/>
+<area shape="rect" id="Node000007" href="$catch__meta_8hpp.html" title=" " alt="" coords="405,208,562,252"/>
+<area shape="poly" id="edge7_Node000001_Node000007" title=" " alt="" coords="384,60,426,82,460,113,472,132,479,152,486,194,481,191,474,153,467,134,456,117,423,87,384,66"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="59,216,124,244"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="96,158,95,201,90,200,93,162"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="330,159,280,200,278,196,326,161"/>
+<area shape="rect" id="Node000006" title=" " alt="" coords="322,300,413,328"/>
+<area shape="poly" id="edge6_Node000004_Node000006" title=" " alt="" coords="359,158,368,286,363,284,355,162"/>
+<area shape="poly" id="edge5_Node000005_Node000006" title=" " alt="" coords="274,250,337,292,332,292,273,256"/>
+<area shape="poly" id="edge8_Node000007_Node000006" title=" " alt="" coords="456,252,400,293,398,288,450,254"/>
+</map>

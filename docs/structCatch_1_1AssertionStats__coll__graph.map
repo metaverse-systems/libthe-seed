@@ -1,0 +1,19 @@
+<map id="Catch::AssertionStats" name="Catch::AssertionStats">
+<area shape="rect" id="Node000001" title=" " alt="" coords="430,352,590,380"/>
+<area shape="rect" id="Node000002" href="$classCatch_1_1AssertionResult.html" title=" " alt="" coords="347,251,515,279"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="437,292,444,311,454,326,467,339,483,352,478,351,463,343,449,330,440,313,435,296"/>
+<area shape="rect" id="Node000003" href="$structCatch_1_1AssertionInfo.html" title=" " alt="" coords="155,128,307,156"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="266,162,412,250,407,252,265,167"/>
+<area shape="rect" id="Node000004" href="$classCatch_1_1StringRef.html" title="A non&#45;owning string class (similar to the forthcoming std::string_view) Note that,..." alt="" coords="5,5,132,33"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="69,46,78,77,93,103,122,122,157,134,152,137,119,127,89,106,73,79,69,51"/>
+<area shape="rect" id="Node000005" href="$structCatch_1_1SourceLineInfo.html" title=" " alt="" coords="155,5,318,33"/>
+<area shape="poly" id="edge4_Node000003_Node000005" title=" " alt="" coords="236,46,234,128,229,127,234,51"/>
+<area shape="rect" id="Node000006" href="$structCatch_1_1AssertionResultData.html" title=" " alt="" coords="332,128,531,156"/>
+<area shape="poly" id="edge5_Node000002_Node000006" title=" " alt="" coords="433,170,434,252,429,249,429,174"/>
+<area shape="rect" id="Node000007" href="$classCatch_1_1LazyExpression.html" title=" " alt="" coords="348,5,515,33"/>
+<area shape="poly" id="edge6_Node000006_Node000007" title=" " alt="" coords="433,46,434,129,429,127,430,51"/>
+<area shape="rect" id="Node000008" href="$structCatch_1_1Totals.html" title=" " alt="" coords="548,251,653,279"/>
+<area shape="poly" id="edge7_Node000001_Node000008" title=" " alt="" coords="589,291,562,330,532,354,530,349,559,326,584,293"/>
+<area shape="rect" id="Node000009" href="$structCatch_1_1Counts.html" title=" " alt="" coords="556,128,667,156"/>
+<area shape="poly" id="edge8_Node000008_Node000009" title=" " alt="" coords="611,170,604,252,599,249,607,174"/>
+</map>

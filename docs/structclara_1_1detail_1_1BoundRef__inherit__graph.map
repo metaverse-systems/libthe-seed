@@ -1,0 +1,20 @@
+<map id="clara::detail::BoundRef" name="clara::detail::BoundRef">
+<area shape="rect" id="Node000001" title=" " alt="" coords="247,106,416,134"/>
+<area shape="rect" id="Node000003" href="$structclara_1_1detail_1_1BoundFlagRefBase.html" title=" " alt="" coords="468,63,644,107"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="431,102,471,98,466,99,432,107"/>
+<area shape="rect" id="Node000006" href="$structclara_1_1detail_1_1BoundValueRefBase.html" title=" " alt="" coords="464,132,648,177"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="431,132,466,140,461,140,432,138"/>
+<area shape="rect" id="Node000002" href="$structclara_1_1detail_1_1NonCopyable.html" title=" " alt="" coords="5,106,199,134"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="213,117,249,119,244,121,215,122"/>
+<area shape="rect" id="Node000004" href="$structclara_1_1detail_1_1BoundFlagLambda.html" title=" " alt="" coords="727,5,902,50"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="658,60,729,46,724,48,660,65"/>
+<area shape="rect" id="Node000005" href="$structclara_1_1detail_1_1BoundFlagRef.html" title=" " alt="" coords="716,74,913,102"/>
+<area shape="poly" id="edge4_Node000003_Node000005" title=" " alt="" coords="659,83,718,86,713,87,660,89"/>
+<area shape="rect" id="Node000007" href="$structclara_1_1detail_1_1BoundValueRef_3_01std_1_1vector_3_01T_01_4_01_4.html" title=" " alt="" coords="722,129,907,174"/>
+<area shape="poly" id="edge6_Node000006_Node000007" title=" " alt="" coords="664,159,725,161,719,162,664,165"/>
+<area shape="poly" id="edge9_Node000006_Node000007" title=" " alt="" coords="664,142,725,144,719,144,664,147"/>
+<area shape="rect" id="Node000008" href="$structclara_1_1detail_1_1BoundLambda.html" title=" " alt="" coords="696,198,933,226"/>
+<area shape="poly" id="edge7_Node000006_Node000008" title=" " alt="" coords="664,176,697,184,748,197,743,197,696,189,664,182"/>
+<area shape="rect" id="Node000009" href="$structclara_1_1detail_1_1BoundValueRef.html" title=" " alt="" coords="722,249,907,294"/>
+<area shape="poly" id="edge8_Node000006_Node000009" title=" " alt="" coords="604,183,649,210,697,235,729,249,724,248,695,239,646,215,603,188"/>
+</map>

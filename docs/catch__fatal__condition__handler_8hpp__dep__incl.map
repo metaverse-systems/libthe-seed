@@ -1,0 +1,19 @@
+<map id="external/Catch2/src/catch2/internal/catch_fatal_condition_handler.hpp" name="external/Catch2/src/catch2/internal/catch_fatal_condition_handler.hpp">
+<area shape="rect" id="Node000001" title=" " alt="" coords="222,5,432,67"/>
+<area shape="rect" id="Node000002" href="$catch__all_8hpp.html" title=" " alt="" coords="5,233,164,278"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="284,79,110,235,107,231,280,76"/>
+<area shape="rect" id="Node000003" href="$catch__fatal__condition__handler_8cpp.html" title=" " alt="" coords="492,115,701,177"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="417,71,523,114,518,115,417,76"/>
+<area shape="rect" id="Node000004" href="$catch__run__context_8cpp.html" title=" " alt="" coords="188,225,349,286"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="309,80,298,116,284,173,275,226,270,223,279,172,293,114,305,84"/>
+<area shape="rect" id="Node000005" href="$catch__run__context_8hpp.html" title=" " alt="" coords="306,115,468,177"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="352,78,373,115,368,114,350,83"/>
+<area shape="poly" id="edge5_Node000005_Node000002" title=" " alt="" coords="292,183,147,235,145,230,292,178"/>
+<area shape="poly" id="edge7_Node000005_Node000004" title=" " alt="" coords="345,186,303,226,300,222,341,188"/>
+<area shape="rect" id="Node000006" href="$catch__session_8cpp.html" title=" " alt="" coords="373,233,564,278"/>
+<area shape="poly" id="edge6_Node000005_Node000006" title=" " alt="" coords="420,187,455,233,450,232,418,191"/>
+<area shape="rect" id="Node000007" href="$catch__section_8cpp.html" title=" " alt="" coords="588,225,749,286"/>
+<area shape="poly" id="edge8_Node000005_Node000007" title=" " alt="" coords="481,180,592,224,587,224,480,185"/>
+<area shape="rect" id="Node000008" href="$catch__test__case__registry__impl_8cpp.html" title=" " alt="" coords="773,225,983,286"/>
+<area shape="poly" id="edge9_Node000005_Node000008" title=" " alt="" coords="483,174,562,191,624,200,686,208,762,222,775,227,770,227,761,227,685,213,624,205,561,196,483,180"/>
+</map>

@@ -1,0 +1,13 @@
+<map id="Catch::MultiReporter" name="Catch::MultiReporter">
+<area shape="rect" id="Node000001" title=" " alt="" coords="95,260,251,288"/>
+<area shape="rect" id="Node000002" href="$classCatch_1_1IEventListener.html" title=" " alt="" coords="93,183,253,211"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="166,224,168,261,164,258,162,228"/>
+<area shape="poly" id="edge6_Node000001_Node000002" title=" " alt="" coords="184,224,182,261,178,258,180,228"/>
+<area shape="rect" id="Node000003" href="$structCatch_1_1ReporterPreferences.html" title="By setting up its preferences, a reporter can modify Catch2&#39;s behaviour in some regards,..." alt="" coords="5,82,205,110"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="112,122,130,157,155,182,150,183,126,161,111,127"/>
+<area shape="rect" id="Node000004" href="$classCatch_1_1IConfig.html" title=" " alt="" coords="229,82,341,110"/>
+<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="269,121,235,161,200,185,197,180,231,157,265,124"/>
+<area shape="rect" id="Node000005" href="$classCatch_1_1Detail_1_1NonCopyable.html" title="Deriving classes become noncopyable and nonmovable." alt="" coords="185,5,385,33"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="277,46,280,83,276,81,275,51"/>
+<area shape="poly" id="edge5_Node000004_Node000005" title=" " alt="" coords="295,46,294,83,290,81,292,51"/>
+</map>

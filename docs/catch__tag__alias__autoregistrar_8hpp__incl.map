@@ -1,0 +1,20 @@
+<map id="external/Catch2/src/catch2/catch_tag_alias_autoregistrar.hpp" name="external/Catch2/src/catch2/catch_tag_alias_autoregistrar.hpp">
+<area shape="rect" id="Node000001" title=" " alt="" coords="229,5,403,67"/>
+<area shape="rect" id="Node000002" href="$catch__compiler__capabilities_8hpp.html" title=" " alt="" coords="18,115,214,160"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="253,69,175,110,172,106,257,66"/>
+<area shape="rect" id="Node000005" href="$catch__unique__name_8hpp.html" title=" " alt="" coords="237,115,395,160"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="317,65,318,101,314,98,315,70"/>
+<area shape="rect" id="Node000007" href="$catch__source__line__info_8hpp.html" title=" " alt="" coords="419,115,581,160"/>
+<area shape="poly" id="edge7_Node000001_Node000007" title=" " alt="" coords="372,65,449,107,444,108,372,70"/>
+<area shape="rect" id="Node000003" href="$catch__platform_8hpp.html" title=" " alt="" coords="5,208,163,252"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="110,158,99,195,94,192,107,162"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="151,300,364,328"/>
+<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="135,158,177,206,241,288,235,288,173,209,134,163"/>
+<area shape="rect" id="Node000006" href="$catch__config__counter_8hpp.html" title=" " alt="" coords="237,208,395,252"/>
+<area shape="poly" id="edge5_Node000005_Node000006" title=" " alt="" coords="318,158,318,194,314,191,314,162"/>
+<area shape="poly" id="edge6_Node000006_Node000004" title=" " alt="" coords="303,252,277,289,274,285,298,254"/>
+<area shape="rect" id="Node000008" title=" " alt="" coords="441,216,511,244"/>
+<area shape="poly" id="edge8_Node000007_Node000008" title=" " alt="" coords="496,158,485,203,481,199,492,162"/>
+<area shape="rect" id="Node000009" title=" " alt="" coords="534,216,599,244"/>
+<area shape="poly" id="edge9_Node000007_Node000009" title=" " alt="" coords="517,158,551,204,546,203,515,162"/>
+</map>

@@ -1,0 +1,16 @@
+<map id="Catch::Matchers::EndsWithMatcher" name="Catch::Matchers::EndsWithMatcher">
+<area shape="rect" id="Node000001" title=" " alt="" coords="912,36,1107,81"/>
+<area shape="rect" id="Node000002" href="$classCatch_1_1Matchers_1_1StringMatcherBase.html" title=" " alt="" coords="605,44,863,72"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="878,65,914,67,909,67,878,70"/>
+<area shape="poly" id="edge8_Node000001_Node000002" title=" " alt="" coords="878,47,914,50,909,50,878,52"/>
+<area shape="rect" id="Node000003" href="$classCatch_1_1Matchers_1_1MatcherBase.html" title=" " alt="" coords="254,5,442,50"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="457,42,608,56,602,57,458,47"/>
+<area shape="poly" id="edge5_Node000002_Node000003" title=" " alt="" coords="457,25,650,43,645,44,457,31"/>
+<area shape="rect" id="Node000004" href="$classCatch_1_1Matchers_1_1MatcherUntypedBase.html" title=" " alt="" coords="5,5,193,50"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="208,34,257,36,252,37,209,39"/>
+<area shape="poly" id="edge4_Node000003_Node000004" title=" " alt="" coords="208,16,257,18,252,20,209,21"/>
+<area shape="rect" id="Node000005" href="$structCatch_1_1Matchers_1_1CasedString.html" title=" " alt="" coords="242,74,454,102"/>
+<area shape="poly" id="edge6_Node000002_Node000005" title=" " alt="" coords="470,86,581,81,656,73,661,72,582,86,470,91"/>
+<area shape="rect" id="Node000006" href="$classCatch_1_1StringRef.html" title="A non&#45;owning string class (similar to the forthcoming std::string_view) Note that,..." alt="" coords="285,128,411,156"/>
+<area shape="poly" id="edge7_Node000002_Node000006" title=" " alt="" coords="427,137,502,131,581,117,647,95,701,73,707,72,649,100,582,122,502,136,427,143"/>
+</map>

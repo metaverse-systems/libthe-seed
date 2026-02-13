@@ -1,0 +1,7 @@
+<map id="Catch::AssertionInfo" name="Catch::AssertionInfo">
+<area shape="rect" id="Node000001" title=" " alt="" coords="76,128,229,156"/>
+<area shape="rect" id="Node000002" href="$classCatch_1_1StringRef.html" title="A non&#45;owning string class (similar to the forthcoming std::string_view) Note that,..." alt="" coords="5,5,132,33"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="63,46,64,76,73,103,86,116,103,128,98,128,83,120,69,106,59,77,61,51"/>
+<area shape="rect" id="Node000003" href="$structCatch_1_1SourceLineInfo.html" title=" " alt="" coords="155,5,318,33"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="233,47,225,78,209,106,180,130,178,125,205,103,220,76,229,50"/>
+</map>

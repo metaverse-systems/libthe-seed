@@ -1,0 +1,12 @@
+<map id="Catch::Benchmark::Environment&lt; Clock &gt;" name="Catch::Benchmark::Environment&lt; Clock &gt;">
+<area shape="rect" id="Node000001" title=" " alt="" coords="696,55,927,100"/>
+<area shape="rect" id="Node000002" href="$structCatch_1_1Benchmark_1_1EnvironmentEstimate.html" title=" " alt="" coords="303,7,534,68"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="549,48,698,65,693,66,549,53"/>
+<area shape="rect" id="Node000003" href="$structCatch_1_1Benchmark_1_1OutlierClassification.html" title=" " alt="" coords="5,42,198,86"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="212,52,305,46,300,48,213,57"/>
+<area shape="rect" id="Node000004" href="$structCatch_1_1Benchmark_1_1EnvironmentEstimate.html" title=" " alt="" coords="303,94,534,138"/>
+<area shape="poly" id="edge5_Node000004_Node000003" title=" " alt="" coords="213,80,305,96,300,98,213,85"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="549,119,610,117,672,111,735,101,740,100,672,117,611,122,549,124"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="32,136,171,163"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="186,150,278,145,327,139,332,139,279,150,186,155"/>
+</map>

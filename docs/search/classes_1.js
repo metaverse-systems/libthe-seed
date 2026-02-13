@@ -1,5 +1,26 @@
 var searchData=
 [
-  ['libraryloader_50',['LibraryLoader',['../classLibraryLoader.html',1,'']]],
-  ['loader_51',['Loader',['../classComponentLoader_1_1Loader.html',1,'ComponentLoader::Loader'],['../classSystemLoader_1_1Loader.html',1,'SystemLoader::Loader']]]
+  ['basic_5fiterator_0',['basic_iterator',['../classwith__mocked__iterator__access_1_1basic__iterator.html',1,'with_mocked_iterator_access']]],
+  ['basic_5fiterator_3c_20false_20_3e_1',['basic_iterator&lt; false &gt;',['../classwith__mocked__iterator__access_1_1basic__iterator.html',1,'with_mocked_iterator_access']]],
+  ['basic_5fiterator_3c_20true_20_3e_2',['basic_iterator&lt; true &gt;',['../classwith__mocked__iterator__access_1_1basic__iterator.html',1,'with_mocked_iterator_access']]],
+  ['basicresult_3',['BasicResult',['../classCatch_1_1Clara_1_1Detail_1_1BasicResult.html',1,'Catch::Clara::Detail::BasicResult&lt; T &gt;'],['../classclara_1_1detail_1_1BasicResult.html',1,'clara::detail::BasicResult&lt; T &gt;']]],
+  ['basicresult_3c_20parseresulttype_20_3e_4',['BasicResult&lt; ParseResultType &gt;',['../classCatch_1_1Clara_1_1Detail_1_1BasicResult.html',1,'Catch::Clara::Detail::BasicResult&lt; ParseResultType &gt;'],['../classclara_1_1detail_1_1BasicResult.html',1,'clara::detail::BasicResult&lt; ParseResultType &gt;']]],
+  ['basicresult_3c_20parsestate_20_3e_5',['BasicResult&lt; ParseState &gt;',['../classCatch_1_1Clara_1_1Detail_1_1BasicResult.html',1,'Catch::Clara::Detail::BasicResult&lt; ParseState &gt;'],['../classclara_1_1detail_1_1BasicResult.html',1,'clara::detail::BasicResult&lt; ParseState &gt;']]],
+  ['basicresult_3c_20void_20_3e_6',['BasicResult&lt; void &gt;',['../classCatch_1_1Clara_1_1Detail_1_1BasicResult.html',1,'Catch::Clara::Detail::BasicResult&lt; void &gt;'],['../classclara_1_1detail_1_1BasicResult.html',1,'clara::detail::BasicResult&lt; void &gt;']]],
+  ['benchmark_7',['Benchmark',['../structCatch_1_1Benchmark_1_1Benchmark.html',1,'Catch::Benchmark']]],
+  ['benchmarkfunction_8',['BenchmarkFunction',['../structCatch_1_1Benchmark_1_1Detail_1_1BenchmarkFunction.html',1,'Catch::Benchmark::Detail']]],
+  ['benchmarkinfo_9',['BenchmarkInfo',['../structCatch_1_1BenchmarkInfo.html',1,'Catch']]],
+  ['benchmarkstats_10',['BenchmarkStats',['../structCatch_1_1BenchmarkStats.html',1,'Catch']]],
+  ['benchmarkstats_3c_3e_11',['BenchmarkStats&lt;&gt;',['../structCatch_1_1BenchmarkStats.html',1,'Catch']]],
+  ['binaryexpr_12',['BinaryExpr',['../classCatch_1_1BinaryExpr.html',1,'Catch']]],
+  ['bootstrap_5fanalysis_13',['bootstrap_analysis',['../structCatch_1_1Benchmark_1_1Detail_1_1bootstrap__analysis.html',1,'Catch::Benchmark::Detail']]],
+  ['boundflaglambda_14',['BoundFlagLambda',['../structCatch_1_1Clara_1_1Detail_1_1BoundFlagLambda.html',1,'Catch::Clara::Detail::BoundFlagLambda&lt; L &gt;'],['../structclara_1_1detail_1_1BoundFlagLambda.html',1,'clara::detail::BoundFlagLambda&lt; L &gt;']]],
+  ['boundflagref_15',['BoundFlagRef',['../structCatch_1_1Clara_1_1Detail_1_1BoundFlagRef.html',1,'Catch::Clara::Detail::BoundFlagRef'],['../structclara_1_1detail_1_1BoundFlagRef.html',1,'clara::detail::BoundFlagRef']]],
+  ['boundflagrefbase_16',['BoundFlagRefBase',['../structCatch_1_1Clara_1_1Detail_1_1BoundFlagRefBase.html',1,'Catch::Clara::Detail::BoundFlagRefBase'],['../structclara_1_1detail_1_1BoundFlagRefBase.html',1,'clara::detail::BoundFlagRefBase']]],
+  ['boundlambda_17',['BoundLambda',['../structCatch_1_1Clara_1_1Detail_1_1BoundLambda.html',1,'Catch::Clara::Detail::BoundLambda&lt; L &gt;'],['../structclara_1_1detail_1_1BoundLambda.html',1,'clara::detail::BoundLambda&lt; L &gt;']]],
+  ['boundmanylambda_18',['BoundManyLambda',['../structCatch_1_1Clara_1_1Detail_1_1BoundManyLambda.html',1,'Catch::Clara::Detail']]],
+  ['boundref_19',['BoundRef',['../structCatch_1_1Clara_1_1Detail_1_1BoundRef.html',1,'Catch::Clara::Detail::BoundRef'],['../structclara_1_1detail_1_1BoundRef.html',1,'clara::detail::BoundRef']]],
+  ['boundvalueref_20',['BoundValueRef',['../structCatch_1_1Clara_1_1Detail_1_1BoundValueRef.html',1,'Catch::Clara::Detail::BoundValueRef&lt; T &gt;'],['../structclara_1_1detail_1_1BoundValueRef.html',1,'clara::detail::BoundValueRef&lt; T &gt;']]],
+  ['boundvalueref_3c_20std_3a_3avector_3c_20t_20_3e_20_3e_21',['BoundValueRef&lt; std::vector&lt; T &gt; &gt;',['../structCatch_1_1Clara_1_1Detail_1_1BoundValueRef_3_01std_1_1vector_3_01T_01_4_01_4.html',1,'Catch::Clara::Detail::BoundValueRef&lt; std::vector&lt; T &gt; &gt;'],['../structclara_1_1detail_1_1BoundValueRef_3_01std_1_1vector_3_01T_01_4_01_4.html',1,'clara::detail::BoundValueRef&lt; std::vector&lt; T &gt; &gt;']]],
+  ['boundvaluerefbase_22',['BoundValueRefBase',['../structCatch_1_1Clara_1_1Detail_1_1BoundValueRefBase.html',1,'Catch::Clara::Detail::BoundValueRefBase'],['../structclara_1_1detail_1_1BoundValueRefBase.html',1,'clara::detail::BoundValueRefBase']]]
 ];

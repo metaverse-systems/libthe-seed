@@ -1,0 +1,17 @@
+<map id="Catch::MessageBuilder" name="Catch::MessageBuilder">
+<area shape="rect" id="Node000001" title=" " alt="" coords="32,284,203,311"/>
+<area shape="rect" id="Node000002" href="$structCatch_1_1MessageStream.html" title=" " alt="" coords="32,183,203,211"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="112,224,114,284,109,282,107,227"/>
+<area shape="poly" id="edge5_Node000001_Node000002" title=" " alt="" coords="128,224,127,284,122,282,124,227"/>
+<area shape="rect" id="Node000003" href="$classCatch_1_1ReusableStringStream.html" title=" " alt="" coords="5,82,217,110"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="114,123,119,183,114,182,112,127"/>
+<area shape="rect" id="Node000004" href="$classCatch_1_1Detail_1_1NonCopyable.html" title="Deriving classes become noncopyable and nonmovable." alt="" coords="11,5,211,33"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="103,46,107,82,101,82,102,51"/>
+<area shape="poly" id="edge4_Node000003_Node000004" title=" " alt="" coords="120,46,121,83,115,81,119,51"/>
+<area shape="rect" id="Node000005" href="$structCatch_1_1MessageInfo.html" title=" " alt="" coords="230,183,379,211"/>
+<area shape="poly" id="edge6_Node000001_Node000005" title=" " alt="" coords="269,219,144,286,141,281,264,217"/>
+<area shape="rect" id="Node000006" href="$classCatch_1_1StringRef.html" title="A non&#45;owning string class (similar to the forthcoming std::string_view) Note that,..." alt="" coords="241,82,368,110"/>
+<area shape="poly" id="edge7_Node000005_Node000006" title=" " alt="" coords="306,124,307,184,302,181,303,128"/>
+<area shape="rect" id="Node000007" href="$structCatch_1_1SourceLineInfo.html" title=" " alt="" coords="391,82,554,110"/>
+<area shape="poly" id="edge8_Node000005_Node000007" title=" " alt="" coords="451,119,399,161,347,185,345,180,396,157,446,122"/>
+</map>

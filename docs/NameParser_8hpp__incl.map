@@ -1,4 +1,5 @@
 <map id="src/NameParser.hpp" name="src/NameParser.hpp">
-<area shape="rect" id="node1" title=" " alt="" coords="5,5,159,32"/>
-<area shape="rect" id="node2" title=" " alt="" coords="53,80,111,107"/>
+<area shape="rect" id="Node000001" title=" " alt="" coords="5,5,158,33"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="52,81,111,109"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="83,32,84,66,79,64,80,36"/>
 </map>

@@ -1,0 +1,8 @@
+<map id="Catch::MessageStream" name="Catch::MessageStream">
+<area shape="rect" id="Node000001" title=" " alt="" coords="25,183,197,211"/>
+<area shape="rect" id="Node000002" href="$classCatch_1_1ReusableStringStream.html" title=" " alt="" coords="5,82,217,110"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="113,124,114,183,108,182,109,127"/>
+<area shape="rect" id="Node000003" href="$classCatch_1_1Detail_1_1NonCopyable.html" title="Deriving classes become noncopyable and nonmovable." alt="" coords="11,5,211,33"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="103,46,107,83,101,82,101,51"/>
+<area shape="poly" id="edge3_Node000002_Node000003" title=" " alt="" coords="121,46,121,83,115,81,119,51"/>
+</map>

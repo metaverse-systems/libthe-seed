@@ -1,0 +1,15 @@
+<map id="Graphical Class Hierarchy" name="Graphical Class Hierarchy">
+<area shape="rect" id="Node000000" href="$classCatch_1_1Clara_1_1Detail_1_1ResultBase.html" title=" " alt="" coords="5,109,153,154"/>
+<area shape="rect" id="Node000001" href="$classCatch_1_1Clara_1_1Detail_1_1ResultValueBase_3_01void_01_4.html" title=" " alt="" coords="201,75,398,119"/>
+<area shape="poly" id="edge39_Node000000_Node000001" title=" " alt="" coords="167,115,203,111,198,114,169,120"/>
+<area shape="rect" id="Node000004" href="$classCatch_1_1Clara_1_1Detail_1_1ResultValueBase.html" title=" " alt="" coords="211,144,388,189"/>
+<area shape="poly" id="edge42_Node000000_Node000004" title=" " alt="" coords="167,143,213,152,208,153,168,148"/>
+<area shape="rect" id="Node000002" href="$classCatch_1_1Clara_1_1Detail_1_1BasicResult.html" title=" " alt="" coords="486,5,649,50"/>
+<area shape="poly" id="edge40_Node000001_Node000002" title=" " alt="" coords="403,68,487,48,482,50,404,73"/>
+<area shape="rect" id="Node000003" href="$classCatch_1_1Clara_1_1Detail_1_1BasicResult.html" title=" " alt="" coords="494,75,641,119"/>
+<area shape="poly" id="edge41_Node000001_Node000003" title=" " alt="" coords="413,94,496,96,491,98,414,100"/>
+<area shape="rect" id="Node000005" href="$classCatch_1_1Clara_1_1Detail_1_1BasicResult.html" title=" " alt="" coords="446,144,688,189"/>
+<area shape="poly" id="edge43_Node000004_Node000005" title=" " alt="" coords="404,164,448,166,443,167,404,169"/>
+<area shape="rect" id="Node000006" href="$classCatch_1_1Clara_1_1Detail_1_1BasicResult.html" title=" " alt="" coords="464,213,670,258"/>
+<area shape="poly" id="edge44_Node000004_Node000006" title=" " alt="" coords="404,191,481,213,475,213,403,196"/>
+</map>

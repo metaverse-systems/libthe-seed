@@ -1,0 +1,6 @@
+var searchData=
+[
+  ['xmlencode_0',['XmlEncode',['../classCatch_1_1XmlEncode.html#ad4bf8ef6158ae9c8da0359e7d9f88327',1,'Catch::XmlEncode::XmlEncode(StringRef str, ForWhat forWhat=ForTextNodes)'],['../classCatch_1_1XmlEncode.html#ad4bf8ef6158ae9c8da0359e7d9f88327',1,'Catch::XmlEncode::XmlEncode(StringRef str, ForWhat forWhat=ForTextNodes)']]],
+  ['xmlreporter_1',['XmlReporter',['../classCatch_1_1XmlReporter.html#a52569de21b23c6f18812fb4369dc0d36',1,'Catch::XmlReporter::XmlReporter(ReporterConfig &amp;&amp;_config)'],['../classCatch_1_1XmlReporter.html#a52569de21b23c6f18812fb4369dc0d36',1,'Catch::XmlReporter::XmlReporter(ReporterConfig &amp;&amp;_config)']]],
+  ['xmlwriter_2',['XmlWriter',['../classCatch_1_1XmlWriter.html#a179557581b3b64fa2576236ec4da95e3',1,'Catch::XmlWriter::XmlWriter(std::ostream &amp;os)'],['../classCatch_1_1XmlWriter.html#a735da4465c68e34d099d8ae06a3e48d4',1,'Catch::XmlWriter::XmlWriter(XmlWriter const &amp;)=delete'],['../classCatch_1_1XmlWriter.html#a179557581b3b64fa2576236ec4da95e3',1,'Catch::XmlWriter::XmlWriter(std::ostream &amp;os)'],['../classCatch_1_1XmlWriter.html#a735da4465c68e34d099d8ae06a3e48d4',1,'Catch::XmlWriter::XmlWriter(XmlWriter const &amp;)=delete']]]
+];
