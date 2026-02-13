@@ -52,7 +52,7 @@ namespace ComponentLoader
         return loader->ComponentCreate();
     }
 
-    ecs::Component *Create(std::string component, void *data)
+    ecs::Component *Create(const std::string &component, void *data)
     {
         auto &loader = component_loaders[component];
         if(!loader)

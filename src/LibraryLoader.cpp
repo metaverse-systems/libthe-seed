@@ -5,7 +5,10 @@
 #endif
 
 #include <libthe-seed/LibraryLoader.hpp>
-#include <fstream>
+
+#ifndef _WIN32
+    #include <fstream>
+#endif
 
 void LibraryLoader::PathAdd(std::string path)
 {
@@ -26,12 +29,20 @@ const std::vector<std::string> LibraryLoader::PathsGet()
         std::string full_path = path + "/lib" + this->name + ".so";
 #endif
 
+#ifdef _WIN32
+        DWORD attrib = GetFileAttributesA(full_path.c_str());
+        if(attrib != INVALID_FILE_ATTRIBUTES && !(attrib & FILE_ATTRIBUTE_DIRECTORY))
+        {
+            valid_paths.push_back(full_path);
+        }
+#else
         std::ifstream test_path(full_path);
         if(test_path.is_open()) 
         {
             valid_paths.push_back(full_path);
             test_path.close();
         }
+#endif
     }
 
     if(valid_paths.size() == 0)

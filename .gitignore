@@ -20,6 +20,7 @@ Makefile.in
 /config.h
 /config.sub
 /configure
+/configure~
 /configure.scan
 /depcomp
 /install-sh
