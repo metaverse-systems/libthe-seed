@@ -1,0 +1,9 @@
+<map id="clara::detail::BoundLambda&lt; L &gt;" name="clara::detail::BoundLambda&lt; L &gt;">
+<area shape="rect" id="Node000001" title=" " alt="" coords="5,249,242,277"/>
+<area shape="rect" id="Node000002" href="$structclara_1_1detail_1_1BoundValueRefBase.html" title=" " alt="" coords="31,157,216,201"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="125,215,126,250,121,248,122,219"/>
+<area shape="rect" id="Node000003" href="$structclara_1_1detail_1_1BoundRef.html" title=" " alt="" coords="39,81,208,109"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="125,122,126,157,121,155,122,127"/>
+<area shape="rect" id="Node000004" href="$structclara_1_1detail_1_1NonCopyable.html" title=" " alt="" coords="27,5,220,33"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="124,46,126,81,121,80,123,51"/>
+</map>

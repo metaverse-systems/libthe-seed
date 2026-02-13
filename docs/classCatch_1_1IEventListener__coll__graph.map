@@ -1,0 +1,10 @@
+<map id="Catch::IEventListener" name="Catch::IEventListener">
+<area shape="rect" id="Node000001" title=" " alt="" coords="93,183,253,211"/>
+<area shape="rect" id="Node000002" href="$structCatch_1_1ReporterPreferences.html" title="By setting up its preferences, a reporter can modify Catch2&#39;s behaviour in some regards,..." alt="" coords="5,82,205,110"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="113,122,130,157,155,183,150,182,126,161,110,127"/>
+<area shape="rect" id="Node000003" href="$classCatch_1_1IConfig.html" title=" " alt="" coords="229,82,341,110"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="270,121,235,161,199,185,197,180,231,157,265,123"/>
+<area shape="rect" id="Node000004" href="$classCatch_1_1Detail_1_1NonCopyable.html" title="Deriving classes become noncopyable and nonmovable." alt="" coords="185,5,385,33"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="278,46,280,83,276,81,275,51"/>
+<area shape="poly" id="edge4_Node000003_Node000004" title=" " alt="" coords="295,46,294,83,290,81,292,51"/>
+</map>

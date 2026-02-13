@@ -1,0 +1,23 @@
+<map id="Catch::Clara::Detail::BoundValueRefBase" name="Catch::Clara::Detail::BoundValueRefBase">
+<area shape="rect" id="Node000001" title=" " alt="" coords="449,52,610,97"/>
+<area shape="rect" id="Node000004" href="$structCatch_1_1Clara_1_1Detail_1_1BoundValueRef_3_01std_1_1vector_3_01T_01_4_01_4.html" title=" " alt="" coords="660,5,824,67"/>
+<area shape="poly" id="edge5_Node000001_Node000004" title=" " alt="" coords="625,82,692,68,697,67,627,87"/>
+<area shape="poly" id="edge6_Node000001_Node000004" title=" " alt="" coords="625,64,662,59,657,61,626,69"/>
+<area shape="poly" id="edge13_Node000001_Node000004" title=" " alt="" coords="622,46,662,42,657,43,623,52"/>
+<area shape="poly" id="edge14_Node000001_Node000004" title=" " alt="" coords="569,44,612,31,662,24,657,25,613,36,571,49"/>
+<area shape="rect" id="Node000005" href="$structCatch_1_1Clara_1_1Detail_1_1BoundLambda.html" title=" " alt="" coords="662,91,822,136"/>
+<area shape="poly" id="edge7_Node000001_Node000005" title=" " alt="" coords="623,98,664,108,659,108,623,103"/>
+<area shape="poly" id="edge10_Node000001_Node000005" title=" " alt="" coords="626,81,666,91,661,91,626,86"/>
+<area shape="rect" id="Node000007" href="$structCatch_1_1Clara_1_1Detail_1_1BoundValueRef.html" title=" " alt="" coords="658,160,826,205"/>
+<area shape="poly" id="edge11_Node000001_Node000007" title=" " alt="" coords="566,104,661,160,655,160,565,109"/>
+<area shape="poly" id="edge12_Node000001_Node000007" title=" " alt="" coords="600,102,660,134,712,160,707,160,657,139,599,108"/>
+<area shape="rect" id="Node000002" href="$structCatch_1_1Clara_1_1Detail_1_1BoundRef.html" title=" " alt="" coords="254,52,401,97"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="416,81,451,83,446,84,417,86"/>
+<area shape="poly" id="edge4_Node000001_Node000002" title=" " alt="" coords="416,63,451,66,446,66,417,69"/>
+<area shape="rect" id="Node000003" href="$classCatch_1_1Detail_1_1NonCopyable.html" title="Deriving classes become noncopyable and nonmovable." alt="" coords="5,61,206,89"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="221,81,256,83,251,84,222,86"/>
+<area shape="poly" id="edge3_Node000002_Node000003" title=" " alt="" coords="221,63,256,65,251,67,222,68"/>
+<area shape="rect" id="Node000006" href="$structCatch_1_1Clara_1_1Detail_1_1BoundManyLambda.html" title=" " alt="" coords="874,91,1069,136"/>
+<area shape="poly" id="edge8_Node000005_Node000006" title=" " alt="" coords="837,120,876,122,870,123,837,125"/>
+<area shape="poly" id="edge9_Node000005_Node000006" title=" " alt="" coords="837,102,876,104,870,105,837,107"/>
+</map>

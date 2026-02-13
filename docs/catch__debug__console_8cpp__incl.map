@@ -1,0 +1,23 @@
+<map id="external/Catch2/src/catch2/internal/catch_debug_console.cpp" name="external/Catch2/src/catch2/internal/catch_debug_console.cpp">
+<area shape="rect" id="Node000001" title=" " alt="" coords="407,5,569,67"/>
+<area shape="rect" id="Node000002" href="$catch__debug__console_8hpp.html" title=" " alt="" coords="5,115,163,160"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="406,60,179,116,177,111,408,55"/>
+<area shape="rect" id="Node000004" href="$catch__config__android__logwrite_8hpp.html" title=" " alt="" coords="187,115,400,160"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="431,66,351,110,348,105,426,69"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="213,216,427,244"/>
+<area shape="poly" id="edge8_Node000001_Node000005" title=" " alt="" coords="476,66,450,114,414,161,386,188,356,210,353,205,382,184,410,158,445,111,471,69"/>
+<area shape="rect" id="Node000006" href="$catch__platform_8hpp.html" title=" " alt="" coords="479,208,636,252"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="493,65,502,111,516,159,535,196,530,194,511,161,496,112,490,70"/>
+<area shape="rect" id="Node000007" href="$catch__windows__h__proxy_8hpp.html" title=" " alt="" coords="526,115,696,160"/>
+<area shape="poly" id="edge6_Node000001_Node000007" title=" " alt="" coords="526,65,575,105,569,105,525,70"/>
+<area shape="rect" id="Node000008" href="$catch__stdstreams_8hpp.html" title=" " alt="" coords="720,115,877,160"/>
+<area shape="poly" id="edge9_Node000001_Node000008" title=" " alt="" coords="569,61,719,110,714,110,569,66"/>
+<area shape="rect" id="Node000010" title=" " alt="" coords="901,124,976,151"/>
+<area shape="poly" id="edge11_Node000001_Node000010" title=" " alt="" coords="569,45,720,71,806,90,890,112,899,118,894,117,889,118,804,95,719,76,569,51"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="55,216,113,244"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="86,158,87,201,81,200,82,162"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="301,158,314,202,309,200,298,162"/>
+<area shape="poly" id="edge7_Node000007_Node000006" title=" " alt="" coords="600,159,579,197,576,192,596,161"/>
+<area shape="rect" id="Node000009" title=" " alt="" coords="766,216,831,244"/>
+<area shape="poly" id="edge10_Node000008_Node000009" title=" " alt="" coords="801,158,801,202,797,199,797,162"/>
+</map>

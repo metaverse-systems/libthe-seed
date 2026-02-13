@@ -1,0 +1,20 @@
+<map id="external/Catch2/src/catch2/internal/catch_leak_detector.cpp" name="external/Catch2/src/catch2/internal/catch_leak_detector.cpp">
+<area shape="rect" id="Node000001" title=" " alt="" coords="211,5,373,67"/>
+<area shape="rect" id="Node000002" href="$catch__leak__detector_8hpp.html" title=" " alt="" coords="5,115,163,160"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="227,70,145,110,142,106,230,65"/>
+<area shape="rect" id="Node000003" href="$catch__interfaces__registry__hub_8hpp.html" title=" " alt="" coords="187,115,397,160"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="293,65,295,100,289,99,291,70"/>
+<area shape="rect" id="Node000009" title=" " alt="" coords="421,124,635,151"/>
+<area shape="poly" id="edge9_Node000001_Node000009" title=" " alt="" coords="364,65,485,116,480,118,364,70"/>
+<area shape="rect" id="Node000004" href="$catch__unique__ptr_8hpp.html" title=" " alt="" coords="147,208,304,252"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="278,158,252,197,248,194,274,162"/>
+<area shape="rect" id="Node000008" title=" " alt="" coords="328,216,386,244"/>
+<area shape="poly" id="edge8_Node000003_Node000008" title=" " alt="" coords="308,157,341,203,336,203,307,163"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="119,309,188,336"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="210,251,175,298,171,294,206,254"/>
+<area shape="rect" id="Node000006" title=" " alt="" coords="244,393,335,421"/>
+<area shape="poly" id="edge5_Node000004_Node000006" title=" " alt="" coords="229,251,238,296,253,344,273,381,268,380,248,346,233,297,227,255"/>
+<area shape="rect" id="Node000007" href="$catch__move__and__forward_8hpp.html" title=" " alt="" coords="263,300,444,345"/>
+<area shape="poly" id="edge6_Node000004_Node000007" title=" " alt="" coords="256,250,313,291,308,291,255,255"/>
+<area shape="poly" id="edge7_Node000007_Node000006" title=" " alt="" coords="339,344,311,383,308,378,334,347"/>
+</map>

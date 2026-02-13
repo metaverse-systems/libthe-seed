@@ -1,4 +1,6 @@
 var searchData=
 [
-  ['systemloader_55',['SystemLoader',['../namespaceSystemLoader.html',1,'']]]
+  ['b_0',['B',['../namespaceB.html',1,'']]],
+  ['bar_1',['bar',['../namespacebar.html',1,'']]],
+  ['bikeshed_2',['Bikeshed',['../namespaceBikeshed.html',1,'']]]
 ];

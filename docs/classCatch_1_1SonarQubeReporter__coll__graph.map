@@ -1,0 +1,25 @@
+<map id="Catch::SonarQubeReporter" name="Catch::SonarQubeReporter">
+<area shape="rect" id="Node000001" title=" " alt="" coords="1714,64,1907,92"/>
+<area shape="rect" id="Node000002" href="$classCatch_1_1CumulativeReporterBase.html" title=" " alt="" coords="1435,64,1664,92"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="1680,85,1716,87,1710,87,1680,90"/>
+<area shape="poly" id="edge13_Node000001_Node000002" title=" " alt="" coords="1680,67,1716,70,1710,70,1680,72"/>
+<area shape="rect" id="Node000003" href="$classCatch_1_1ReporterBase.html" title=" " alt="" coords="1070,64,1224,92"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="1239,83,1437,86,1432,87,1240,89"/>
+<area shape="poly" id="edge11_Node000002_Node000003" title=" " alt="" coords="1239,68,1437,70,1432,70,1240,73"/>
+<area shape="rect" id="Node000004" href="$classCatch_1_1IEventListener.html" title=" " alt="" coords="624,34,783,61"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="799,59,1072,80,1067,80,799,64"/>
+<area shape="poly" id="edge8_Node000003_Node000004" title=" " alt="" coords="799,44,1072,66,1067,66,799,49"/>
+<area shape="rect" id="Node000005" href="$structCatch_1_1ReporterPreferences.html" title="By setting up its preferences, a reporter can modify Catch2&#39;s behaviour in some regards,..." alt="" coords="255,6,454,33"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="469,26,626,41,621,42,470,32"/>
+<area shape="rect" id="Node000006" href="$classCatch_1_1IConfig.html" title=" " alt="" coords="298,62,411,89"/>
+<area shape="poly" id="edge5_Node000004_Node000006" title=" " alt="" coords="426,73,502,72,583,66,633,62,628,63,584,71,502,77,427,79"/>
+<area shape="rect" id="Node000007" href="$classCatch_1_1Detail_1_1NonCopyable.html" title="Deriving classes become noncopyable and nonmovable." alt="" coords="5,62,206,89"/>
+<area shape="poly" id="edge6_Node000006_Node000007" title=" " alt="" coords="221,82,300,82,295,84,222,87"/>
+<area shape="poly" id="edge7_Node000006_Node000007" title=" " alt="" coords="221,64,300,67,295,69,222,69"/>
+<area shape="rect" id="Node000008" href="$classCatch_1_1Detail_1_1unique__ptr.html" title=" " alt="" coords="617,85,790,130"/>
+<area shape="poly" id="edge9_Node000003_Node000008" title=" " alt="" coords="805,107,960,102,1067,92,1072,91,961,107,805,112"/>
+<area shape="rect" id="Node000009" href="$classCatch_1_1Detail_1_1unique__ptr.html" title=" " alt="" coords="607,155,800,199"/>
+<area shape="poly" id="edge10_Node000003_Node000009" title=" " alt="" coords="815,177,889,166,925,154,959,137,967,130,970,121,974,112,983,103,1025,85,1066,79,1072,78,1026,90,986,107,979,115,975,123,971,133,962,142,927,159,890,171,815,182"/>
+<area shape="rect" id="Node000010" href="$classCatch_1_1Detail_1_1unique__ptr.html" title=" " alt="" coords="985,117,1309,178"/>
+<area shape="poly" id="edge12_Node000002_Node000010" title=" " alt="" coords="1324,121,1411,106,1485,93,1490,92,1411,111,1325,126"/>
+</map>

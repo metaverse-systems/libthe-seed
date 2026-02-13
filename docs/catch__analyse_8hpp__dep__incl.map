@@ -1,0 +1,23 @@
+<map id="external/Catch2/src/catch2/benchmark/detail/catch_analyse.hpp" name="external/Catch2/src/catch2/benchmark/detail/catch_analyse.hpp">
+<area shape="rect" id="Node000001" title=" " alt="" coords="724,5,911,67"/>
+<area shape="rect" id="Node000002" href="$catch__benchmark_8hpp.html" title=" " alt="" coords="661,115,846,177"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="794,79,773,117,770,112,790,82"/>
+<area shape="rect" id="Node000003" href="$catch__benchmark__all_8hpp.html" title=" " alt="" coords="5,225,190,286"/>
+<area shape="poly" id="edge9_Node000001_Node000003" title=" " alt="" coords="710,73,191,229,189,224,709,67"/>
+<area shape="rect" id="Node000008" href="$InternalBenchmark_8tests_8cpp.html" title=" " alt="" coords="1205,225,1417,286"/>
+<area shape="poly" id="edge11_Node000001_Node000008" title=" " alt="" coords="842,78,877,136,895,160,910,175,947,195,981,208,1012,213,1043,215,1110,213,1149,215,1193,222,1207,227,1202,227,1192,227,1148,221,1110,219,1043,220,1012,218,979,213,945,200,907,179,891,163,873,139,840,83"/>
+<area shape="rect" id="Node000010" href="$catch__analyse_8cpp.html" title=" " alt="" coords="920,115,1107,177"/>
+<area shape="poly" id="edge10_Node000001_Node000010" title=" " alt="" coords="886,72,961,115,956,114,885,77"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="644,159,440,186,320,205,202,227,191,230,189,225,201,222,319,200,439,181,649,157"/>
+<area shape="rect" id="Node000005" href="$X02-DisabledMacros_8cpp.html" title=" " alt="" coords="214,233,472,278"/>
+<area shape="poly" id="edge4_Node000002_Node000005" title=" " alt="" coords="643,176,426,235,425,230,649,174"/>
+<area shape="rect" id="Node000006" href="$X03-DisabledExceptions-DefaultHandler_8cpp.html" title=" " alt="" coords="496,225,750,286"/>
+<area shape="poly" id="edge5_Node000002_Node000006" title=" " alt="" coords="707,186,661,227,658,222,703,188"/>
+<area shape="rect" id="Node000007" href="$X22-BenchmarksInCumulativeReporter_8cpp.html" title=" " alt="" coords="774,225,994,286"/>
+<area shape="poly" id="edge6_Node000002_Node000007" title=" " alt="" coords="803,184,850,225,845,224,801,189"/>
+<area shape="poly" id="edge7_Node000002_Node000008" title=" " alt="" coords="861,173,865,174,956,190,1028,198,1101,207,1193,222,1207,227,1202,227,1192,227,1100,212,1028,204,956,195,864,179,861,179"/>
+<area shape="rect" id="Node000009" href="$Benchmark_8tests_8cpp.html" title=" " alt="" coords="1018,225,1180,286"/>
+<area shape="poly" id="edge8_Node000002_Node000009" title=" " alt="" coords="861,177,1006,222,1020,229,1015,228,1005,227,860,183"/>
+<area shape="rect" id="Node000004" href="$catch__all_8hpp.html" title=" " alt="" coords="18,334,177,379"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="99,300,100,335,95,333,96,304"/>
+</map>

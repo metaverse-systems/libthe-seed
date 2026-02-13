@@ -1,0 +1,21 @@
+<map id="external/Catch2/src/catch2/catch_assertion_info.hpp" name="external/Catch2/src/catch2/catch_assertion_info.hpp">
+<area shape="rect" id="Node000001" title=" " alt="" coords="181,5,355,67"/>
+<area shape="rect" id="Node000002" href="$catch__result__type_8hpp.html" title=" " alt="" coords="5,115,163,160"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="210,69,139,110,136,105,214,66"/>
+<area shape="rect" id="Node000003" href="$catch__source__line__info_8hpp.html" title=" " alt="" coords="187,115,349,160"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="269,65,270,101,266,98,267,70"/>
+<area shape="rect" id="Node000006" href="$catch__stringref_8hpp.html" title=" " alt="" coords="373,115,531,160"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="325,65,401,107,396,108,324,70"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="324,208,393,235"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="293,158,335,197,330,196,291,163"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="236,208,300,235"/>
+<area shape="poly" id="edge4_Node000003_Node000005" title=" " alt="" coords="270,158,270,194,266,191,266,162"/>
+<area shape="poly" id="edge6_Node000006_Node000004" title=" " alt="" coords="430,159,386,200,384,195,425,161"/>
+<area shape="poly" id="edge8_Node000006_Node000005" title=" " alt="" coords="406,160,312,203,311,198,401,161"/>
+<area shape="rect" id="Node000007" title=" " alt="" coords="418,208,476,235"/>
+<area shape="poly" id="edge7_Node000006_Node000007" title=" " alt="" coords="453,158,451,194,446,190,449,162"/>
+<area shape="rect" id="Node000008" title=" " alt="" coords="500,208,569,235"/>
+<area shape="poly" id="edge9_Node000006_Node000008" title=" " alt="" coords="475,158,513,197,508,196,473,163"/>
+<area shape="rect" id="Node000009" title=" " alt="" coords="593,208,658,235"/>
+<area shape="poly" id="edge10_Node000006_Node000009" title=" " alt="" coords="499,158,586,201,581,200,497,163"/>
+</map>

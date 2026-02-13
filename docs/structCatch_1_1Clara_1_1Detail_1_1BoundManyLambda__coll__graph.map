@@ -1,0 +1,15 @@
+<map id="Catch::Clara::Detail::BoundManyLambda&lt; L &gt;" name="Catch::Clara::Detail::BoundManyLambda&lt; L &gt;">
+<area shape="rect" id="Node000001" title=" " alt="" coords="8,359,203,404"/>
+<area shape="rect" id="Node000002" href="$structCatch_1_1Clara_1_1Detail_1_1BoundLambda.html" title=" " alt="" coords="26,266,185,311"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="98,325,100,360,95,358,95,329"/>
+<area shape="poly" id="edge8_Node000001_Node000002" title=" " alt="" coords="116,325,116,360,111,358,113,329"/>
+<area shape="rect" id="Node000003" href="$structCatch_1_1Clara_1_1Detail_1_1BoundValueRefBase.html" title=" " alt="" coords="25,174,186,218"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="98,231,100,267,95,266,96,236"/>
+<area shape="poly" id="edge7_Node000002_Node000003" title=" " alt="" coords="115,231,116,267,111,265,113,236"/>
+<area shape="rect" id="Node000004" href="$structCatch_1_1Clara_1_1Detail_1_1BoundRef.html" title=" " alt="" coords="32,81,179,126"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="97,139,100,174,95,173,96,144"/>
+<area shape="poly" id="edge6_Node000003_Node000004" title=" " alt="" coords="115,139,116,174,111,173,114,144"/>
+<area shape="rect" id="Node000005" href="$classCatch_1_1Detail_1_1NonCopyable.html" title="Deriving classes become noncopyable and nonmovable." alt="" coords="5,5,206,33"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="97,46,100,81,95,80,97,51"/>
+<area shape="poly" id="edge5_Node000004_Node000005" title=" " alt="" coords="115,46,116,81,111,80,114,51"/>
+</map>

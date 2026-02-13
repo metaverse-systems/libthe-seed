@@ -1,0 +1,13 @@
+<map id="external/Catch2/src/catch2/benchmark/catch_sample_analysis.hpp" name="external/Catch2/src/catch2/benchmark/catch_sample_analysis.hpp">
+<area shape="rect" id="Node000001" title=" " alt="" coords="317,5,501,67"/>
+<area shape="rect" id="Node000002" href="$catch__estimate_8hpp.html" title=" " alt="" coords="5,115,186,160"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="314,68,180,112,178,107,318,65"/>
+<area shape="rect" id="Node000003" href="$catch__outlier__classification_8hpp.html" title=" " alt="" coords="209,115,400,160"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="379,66,340,106,337,102,375,69"/>
+<area shape="rect" id="Node000004" href="$catch__clock_8hpp.html" title=" " alt="" coords="424,115,604,160"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="442,65,483,105,478,104,440,70"/>
+<area shape="rect" id="Node000006" title=" " alt="" coords="628,124,691,151"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="496,65,618,113,623,117,618,116,616,117,495,70"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="482,208,547,235"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="516,158,516,194,512,190,512,162"/>
+</map>

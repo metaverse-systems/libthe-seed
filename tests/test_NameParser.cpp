@@ -1,5 +1,4 @@
-#define CATCH_CONFIG_MAIN
-#include <catch2/catch.hpp>
+#include <catch_amalgamated.hpp>
 #include "../src/NameParser.hpp"
 
 TEST_CASE("NameParser constructs with valid input", "[NameParser]") {

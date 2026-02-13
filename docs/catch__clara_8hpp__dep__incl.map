@@ -1,0 +1,33 @@
+<map id="external/Catch2/src/catch2/internal/catch_clara.hpp" name="external/Catch2/src/catch2/internal/catch_clara.hpp">
+<area shape="rect" id="Node000001" title=" " alt="" coords="448,5,609,67"/>
+<area shape="rect" id="Node000002" href="$catch__all_8hpp.html" title=" " alt="" coords="649,452,808,497"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="431,50,280,77,199,97,123,123,62,154,38,172,21,191,11,212,9,234,15,258,31,285,48,302,72,319,135,350,215,378,305,402,493,439,652,464,647,464,492,444,304,407,214,383,133,355,69,324,44,306,26,288,10,260,3,235,6,210,17,188,35,168,59,150,121,118,197,92,279,72,435,46"/>
+<area shape="rect" id="Node000003" href="$catch__clara_8cpp.html" title=" " alt="" coords="541,115,703,177"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="565,76,598,115,593,114,564,81"/>
+<area shape="rect" id="Node000004" href="$catch__commandline_8hpp.html" title=" " alt="" coords="356,115,517,177"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="495,77,464,116,460,113,491,81"/>
+<area shape="rect" id="Node000014" href="$Clara_8tests_8cpp.html" title=" " alt="" coords="727,115,925,177"/>
+<area shape="poly" id="edge17_Node000001_Node000014" title=" " alt="" coords="624,69,745,114,739,115,624,75"/>
+<area shape="poly" id="edge4_Node000004_Node000002" title=" " alt="" coords="532,175,616,204,661,223,677,258,695,322,726,453,721,451,690,324,672,260,657,227,615,209,532,181"/>
+<area shape="rect" id="Node000005" href="$catch__session_8hpp.html" title=" " alt="" coords="826,233,1018,278"/>
+<area shape="poly" id="edge5_Node000004_Node000005" title=" " alt="" coords="532,175,691,210,828,238,823,239,690,216,532,180"/>
+<area shape="rect" id="Node000011" href="$catch__commandline_8cpp.html" title=" " alt="" coords="41,225,203,286"/>
+<area shape="poly" id="edge14_Node000004_Node000011" title=" " alt="" coords="340,181,204,229,202,224,343,178"/>
+<area shape="rect" id="Node000012" href="$CmdLine_8tests_8cpp.html" title=" " alt="" coords="227,225,425,286"/>
+<area shape="poly" id="edge15_Node000004_Node000012" title=" " alt="" coords="397,186,359,226,355,222,393,189"/>
+<area shape="rect" id="Node000013" href="$TestSpec_8tests_8cpp.html" title=" " alt="" coords="449,225,648,286"/>
+<area shape="poly" id="edge16_Node000004_Node000013" title=" " alt="" coords="479,185,520,224,514,224,478,190"/>
+<area shape="poly" id="edge6_Node000005_Node000002" title=" " alt="" coords="926,291,921,346,913,373,899,398,880,417,858,434,809,457,807,452,855,429,876,413,894,394,908,371,916,344,922,295"/>
+<area shape="rect" id="Node000006" href="$catch__session_8cpp.html" title=" " alt="" coords="855,452,1045,497"/>
+<area shape="poly" id="edge7_Node000005_Node000006" title=" " alt="" coords="933,291,943,334,950,398,952,454,947,450,944,399,938,335,930,295"/>
+<area shape="rect" id="Node000007" href="$catch__main_8cpp.html" title=" " alt="" coords="723,334,884,396"/>
+<area shape="poly" id="edge8_Node000005_Node000007" title=" " alt="" coords="889,287,838,336,835,331,884,290"/>
+<area shape="rect" id="Node000008" href="$catch__sharding_8hpp.html" title=" " alt="" coords="1011,334,1172,396"/>
+<area shape="poly" id="edge9_Node000005_Node000008" title=" " alt="" coords="969,284,1046,334,1041,333,968,289"/>
+<area shape="poly" id="edge10_Node000008_Node000002" title=" " alt="" coords="998,394,802,454,801,449,993,395"/>
+<area shape="poly" id="edge11_Node000008_Node000006" title=" " alt="" coords="1042,405,979,455,977,450,1037,406"/>
+<area shape="rect" id="Node000009" href="$catch__test__case__registry__impl_8cpp.html" title=" " alt="" coords="1291,444,1502,506"/>
+<area shape="poly" id="edge12_Node000008_Node000009" title=" " alt="" coords="1187,397,1313,444,1308,443,1186,403"/>
+<area shape="rect" id="Node000010" href="$Sharding_8tests_8cpp.html" title=" " alt="" coords="1069,444,1268,506"/>
+<area shape="poly" id="edge13_Node000008_Node000010" title=" " alt="" coords="1123,406,1149,445,1144,442,1120,411"/>
+</map>

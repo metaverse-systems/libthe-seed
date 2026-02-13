@@ -1,0 +1,10 @@
+<map id="clara::detail::BoundValueRef&lt; std::vector&lt; T &gt; &gt;" name="clara::detail::BoundValueRef&lt; std::vector&lt; T &gt; &gt;">
+<area shape="rect" id="Node000001" title=" " alt="" coords="10,249,194,294"/>
+<area shape="rect" id="Node000002" href="$structclara_1_1detail_1_1BoundValueRefBase.html" title=" " alt="" coords="10,157,194,201"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="95,215,97,250,92,248,91,219"/>
+<area shape="poly" id="edge4_Node000001_Node000002" title=" " alt="" coords="113,215,112,250,107,248,109,219"/>
+<area shape="rect" id="Node000003" href="$structclara_1_1detail_1_1BoundRef.html" title=" " alt="" coords="17,81,187,109"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="103,122,105,157,99,155,101,127"/>
+<area shape="rect" id="Node000004" href="$structclara_1_1detail_1_1NonCopyable.html" title=" " alt="" coords="5,5,199,33"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="103,46,105,81,99,80,101,51"/>
+</map>

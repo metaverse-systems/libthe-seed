@@ -1,0 +1,9 @@
+<map id="Catch::ScopedMessage" name="Catch::ScopedMessage">
+<area shape="rect" id="Node000001" title=" " alt="" coords="67,207,238,234"/>
+<area shape="rect" id="Node000002" href="$structCatch_1_1MessageInfo.html" title=" " alt="" coords="78,106,227,134"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="155,148,155,207,150,205,150,151"/>
+<area shape="rect" id="Node000003" href="$classCatch_1_1StringRef.html" title="A non&#45;owning string class (similar to the forthcoming std::string_view) Note that,..." alt="" coords="5,5,132,33"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="89,42,121,80,143,105,138,106,117,84,88,48"/>
+<area shape="rect" id="Node000004" href="$structCatch_1_1SourceLineInfo.html" title=" " alt="" coords="155,5,318,33"/>
+<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="229,46,209,84,180,107,176,103,205,80,225,50"/>
+</map>

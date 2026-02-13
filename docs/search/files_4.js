@@ -1,5 +1,6 @@
 var searchData=
 [
-  ['nameparser_2ecpp_63',['NameParser.cpp',['../NameParser_8cpp.html',1,'']]],
-  ['nameparser_2ehpp_64',['NameParser.hpp',['../NameParser_8hpp.html',1,'']]]
+  ['algorithms_2etests_2ecpp_0',['Algorithms.tests.cpp',['../Algorithms_8tests_8cpp.html',1,'']]],
+  ['approx_2etests_2ecpp_1',['Approx.tests.cpp',['../Approx_8tests_8cpp.html',1,'']]],
+  ['assertionhandler_2etests_2ecpp_2',['AssertionHandler.tests.cpp',['../AssertionHandler_8tests_8cpp.html',1,'']]]
 ];

@@ -1,0 +1,20 @@
+<map id="external/Catch2/src/catch2/benchmark/catch_chronometer.cpp" name="external/Catch2/src/catch2/benchmark/catch_chronometer.cpp">
+<area shape="rect" id="Node000001" title=" " alt="" coords="199,5,384,67"/>
+<area shape="rect" id="Node000002" href="$catch__chronometer_8hpp.html" title=" " alt="" coords="201,115,382,160"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="293,65,294,100,289,99,290,70"/>
+<area shape="rect" id="Node000003" href="$catch__clock_8hpp.html" title=" " alt="" coords="5,208,186,252"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="243,162,158,203,155,199,246,158"/>
+<area shape="rect" id="Node000005" href="$catch__optimizer_8hpp.html" title=" " alt="" coords="265,208,446,252"/>
+<area shape="poly" id="edge4_Node000002_Node000005" title=" " alt="" coords="307,157,334,195,329,195,306,163"/>
+<area shape="rect" id="Node000006" href="$catch__move__and__forward_8hpp.html" title=" " alt="" coords="149,300,330,345"/>
+<area shape="poly" id="edge10_Node000002_Node000006" title=" " alt="" coords="278,158,255,209,247,247,243,286,238,283,241,247,250,207,275,162"/>
+<area shape="rect" id="Node000008" href="$catch__meta_8hpp.html" title=" " alt="" coords="405,300,562,345"/>
+<area shape="poly" id="edge8_Node000002_Node000008" title=" " alt="" coords="382,156,425,176,460,206,472,224,480,244,486,286,481,284,474,246,467,226,456,209,422,180,382,161"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="59,309,124,336"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="96,250,95,294,90,293,93,255"/>
+<area shape="poly" id="edge5_Node000005_Node000006" title=" " alt="" coords="330,251,280,293,278,288,326,254"/>
+<area shape="rect" id="Node000007" title=" " alt="" coords="322,393,413,421"/>
+<area shape="poly" id="edge7_Node000005_Node000007" title=" " alt="" coords="359,251,368,379,363,376,355,254"/>
+<area shape="poly" id="edge6_Node000006_Node000007" title=" " alt="" coords="274,343,337,384,332,384,273,348"/>
+<area shape="poly" id="edge9_Node000008_Node000007" title=" " alt="" coords="456,345,400,386,398,381,450,346"/>
+</map>

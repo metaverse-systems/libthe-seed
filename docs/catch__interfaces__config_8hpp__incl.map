@@ -1,0 +1,23 @@
+<map id="external/Catch2/src/catch2/interfaces/catch_interfaces_config.hpp" name="external/Catch2/src/catch2/interfaces/catch_interfaces_config.hpp">
+<area shape="rect" id="Node000001" title=" " alt="" coords="285,5,462,67"/>
+<area shape="rect" id="Node000002" href="$catch__noncopyable_8hpp.html" title=" " alt="" coords="5,115,163,160"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="283,69,163,112,161,107,287,66"/>
+<area shape="rect" id="Node000003" href="$catch__stringref_8hpp.html" title=" " alt="" coords="237,115,395,160"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="358,66,338,103,334,99,354,69"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="106,208,164,235"/>
+<area shape="poly" id="edge10_Node000001_Node000005" title=" " alt="" coords="301,69,265,91,227,117,186,157,154,197,150,193,182,153,224,113,262,87,305,66"/>
+<area shape="rect" id="Node000006" title=" " alt="" coords="464,208,528,235"/>
+<area shape="poly" id="edge9_Node000001_Node000006" title=" " alt="" coords="395,65,482,195,476,194,392,70"/>
+<area shape="rect" id="Node000009" title=" " alt="" coords="470,124,535,151"/>
+<area shape="poly" id="edge8_Node000001_Node000009" title=" " alt="" coords="414,65,476,114,471,114,412,70"/>
+<area shape="rect" id="Node000010" title=" " alt="" coords="560,124,622,151"/>
+<area shape="poly" id="edge11_Node000001_Node000010" title=" " alt="" coords="443,65,549,113,554,117,548,116,547,117,442,70"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="188,208,257,235"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="294,159,250,199,248,195,289,161"/>
+<area shape="poly" id="edge4_Node000003_Node000005" title=" " alt="" coords="271,160,178,203,177,198,265,161"/>
+<area shape="poly" id="edge5_Node000003_Node000006" title=" " alt="" coords="364,158,456,201,451,201,363,163"/>
+<area shape="rect" id="Node000007" title=" " alt="" coords="282,208,350,235"/>
+<area shape="poly" id="edge6_Node000003_Node000007" title=" " alt="" coords="318,158,318,194,314,191,314,162"/>
+<area shape="rect" id="Node000008" title=" " alt="" coords="374,208,439,235"/>
+<area shape="poly" id="edge7_Node000003_Node000008" title=" " alt="" coords="341,158,383,197,378,196,339,163"/>
+</map>

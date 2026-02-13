@@ -1,0 +1,14 @@
+<map id="external/Catch2/src/catch2/internal/catch_debugger.cpp" name="external/Catch2/src/catch2/internal/catch_debugger.cpp">
+<area shape="rect" id="Node000001" title=" " alt="" coords="177,5,338,67"/>
+<area shape="rect" id="Node000002" href="$catch__debugger_8hpp.html" title=" " alt="" coords="5,115,163,160"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="203,69,136,109,133,105,206,66"/>
+<area shape="rect" id="Node000003" href="$catch__platform_8hpp.html" title=" " alt="" coords="63,208,220,252"/>
+<area shape="poly" id="edge4_Node000001_Node000003" title=" " alt="" coords="242,67,164,196,160,193,237,68"/>
+<area shape="rect" id="Node000004" href="$catch__errno__guard_8hpp.html" title=" " alt="" coords="237,115,395,160"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="276,65,298,102,293,101,274,70"/>
+<area shape="rect" id="Node000005" href="$catch__stdstreams_8hpp.html" title=" " alt="" coords="419,115,576,160"/>
+<area shape="poly" id="edge5_Node000001_Node000005" title=" " alt="" coords="331,65,433,108,428,109,330,70"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="99,158,123,195,117,195,96,162"/>
+<area shape="rect" id="Node000006" title=" " alt="" coords="465,216,530,244"/>
+<area shape="poly" id="edge6_Node000005_Node000006" title=" " alt="" coords="499,158,499,202,495,199,495,162"/>
+</map>
