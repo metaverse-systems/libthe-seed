@@ -17,7 +17,7 @@ Implement a `DependencyLister` class that parses ELF and PE binary formats direc
 **Project Type**: Single shared library (`libthe-seed.la`) built with autotools/libtool  
 **Performance Goals**: N/A — binary headers are small (KB range), performance is not a concern  
 **Constraints**: No LIEF dependency. No platform-default search paths. Caller provides all inputs.  
-**Scale/Scope**: Single class addition to existing library. ~4 files (header, impl, ELF parser, PE parser + tests).
+**Scale/Scope**: Single class addition to existing library. 7 files (public header, 2 parser implementations, 2 parser headers, byte-swap utility, tests).
 
 ## Constitution Check
 

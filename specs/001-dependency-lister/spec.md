@@ -84,7 +84,7 @@ The DependencyLister parses both ELF and PE binary formats on any platform — i
 
 - The DependencyLister supports both ELF and PE binary formats on all platforms. Cross-platform binary analysis (e.g., reading PE files on Linux or ELF files on Windows) is supported.
 - Library search paths for recursive resolution are always provided explicitly by the caller. The system does not infer or use any platform-default paths (e.g., `LD_LIBRARY_PATH`, `/usr/lib`, system `PATH`). This gives the TypeScript caller full control over resolution and ensures consistent behavior across native and cross-platform analysis.
-- The TypeScript application communicates with this C++ library through an existing binding mechanism already established in the project (matching the existing patterns in `libthe-seed`).
+- The TypeScript application communicates with this C++ library through an existing binding mechanism already established in the project (matching the existing patterns in `libthe-seed`). The binding mechanism itself is an out-of-scope prerequisite — this feature is responsible only for the C++ API surface.
 - The DependencyLister exposes a single stateless call — the caller provides all inputs (binary paths + search paths) and receives the full dependency map as the return value. No state is accumulated across calls.
 
 ## Requirements *(mandatory)*
@@ -98,9 +98,8 @@ The DependencyLister parses both ELF and PE binary formats on any platform — i
 - **FR-005**: System MUST accept a list of search paths from the caller to locate dependent libraries on the filesystem for recursive resolution. The system MUST NOT use any platform-default search paths (e.g., `LD_LIBRARY_PATH`, `/usr/lib`, `PATH`) — all search paths are explicitly provided by the caller.
 - **FR-006**: System MUST detect and handle circular dependencies gracefully, avoiding infinite recursion.
 - **FR-007**: System MUST produce a result mapping each discovered library's resolved absolute filesystem path to the list of input project files that depend on it (directly or transitively), using a structure equivalent to `std::map<std::string, std::vector<std::string>>`. If a library cannot be located on the filesystem, its key falls back to the name as recorded in the binary.
-- **FR-008**: System MUST return per-file errors alongside successful results in the same return structure. Invalid inputs (non-existent files, non-binary files, unreadable files) produce an error entry for that file but do not prevent processing of other files.
-- **FR-009**: The return structure MUST include both a dependency map (for successfully processed binaries) and an error map (mapping failed file paths to error descriptions), so the caller can handle partial results and errors in one place.
-- **FR-010**: System MUST NOT depend on any third-party binary parsing library (e.g., LIEF). All binary format parsing MUST be implemented directly.
+- **FR-008**: System MUST return a single result structure containing both a dependency map (for successfully processed binaries) and an error map (mapping failed file paths to error descriptions). Invalid inputs (non-existent files, non-binary files, unreadable files) produce an error entry for that file but do not prevent processing of other files, so the caller can handle partial results and errors in one place.
+- **FR-009**: System MUST NOT depend on any third-party binary parsing library (e.g., LIEF). All binary format parsing MUST be implemented directly.
 
 ### Key Entities
 
@@ -117,4 +116,4 @@ The DependencyLister parses both ELF and PE binary formats on any platform — i
 - **SC-002**: Given a chain of transitive dependencies (A → B → C), all transitive libraries appear in the result mapped back to the originating project file.
 - **SC-003**: Circular dependency chains are handled without hanging or crashing — processing completes within the same time bounds as acyclic inputs of similar size.
 - **SC-004**: The LIEF library is no longer required at build time or runtime after this feature replaces its usage.
-- **SC-005**: A TypeScript application can invoke the DependencyLister and receive a JSON-compatible object representing the dependency map.
+- **SC-005**: *(Deferred — follow-up feature)* A TypeScript application can invoke the DependencyLister and receive a JSON-compatible object representing the dependency map. This depends on the existing binding mechanism which is out of scope for this feature.
