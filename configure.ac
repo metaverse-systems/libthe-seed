@@ -28,7 +28,6 @@ AC_CHECK_HEADER([windows.h],
     [LIBS="$LIBS"],
     [
         LIBS="$LIBS -ldl"
-        PKG_CHECK_MODULES([LIEF], LIEF)
     ],
     [])
 

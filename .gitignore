@@ -65,3 +65,14 @@ libtool
 *.dll
 node_modules
 .vscode
+.idea/
+build/
+bin/
+obj/
+out/
+*.log
+.env*
+.DS_Store
+Thumbs.db
+*.tmp
+*.swp
