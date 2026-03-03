@@ -5,14 +5,17 @@ pkginclude_HEADERS = \
     ../include/libthe-seed/ComponentLoader.hpp \
     ../include/libthe-seed/LibraryLoader.hpp \
 	../include/libthe-seed/ResourcePak.hpp \
-	../include/libthe-seed/DependencyLister.hpp
+	../include/libthe-seed/DependencyLister.hpp \
+	../include/libthe-seed/PeSigner.hpp \
+	../include/libthe-seed/MachOParser.hpp \
+	../include/libthe-seed/MachOSigner.hpp
 
 noinst_HEADERS = \
 	ElfParser.hpp \
 	PeParser.hpp \
 	ByteSwap.hpp
 
-libthe_seed_la_CXXFLAGS = -std=c++20 -I../include ${LIBECS_CFLAGS}
+libthe_seed_la_CXXFLAGS = -std=c++20 -I../include -I../external ${LIBECS_CFLAGS}
 libthe_seed_la_LIBADD = -lpthread ${LIBECS_LIBS}
 libthe_seed_la_LDFLAGS = -no-undefined -version-info 0:0:0
 libthe_seed_la_SOURCES = LibraryLoader.cpp \
@@ -23,4 +26,7 @@ libthe_seed_la_SOURCES = LibraryLoader.cpp \
 		NameParser.cpp \
 		DependencyLister.cpp \
 		ElfParser.cpp \
-		PeParser.cpp
+		PeParser.cpp \
+		PeSigner.cpp \
+		MachOParser.cpp \
+		MachOSigner.cpp
