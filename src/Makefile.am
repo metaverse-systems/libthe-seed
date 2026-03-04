@@ -8,7 +8,8 @@ pkginclude_HEADERS = \
 	../include/libthe-seed/DependencyLister.hpp \
 	../include/libthe-seed/PeSigner.hpp \
 	../include/libthe-seed/MachOParser.hpp \
-	../include/libthe-seed/MachOSigner.hpp
+	../include/libthe-seed/MachOSigner.hpp \
+	../include/libthe-seed/MsiSigner.hpp
 
 noinst_HEADERS = \
 	ElfParser.hpp \
@@ -29,4 +30,5 @@ libthe_seed_la_SOURCES = LibraryLoader.cpp \
 		PeParser.cpp \
 		PeSigner.cpp \
 		MachOParser.cpp \
-		MachOSigner.cpp
+		MachOSigner.cpp \
+		MsiSigner.cpp
