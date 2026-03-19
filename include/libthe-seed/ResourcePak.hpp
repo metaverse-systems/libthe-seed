@@ -39,6 +39,15 @@ class ResourcePak
      * @param container Container to load resource into.
      */
     void LoadAll(ecs::Container *container);
+    std::vector<std::string> ResourceNames()
+    {
+        std::vector<std::string> names;
+        for(auto &resource : this->header["resources"])
+        {
+            names.push_back(resource["name"].get<std::string>());
+        }
+        return names;
+    }
   private:
     const std::string filename;
     uint64_t header_size = 0;

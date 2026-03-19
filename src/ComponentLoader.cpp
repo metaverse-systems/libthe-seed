@@ -11,15 +11,16 @@ namespace ComponentLoader
         auto name = NameParser(library);
         this->library = std::make_unique<LibraryLoader>(name.library);
 
-          this->library->PathAdd(".");
-          this->library->PathAdd("../../" + name.library + "/src/.libs/");
-          if(!name.org.empty())
-          {
-              auto path = "../node_modules/" + name.org + "/" + name.library + "/src/.libs";
-              this->library->PathAdd(path);
-          }
+        this->library->PathAdd(".");
+        this->library->PathAdd("../../" + name.library + "/src/.libs/");
+        if (!name.org.empty())
+        {
+            auto path = "../node_modules/" + name.org + "/" + name.library + "/src/.libs";
+            this->library->PathAdd(path);
+        }
 
-          for(auto path : component_paths) this->library->PathAdd(path);
+        for (auto path : component_paths)
+            this->library->PathAdd(path);
     }
 
     ComponentCreator Loader::ComponentGet()
@@ -44,7 +45,7 @@ namespace ComponentLoader
     ecs::Component *Create(const std::string &component)
     {
         auto &loader = component_loaders[component];
-        if(!loader) 
+        if (!loader)
         {
             loader = std::make_unique<Loader>(component);
         }
@@ -55,10 +56,10 @@ namespace ComponentLoader
     ecs::Component *Create(const std::string &component, void *data)
     {
         auto &loader = component_loaders[component];
-        if(!loader)
-        {   
+        if (!loader)
+        {
             loader = std::make_unique<Loader>(component);
-        }   
+        }
 
         return loader->ComponentCreate(data);
     }
@@ -66,7 +67,7 @@ namespace ComponentLoader
     ComponentCreator Get(std::string component)
     {
         auto &loader = component_loaders[component];
-        if(!loader)
+        if (!loader)
         {
             loader = std::make_unique<Loader>(component);
         }

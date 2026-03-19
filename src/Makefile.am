@@ -6,6 +6,7 @@ pkginclude_HEADERS = \
     ../include/libthe-seed/LibraryLoader.hpp \
 	../include/libthe-seed/ResourcePak.hpp \
 	../include/libthe-seed/DependencyLister.hpp \
+    ../include/libthe-seed/PakLoader.hpp \
 	../include/libthe-seed/PeSigner.hpp \
 	../include/libthe-seed/MachOParser.hpp \
 	../include/libthe-seed/MachOSigner.hpp \
@@ -27,6 +28,7 @@ libthe_seed_la_SOURCES = LibraryLoader.cpp \
 		NameParser.cpp \
 		DependencyLister.cpp \
 		ElfParser.cpp \
+        PakLoader.cpp \
 		PeParser.cpp \
 		PeSigner.cpp \
 		MachOParser.cpp \
