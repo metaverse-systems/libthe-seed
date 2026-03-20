@@ -1,0 +1,21 @@
+{
+  "name": "@metaverse-systems/libthe-seed",
+  "version": "0.1.0",
+  "description": "The Seed game engine library",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/metaverse-systems/libthe-seed.git"
+  },
+  "author": "Tim Schwartz <tim@metaverse.systems>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/metaverse-systems/libthe-seed/issues"
+  },
+  "homepage": "https://github.com/metaverse-systems/libthe-seed#readme"
+}
