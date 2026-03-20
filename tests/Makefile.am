@@ -1,8 +1,9 @@
-AM_CPPFLAGS = ${CATCH2_CFLAGS} -I../include -I../external/Catch2/extras \
+AM_CPPFLAGS = ${CATCH2_CFLAGS} ${LIBECS_CFLAGS} -I../include -I../external/Catch2/extras \
               -DFIXTURES_DIR=\"$(abs_srcdir)/fixtures\"
+AM_CXXFLAGS = -std=c++20
 
 check_PROGRAMS = test_NameParser test_LibraryLoader test_DependencyLister \
-                 test_PeSigner test_MachOSigner test_MsiSigner
+                 test_PeSigner test_MachOSigner test_MsiSigner test_ResourcePak
 
 test_NameParser_SOURCES = test_NameParser.cpp ../external/Catch2/extras/catch_amalgamated.cpp
 test_NameParser_LDADD = ../src/libthe-seed.la ${LIBECS_LIBS}
@@ -21,3 +22,6 @@ test_MachOSigner_LDADD = ../src/libthe-seed.la ${LIBECS_LIBS}
 
 test_MsiSigner_SOURCES = test_MsiSigner.cpp ../external/Catch2/extras/catch_amalgamated.cpp
 test_MsiSigner_LDADD = ../src/libthe-seed.la ${LIBECS_LIBS}
+
+test_ResourcePak_SOURCES = test_ResourcePak.cpp ../external/Catch2/extras/catch_amalgamated.cpp
+test_ResourcePak_LDADD = ../src/libthe-seed.la ${LIBECS_LIBS}

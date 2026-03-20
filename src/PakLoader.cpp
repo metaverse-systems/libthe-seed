@@ -43,7 +43,6 @@ namespace PakLoader
             resources[name] = std::make_shared<ecs::Resource>(pak->Load(name));
         }
 
-        loaded_paks.push_back(pak);
         return resources;
     }
 
@@ -60,7 +59,6 @@ namespace PakLoader
             }
         }
 
-        loaded_paks.push_back(pak);
         return resources;
     }
 }

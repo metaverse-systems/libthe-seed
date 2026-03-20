@@ -52,8 +52,8 @@ ecs::Resource ResourcePak::Load(std::string name)
         }
 
         ecs::Resource temp;
-        temp.ptr = (char *)(&this->raw[pointer]);
-        temp.size = resource["size"].get<uint64_t>();
+        auto size = resource["size"].get<uint64_t>();
+        temp.Data.assign(this->raw.begin() + pointer, this->raw.begin() + pointer + size);
         return temp;
     }
 

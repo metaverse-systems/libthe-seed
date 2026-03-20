@@ -5,7 +5,6 @@ class ResourcePak;
 namespace PakLoader
 {
     std::vector<std::string> paths;
-    std::vector<std::shared_ptr<ResourcePak>> loaded_paks;
     std::vector<std::string> PathsGet()
     {
         return paths;

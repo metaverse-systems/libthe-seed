@@ -19,7 +19,7 @@ AM_INIT_AUTOMAKE([subdir-objects])
 # Checks for libraries.
 AC_CHECK_LIB([pthread], [pthread_exit])
 
-PKG_CHECK_MODULES([LIBECS], ecs-cpp)
+PKG_CHECK_MODULES([LIBECS], [ecs-cpp >= 1.0.0])
 PKG_CHECK_MODULES([CATCH2], catch2)
 
 # Checks for header files.
