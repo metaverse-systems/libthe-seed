@@ -17,5 +17,8 @@
   "bugs": {
     "url": "https://github.com/metaverse-systems/libthe-seed/issues"
   },
-  "homepage": "https://github.com/metaverse-systems/libthe-seed#readme"
+  "homepage": "https://github.com/metaverse-systems/libthe-seed#readme",
+  "dependencies": {
+    "@metaverse-systems/libecs-cpp": "^1.0.0"
+  }
 }
