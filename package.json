@@ -1,6 +1,6 @@
 {
   "name": "@metaverse-systems/libthe-seed",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "The Seed game engine library",
   "directories": {
     "doc": "docs"
