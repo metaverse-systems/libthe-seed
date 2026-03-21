@@ -1,6 +1,7 @@
 #include <libthe-seed/MsiSigner.hpp>
 
 #include "ByteSwap.hpp"
+#include "internal/FileIO.hpp"
 
 #include <algorithm>
 #include <cstring>
@@ -31,52 +32,7 @@ constexpr std::uint8_t DIR_TYPE_STORAGE  = 1;
 constexpr std::uint8_t DIR_TYPE_STREAM   = 2;
 constexpr std::uint8_t DIR_TYPE_ROOT     = 5;
 
-// ── File I/O helpers ────────────────────────────────────────
-
-std::vector<std::uint8_t> ReadFileBytes(const std::string &file_path)
-{
-    std::ifstream input(file_path, std::ios::binary);
-    if(!input.is_open())
-    {
-        throw std::runtime_error("Unable to open file: " + file_path);
-    }
-    input.seekg(0, std::ios::end);
-    const std::streamsize size = input.tellg();
-    input.seekg(0, std::ios::beg);
-    if(size < 0)
-    {
-        throw std::runtime_error("Unable to read file size");
-    }
-    std::vector<std::uint8_t> bytes(static_cast<std::size_t>(size));
-    if(size > 0)
-    {
-        input.read(reinterpret_cast<char *>(bytes.data()), size);
-        if(!input)
-        {
-            throw std::runtime_error("Unable to read file");
-        }
-    }
-    return bytes;
-}
-
-void WriteFileBytes(const std::string &file_path, const std::vector<std::uint8_t> &bytes)
-{
-    const auto temp_path = file_path + ".tmp";
-    {
-        std::ofstream output(temp_path, std::ios::binary);
-        if(!output.is_open())
-        {
-            throw std::runtime_error("Unable to create temp file: " + temp_path);
-        }
-        output.write(reinterpret_cast<const char *>(bytes.data()),
-                      static_cast<std::streamsize>(bytes.size()));
-        if(!output)
-        {
-            throw std::runtime_error("Unable to write temp file");
-        }
-    }
-    std::filesystem::rename(temp_path, file_path);
-}
+// ── CFBF Data Structures ───────────────────────────────────
 
 template <typename T>
 T ReadLE(const std::vector<std::uint8_t> &bytes, std::size_t offset)
@@ -101,8 +57,6 @@ void WriteLE(std::vector<std::uint8_t> &bytes, std::size_t offset, T value)
     T le_value = ByteSwapIfNeeded(value, true);
     std::memcpy(bytes.data() + offset, &le_value, sizeof(T));
 }
-
-// ── CFBF Data Structures ───────────────────────────────────
 
 struct CfbHeader
 {

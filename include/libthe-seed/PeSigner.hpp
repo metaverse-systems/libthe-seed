@@ -26,7 +26,7 @@ public:
      * and any existing certificate data from the hash.
      * @throws std::runtime_error if file is not a valid PE
      */
-    static DigestResult ComputeAuthenticodeDigest(const std::string &file_path);
+    [[nodiscard]] static DigestResult ComputeAuthenticodeDigest(const std::string &file_path);
 
     /**
      * Embed a PKCS#7/CMS SignedData blob as an Authenticode signature.
@@ -47,7 +47,7 @@ public:
      * @returns DER-encoded PKCS#7 blob, or nullopt if no signature present
      * @throws std::runtime_error if file is not a valid PE
      */
-    static std::optional<std::vector<std::uint8_t>> ExtractSignature(
+    [[nodiscard]] static std::optional<std::vector<std::uint8_t>> ExtractSignature(
         const std::string &file_path
     );
 

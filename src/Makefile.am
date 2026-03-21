@@ -15,7 +15,11 @@ pkginclude_HEADERS = \
 noinst_HEADERS = \
 	ElfParser.hpp \
 	PeParser.hpp \
-	ByteSwap.hpp
+	ByteSwap.hpp \
+	NameParser.hpp \
+	internal/FileIO.hpp \
+	internal/MachODefs.hpp \
+	internal/ReadCString.hpp
 
 libthe_seed_la_CXXFLAGS = -std=c++20 -I../include -I../external ${LIBECS_CFLAGS}
 libthe_seed_la_LIBADD = -lpthread ${LIBECS_LIBS}
@@ -28,9 +32,10 @@ libthe_seed_la_SOURCES = LibraryLoader.cpp \
 		NameParser.cpp \
 		DependencyLister.cpp \
 		ElfParser.cpp \
-        PakLoader.cpp \
+		PakLoader.cpp \
 		PeParser.cpp \
 		PeSigner.cpp \
 		MachOParser.cpp \
 		MachOSigner.cpp \
-		MsiSigner.cpp
+		MsiSigner.cpp \
+		internal/FileIO.cpp

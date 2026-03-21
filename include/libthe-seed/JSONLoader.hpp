@@ -19,19 +19,19 @@ class JSONLoader
      *                  imported from JSON data.
      */
     JSONLoader(ecs::Container *container);
-    ~JSONLoader();
+    ~JSONLoader() = default;
     /**
      * @brief Parses ECS data from string.
      * 
      * @param data JSON formatted ECS data.
      */
-    void StringParse(std::string data);
+    void StringParse(const std::string &data);
     /**
      * @brief Parses ECS data from a file.
      * 
      * @param filename JSON formatted file containing ECS data.
      */
-    void FileParse(std::string filename);
+    void FileParse(const std::string &filename);
   private:
     nlohmann::json scene;
     ecs::Container *container = nullptr;

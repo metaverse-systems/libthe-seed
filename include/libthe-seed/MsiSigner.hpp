@@ -38,7 +38,7 @@ public:
      * streams, enumerated recursively and sorted alphabetically.
      * @throws std::runtime_error if file is not a valid CFBF
      */
-    static DigestResult ComputeAuthenticodeDigest(const std::string &file_path);
+    [[nodiscard]] static DigestResult ComputeAuthenticodeDigest(const std::string &file_path);
 
     /**
      * Embed a PKCS#7/CMS SignedData blob as an Authenticode signature.
@@ -61,7 +61,7 @@ public:
      *          stream does not exist
      * @throws std::runtime_error if file is not a valid CFBF
      */
-    static std::optional<std::vector<std::uint8_t>> ExtractSignature(
+    [[nodiscard]] static std::optional<std::vector<std::uint8_t>> ExtractSignature(
         const std::string &file_path
     );
 

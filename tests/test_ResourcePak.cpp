@@ -61,3 +61,38 @@ TEST_CASE("ResourcePak round-trip loads Resource::Data correctly", "[ResourcePak
     // Clean up
     std::remove(pakPath.c_str());
 }
+
+TEST_CASE("ResourcePak::Load throws on bounds-exceeding resource size", "[ResourcePak]")
+{
+    // Build a PAK where the JSON header declares a resource size larger than
+    // the actual payload data appended after the header.
+    nlohmann::json header;
+    header["resources"] = nlohmann::json::array();
+    nlohmann::json res;
+    res["name"] = "oversized";
+    res["size"] = 9999; // Way larger than actual payload
+    header["resources"].push_back(res);
+    header["headerSize"] = 0;
+
+    std::string raw = header.dump();
+    for(int i = 0; i < 5; ++i)
+    {
+        header["headerSize"] = std::to_string(raw.size() + 1);
+        raw = header.dump();
+    }
+
+    std::string pakPath = std::string(FIXTURES_DIR) + "/test_bounds.pak";
+    {
+        std::ofstream out(pakPath, std::ios::binary);
+        out << raw << '\n';
+        // Write only 4 bytes of actual payload (header claims 9999)
+        std::vector<std::uint8_t> tiny = {0x01, 0x02, 0x03, 0x04};
+        out.write(reinterpret_cast<const char *>(tiny.data()),
+                  static_cast<std::streamsize>(tiny.size()));
+    }
+
+    ResourcePak pak(pakPath);
+    REQUIRE_THROWS_AS(pak.Load("oversized"), std::runtime_error);
+
+    std::remove(pakPath.c_str());
+}

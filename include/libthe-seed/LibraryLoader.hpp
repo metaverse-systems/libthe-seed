@@ -37,21 +37,21 @@ class LibraryLoader
      * 
      * @param library The name of the library to load.
      */
-    LibraryLoader(std::string library): name(library) {};
+    LibraryLoader(const std::string &library): name(library) {};
     /**
      * @brief Get pointer to function in library.
      * 
      * @param FuncName The name of the function to load.
      * @return void* A pointer to the function.
      */
-    void *FunctionGet(std::string FunctionName);
+    void *FunctionGet(const std::string &FunctionName);
     /**
      * @brief Adds a path to the library path search list.
      * 
      * @param path Path to add.
      */
-    void PathAdd(std::string path);
-    const std::vector<std::string> PathsGet();
+    void PathAdd(const std::string &path);
+    std::vector<std::string> PathsGet();
     const std::string name;
     static const std::string GetLastErrorAsString();
   private:

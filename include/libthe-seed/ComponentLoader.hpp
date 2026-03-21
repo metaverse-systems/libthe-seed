@@ -4,17 +4,16 @@
 #include "LibraryLoader.hpp"
 #include <libecs-cpp/ecs.hpp>
 
-using ComponentCreator = ecs::Component *(*)(void *);
-
 namespace ComponentLoader
 {
+    using ComponentCreator = ecs::Component *(*)(void *);
     class Loader
     {
       public:
-        Loader(std::string library);
-        ecs::Component *ComponentCreate();
-        ecs::Component *ComponentCreate(void *data);
-        ComponentCreator ComponentGet();
+        Loader(const std::string &library);
+        ecs::Component *Create();
+        ecs::Component *Create(void *data);
+        ComponentCreator Get();
       private:
         std::unique_ptr<LibraryLoader> library;
     };
@@ -24,8 +23,8 @@ namespace ComponentLoader
 
     ecs::Component *Create(const std::string &component);
     ecs::Component *Create(const std::string &component, void *data);
-    ComponentCreator Get(std::string);
+    ComponentCreator Get(const std::string &component);
 
     std::vector<std::string> PathsGet();
-    void PathAdd(std::string);
+    void PathAdd(const std::string &path);
 }

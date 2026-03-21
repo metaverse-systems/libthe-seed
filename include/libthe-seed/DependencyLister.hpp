@@ -73,7 +73,7 @@ class DependencyLister
      *        library names to filesystem paths. No platform defaults are used.
      * @return DependencyResult containing the dependency map and error map.
      */
-    DependencyResult ListDependencies(
+    [[nodiscard]] DependencyResult ListDependencies(
         const std::vector<std::string> &binary_paths,
         const std::vector<std::string> &search_paths
     );

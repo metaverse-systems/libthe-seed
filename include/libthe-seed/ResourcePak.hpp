@@ -2,6 +2,7 @@
 
 #include <string>
 #include <map>
+#include <unordered_map>
 #include <libecs-cpp/ecs.hpp>
 #include <libecs-cpp/json.hpp>
 
@@ -17,14 +18,14 @@ class ResourcePak
      * 
      * @param filename Path to resource pak to load.
      */
-    ResourcePak(std::string filename);
+    ResourcePak(const std::string &filename);
     /**
      * @brief Load resource by name.
      * 
      * @param container Container to load resource into.
      * @param name Name of resource to load.
      */
-    void Load(ecs::Container *container, std::string name);
+    void Load(ecs::Container *container, const std::string &name);
 
     /**
      * @brief Load resource by name.
@@ -32,7 +33,7 @@ class ResourcePak
      * @param name Name of resource to load.
      * @return Handle to Resource
      */
-    ecs::Resource Load(std::string name);
+    ecs::Resource Load(const std::string &name);
     /**
      * @brief Load all resources in Resource Pak.
      * 
@@ -53,4 +54,5 @@ class ResourcePak
     uint64_t header_size = 0;
     std::vector<char> raw;
     nlohmann::json header;
+    std::unordered_map<std::string, std::pair<uint64_t, uint64_t>> offset_map;
 };

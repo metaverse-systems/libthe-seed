@@ -1,9 +1,10 @@
 #include "ElfParser.hpp"
 
 #include "ByteSwap.hpp"
+#include "internal/FileIO.hpp"
+#include "internal/ReadCString.hpp"
 
 #include <cstring>
-#include <fstream>
 #include <optional>
 #include <stdexcept>
 #include <vector>
@@ -29,36 +30,6 @@ T ReadStruct(const std::vector<std::uint8_t> &bytes, std::size_t offset)
     return value;
 }
 
-std::vector<std::uint8_t> ReadFileBytes(const std::string &file_path)
-{
-    std::ifstream input(file_path, std::ios::binary);
-    if(!input.is_open())
-    {
-        throw std::runtime_error("Unable to open file");
-    }
-
-    input.seekg(0, std::ios::end);
-    const std::streamsize size = input.tellg();
-    input.seekg(0, std::ios::beg);
-
-    if(size < 0)
-    {
-        throw std::runtime_error("Unable to read file size");
-    }
-
-    std::vector<std::uint8_t> bytes(static_cast<std::size_t>(size));
-    if(size > 0)
-    {
-        input.read(reinterpret_cast<char *>(bytes.data()), size);
-        if(!input)
-        {
-            throw std::runtime_error("Unable to read file");
-        }
-    }
-
-    return bytes;
-}
-
 std::optional<std::uint64_t> VirtualAddressToOffset(
     std::uint64_t virtual_address,
     const std::vector<LoadSegment> &segments
@@ -73,30 +44,6 @@ std::optional<std::uint64_t> VirtualAddressToOffset(
     }
 
     return std::nullopt;
-}
-
-std::string ReadCString(const std::vector<std::uint8_t> &bytes, std::size_t offset)
-{
-    if(offset >= bytes.size())
-    {
-        throw std::runtime_error("Invalid string table offset in ELF");
-    }
-
-    std::size_t end = offset;
-    while(end < bytes.size() && bytes[end] != 0)
-    {
-        ++end;
-    }
-
-    if(end == bytes.size())
-    {
-        throw std::runtime_error("Unterminated dependency string in ELF");
-    }
-
-    return std::string(
-        reinterpret_cast<const char *>(bytes.data() + offset),
-        reinterpret_cast<const char *>(bytes.data() + end)
-    );
 }
 
 std::vector<std::string> ParseElf32(const std::vector<std::uint8_t> &bytes, bool file_is_little_endian)

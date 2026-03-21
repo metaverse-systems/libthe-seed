@@ -6,44 +6,38 @@ namespace SystemLoader
     std::map<std::string, std::unique_ptr<SystemLoader::Loader>> system_loaders;
     std::vector<std::string> system_paths;
 
-    Loader::Loader(std::string library)
+    Loader::Loader(const std::string &library)
     {
         auto name = NameParser(library);
 
-        try
+        this->library = std::make_unique<LibraryLoader>(name.library);
+        this->library->PathAdd("./");
+        this->library->PathAdd("../../" + name.library + "/src/.libs/");
+        if(!name.org.empty())
         {
-            this->library = std::make_unique<LibraryLoader>(name.library);
-            this->library->PathAdd("./");
-            this->library->PathAdd("../../" + name.library + "/src/.libs/");
-            if(name.org.size())
-            {
-                auto path = "../node_modules/" + name.org + "/" + name.library + "/src/.libs";
-                this->library->PathAdd(path);
-            }
-
-            for(auto path : system_paths) this->library->PathAdd(path);
+            auto path = "../node_modules/" + name.org + "/" + name.library + "/src/.libs";
+            this->library->PathAdd(path);
         }
-        catch(std::runtime_error e)
+
+        for(const auto &path : system_paths) this->library->PathAdd(path);
+    }
+
+    SystemCreator Loader::Get()
+    {
+        if(!this->cached_creator)
         {
-            throw e;
+            auto ptr = this->library->FunctionGet("create_system");
+            this->cached_creator = reinterpret_cast<SystemCreator>(ptr);
         }
+        return this->cached_creator;
     }
 
-    SystemCreator Loader::SystemCreatorGet()
+    ecs::System *Loader::Create(void *data)
     {
-        auto ptr = this->library->FunctionGet("create_system");
-        auto creator = reinterpret_cast<SystemCreator>(ptr);
-        return creator;
+        return this->Get()(data);
     }
 
-    ecs::System *Loader::SystemCreate(void *data)
-    {
-        auto ptr = this->library->FunctionGet("create_system");
-        auto creator = reinterpret_cast<SystemCreator>(ptr);
-        return creator(data);
-    }
-
-    std::unique_ptr<ecs::System> Create(std::string system)
+    std::unique_ptr<ecs::System> Create(const std::string &system)
     {
         auto &loader = system_loaders[system];
         if(!loader) 
@@ -51,10 +45,10 @@ namespace SystemLoader
             loader = std::make_unique<Loader>(system);
         }
 
-        return std::unique_ptr<ecs::System>(loader->SystemCreate(nullptr));
+        return std::unique_ptr<ecs::System>(loader->Create(nullptr));
     }
 
-    std::unique_ptr<ecs::System> Create(std::string system, void *data)
+    std::unique_ptr<ecs::System> Create(const std::string &system, void *data)
     {
         auto &loader = system_loaders[system];
         if(!loader)
@@ -62,25 +56,18 @@ namespace SystemLoader
             loader = std::make_unique<Loader>(system);
         }
 
-        return std::unique_ptr<ecs::System>(loader->SystemCreate(data));
+        return std::unique_ptr<ecs::System>(loader->Create(data));
     }
 
-    SystemCreator CreatorGet(std::string system)
+    SystemCreator Get(const std::string &system)
     {
         auto &loader = system_loaders[system];
         if(!loader)
         {
-            try
-            {
-                loader = std::make_unique<Loader>(system);
-            }
-            catch(std::runtime_error e)
-            {
-                throw e;
-            }
+            loader = std::make_unique<Loader>(system);
         }
 
-        return loader->SystemCreatorGet();
+        return loader->Get();
     }
 
     std::vector<std::string> PathsGet()
@@ -88,7 +75,7 @@ namespace SystemLoader
         return system_paths;
     }
 
-    void PathAdd(std::string path)
+    void PathAdd(const std::string &path)
     {
         system_paths.push_back(path);
     }

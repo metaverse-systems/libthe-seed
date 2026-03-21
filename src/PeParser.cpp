@@ -1,10 +1,11 @@
 #include "PeParser.hpp"
 
 #include "ByteSwap.hpp"
+#include "internal/FileIO.hpp"
+#include "internal/ReadCString.hpp"
 
 #include <algorithm>
 #include <cstring>
-#include <fstream>
 #include <stdexcept>
 #include <vector>
 
@@ -22,64 +23,10 @@ T ReadStruct(const std::vector<std::uint8_t> &bytes, std::size_t offset)
     return value;
 }
 
-std::vector<std::uint8_t> ReadFileBytes(const std::string &file_path)
-{
-    std::ifstream input(file_path, std::ios::binary);
-    if(!input.is_open())
-    {
-        throw std::runtime_error("Unable to open file");
-    }
-
-    input.seekg(0, std::ios::end);
-    const std::streamsize size = input.tellg();
-    input.seekg(0, std::ios::beg);
-
-    if(size < 0)
-    {
-        throw std::runtime_error("Unable to read file size");
-    }
-
-    std::vector<std::uint8_t> bytes(static_cast<std::size_t>(size));
-    if(size > 0)
-    {
-        input.read(reinterpret_cast<char *>(bytes.data()), size);
-        if(!input)
-        {
-            throw std::runtime_error("Unable to read file");
-        }
-    }
-
-    return bytes;
-}
-
 template <typename T>
 T FromLittleEndian(T value)
 {
     return ByteSwapIfNeeded(value, true);
-}
-
-std::string ReadCString(const std::vector<std::uint8_t> &bytes, std::size_t offset)
-{
-    if(offset >= bytes.size())
-    {
-        throw std::runtime_error("Invalid string offset in PE");
-    }
-
-    std::size_t end = offset;
-    while(end < bytes.size() && bytes[end] != 0)
-    {
-        ++end;
-    }
-
-    if(end == bytes.size())
-    {
-        throw std::runtime_error("Unterminated DLL name in PE");
-    }
-
-    return std::string(
-        reinterpret_cast<const char *>(bytes.data() + offset),
-        reinterpret_cast<const char *>(bytes.data() + end)
-    );
 }
 
 std::size_t RvaToOffset(

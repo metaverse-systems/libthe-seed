@@ -143,3 +143,28 @@ TEST_CASE("MachOSigner::ExtractCodeDirectoryFromSuperBlob extracts CD", "[MachOS
     REQUIRE(cd.has_value());
     CHECK(*cd == cdResult.code_directory);
 }
+
+TEST_CASE("MachOSigner::ComputeCodeDirectory rejects 32-bit Mach-O", "[MachOSigner]")
+{
+    // Build a minimal 32-bit Mach-O file (MH_MAGIC = 0xFEEDFACE)
+    // 32-bit header is 28 bytes: magic(4) + cputype(4) + cpusubtype(4) +
+    //   filetype(4) + ncmds(4) + sizeofcmds(4) + flags(4)
+    std::vector<std::uint8_t> macho32(64, 0);
+    // MH_MAGIC little-endian representation
+    macho32[0] = 0xCE; macho32[1] = 0xFA; macho32[2] = 0xED; macho32[3] = 0xFE;
+    // ncmds = 0, sizeofcmds = 0 (at offsets 16 and 20)
+
+    auto tmpPath = std::filesystem::temp_directory_path() / "test_macho32_reject.bin";
+    {
+        std::ofstream out(tmpPath, std::ios::binary);
+        out.write(reinterpret_cast<const char *>(macho32.data()),
+                  static_cast<std::streamsize>(macho32.size()));
+    }
+
+    REQUIRE_THROWS_AS(
+        MachOSigner::ComputeCodeDirectory(tmpPath.string(), "test-identity"),
+        std::runtime_error
+    );
+
+    std::filesystem::remove(tmpPath);
+}

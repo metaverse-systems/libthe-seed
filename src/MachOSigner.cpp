@@ -2,6 +2,8 @@
 #include <libthe-seed/MachOParser.hpp>
 
 #include "ByteSwap.hpp"
+#include "internal/FileIO.hpp"
+#include "internal/MachODefs.hpp"
 
 #include <algorithm>
 #include <cstring>
@@ -12,12 +14,6 @@
 #include "../external/picosha2.h"
 
 namespace {
-
-// Mach-O magic constants
-constexpr std::uint32_t MH_MAGIC_64 = 0xFEEDFACF;
-constexpr std::uint32_t MH_CIGAM_64 = 0xCFFAEDFE;
-constexpr std::uint32_t MH_MAGIC    = 0xFEEDFACE;
-constexpr std::uint32_t MH_CIGAM    = 0xCEFAEDFE;
 
 // Code Signing constants (big-endian)
 constexpr std::uint32_t CSMAGIC_EMBEDDED_SIGNATURE = 0xFADE0CC0; // SuperBlob
@@ -41,24 +37,6 @@ constexpr std::uint32_t LC_SEGMENT_64        = 0x19;
 constexpr std::uint32_t CS_SUPPORTSEXECSEG   = 0x20400;
 
 #pragma pack(push, 1)
-struct MachHeader64
-{
-    std::uint32_t magic;
-    std::uint32_t cputype;
-    std::uint32_t cpusubtype;
-    std::uint32_t filetype;
-    std::uint32_t ncmds;
-    std::uint32_t sizeofcmds;
-    std::uint32_t flags;
-    std::uint32_t reserved;
-};
-
-struct LoadCommand
-{
-    std::uint32_t cmd;
-    std::uint32_t cmdsize;
-};
-
 struct LinkeditDataCommand
 {
     std::uint32_t cmd;
@@ -124,43 +102,6 @@ struct BlobIndex
     std::uint32_t offset;
 };
 #pragma pack(pop)
-
-std::vector<std::uint8_t> ReadFileBytes(const std::string &file_path)
-{
-    std::ifstream input(file_path, std::ios::binary);
-    if(!input.is_open())
-    {
-        throw std::runtime_error("Unable to open file: " + file_path);
-    }
-    input.seekg(0, std::ios::end);
-    const std::streamsize size = input.tellg();
-    input.seekg(0, std::ios::beg);
-    if(size < 0)
-    {
-        throw std::runtime_error("Unable to read file size");
-    }
-    std::vector<std::uint8_t> bytes(static_cast<std::size_t>(size));
-    if(size > 0)
-    {
-        input.read(reinterpret_cast<char *>(bytes.data()), size);
-    }
-    return bytes;
-}
-
-void WriteFileBytes(const std::string &file_path, const std::vector<std::uint8_t> &bytes)
-{
-    const auto temp_path = file_path + ".tmp";
-    {
-        std::ofstream output(temp_path, std::ios::binary);
-        if(!output.is_open())
-        {
-            throw std::runtime_error("Unable to create temp file: " + temp_path);
-        }
-        output.write(reinterpret_cast<const char *>(bytes.data()),
-                      static_cast<std::streamsize>(bytes.size()));
-    }
-    std::filesystem::rename(temp_path, file_path);
-}
 
 // Write a big-endian uint32
 void WriteBE32(std::vector<std::uint8_t> &buf, std::size_t offset, std::uint32_t value)
@@ -331,6 +272,11 @@ MachOSigner::CodeDirectoryResult MachOSigner::ComputeCodeDirectory(
 {
     const auto bytes = ReadFileBytes(file_path);
     const auto layout = ParseMachOLayout(bytes);
+
+    if(!layout.is_64bit)
+    {
+        throw std::runtime_error("Only 64-bit Mach-O binaries are supported for code signing");
+    }
 
     const std::size_t code_limit = layout.code_limit;
 

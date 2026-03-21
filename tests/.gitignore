@@ -1,3 +1,7 @@
 test_NameParser
 test_LibraryLoader
 test_DependencyLister
+test_MachOSigner
+test_MsiSigner
+test_PeSigner
+test_ResourcePak

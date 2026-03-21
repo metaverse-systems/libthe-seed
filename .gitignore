@@ -76,3 +76,4 @@ out/
 Thumbs.db
 *.tmp
 *.swp
+src/internal/.dirstamp

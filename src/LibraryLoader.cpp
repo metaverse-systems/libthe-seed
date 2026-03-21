@@ -6,16 +6,14 @@
 
 #include <libthe-seed/LibraryLoader.hpp>
 
-#ifndef _WIN32
-    #include <fstream>
-#endif
+#include <filesystem>
 
-void LibraryLoader::PathAdd(std::string path)
+void LibraryLoader::PathAdd(const std::string &path)
 {
     this->paths.push_back(path);
 }
 
-const std::vector<std::string> LibraryLoader::PathsGet()
+std::vector<std::string> LibraryLoader::PathsGet()
 {
     std::vector<std::string> valid_paths;
 
@@ -36,11 +34,9 @@ const std::vector<std::string> LibraryLoader::PathsGet()
             valid_paths.push_back(full_path);
         }
 #else
-        std::ifstream test_path(full_path);
-        if(test_path.is_open()) 
+        if(std::filesystem::exists(full_path))
         {
             valid_paths.push_back(full_path);
-            test_path.close();
         }
 #endif
     }
@@ -88,7 +84,7 @@ void LibraryLoader::Load()
     }
 }
 
-void *LibraryLoader::FunctionGet(std::string FunctionName)
+void *LibraryLoader::FunctionGet(const std::string &FunctionName)
 {
     this->Load();
 

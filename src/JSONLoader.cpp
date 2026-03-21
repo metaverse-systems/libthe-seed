@@ -6,7 +6,7 @@ JSONLoader::JSONLoader(ecs::Container *container): container(container)
 {
 }
 
-void JSONLoader::StringParse(std::string data)
+void JSONLoader::StringParse(const std::string &data)
 {
     this->scene = nlohmann::json::parse(data);
     for(auto entity : this->scene["entities"])
@@ -20,7 +20,7 @@ void JSONLoader::StringParse(std::string data)
     }
 }
 
-void JSONLoader::FileParse(std::string filename)
+void JSONLoader::FileParse(const std::string &filename)
 {
     std::string data;
     std::ifstream file;
@@ -36,8 +36,4 @@ void JSONLoader::FileParse(std::string filename)
     file.close();
 
     this->StringParse(data);
-}
-
-JSONLoader::~JSONLoader()
-{
 }

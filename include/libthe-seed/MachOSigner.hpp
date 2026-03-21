@@ -28,7 +28,7 @@ public:
      * @param identity Code signing identity string (e.g., CN from cert)
      * @throws std::runtime_error if file is not a valid Mach-O
      */
-    static CodeDirectoryResult ComputeCodeDirectory(
+    [[nodiscard]] static CodeDirectoryResult ComputeCodeDirectory(
         const std::string &file_path,
         const std::string &identity
     );
@@ -40,7 +40,7 @@ public:
      * @param cms_signature DER-encoded CMS SignedData blob
      * @returns Serialized SuperBlob ready for embedding
      */
-    static std::vector<std::uint8_t> BuildSuperBlob(
+    [[nodiscard]] static std::vector<std::uint8_t> BuildSuperBlob(
         const std::vector<std::uint8_t> &code_directory,
         const std::vector<std::uint8_t> &cms_signature
     );

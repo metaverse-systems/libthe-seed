@@ -6,7 +6,7 @@ namespace ComponentLoader
 {
     std::vector<std::string> component_paths;
 
-    Loader::Loader(std::string library)
+    Loader::Loader(const std::string &library)
     {
         auto name = NameParser(library);
         this->library = std::make_unique<LibraryLoader>(name.library);
@@ -19,24 +19,24 @@ namespace ComponentLoader
             this->library->PathAdd(path);
         }
 
-        for (auto path : component_paths)
+        for (const auto &path : component_paths)
             this->library->PathAdd(path);
     }
 
-    ComponentCreator Loader::ComponentGet()
+    ComponentCreator Loader::Get()
     {
         void *ptr = this->library->FunctionGet("create_component");
         return reinterpret_cast<ComponentCreator>(ptr);
     }
 
-    ecs::Component *Loader::ComponentCreate()
+    ecs::Component *Loader::Create()
     {
-        return this->ComponentCreate(nullptr);
+        return this->Create(nullptr);
     }
 
-    ecs::Component *Loader::ComponentCreate(void *data)
+    ecs::Component *Loader::Create(void *data)
     {
-        auto creator = this->ComponentGet();
+        auto creator = this->Get();
         return creator(data);
     }
 
@@ -50,7 +50,7 @@ namespace ComponentLoader
             loader = std::make_unique<Loader>(component);
         }
 
-        return loader->ComponentCreate();
+        return loader->Create();
     }
 
     ecs::Component *Create(const std::string &component, void *data)
@@ -61,10 +61,10 @@ namespace ComponentLoader
             loader = std::make_unique<Loader>(component);
         }
 
-        return loader->ComponentCreate(data);
+        return loader->Create(data);
     }
 
-    ComponentCreator Get(std::string component)
+    ComponentCreator Get(const std::string &component)
     {
         auto &loader = component_loaders[component];
         if (!loader)
@@ -72,7 +72,7 @@ namespace ComponentLoader
             loader = std::make_unique<Loader>(component);
         }
 
-        return loader->ComponentGet();
+        return loader->Get();
     }
 
     std::vector<std::string> PathsGet()
@@ -80,7 +80,7 @@ namespace ComponentLoader
         return component_paths;
     }
 
-    void PathAdd(std::string path)
+    void PathAdd(const std::string &path)
     {
         component_paths.push_back(path);
     }

@@ -1,6 +1,9 @@
 #include <libthe-seed/MachOParser.hpp>
 
 #include "ByteSwap.hpp"
+#include "internal/FileIO.hpp"
+#include "internal/MachODefs.hpp"
+#include "internal/ReadCString.hpp"
 
 #include <cstring>
 #include <fstream>
@@ -8,45 +11,9 @@
 
 namespace {
 
-constexpr std::uint32_t MH_MAGIC    = 0xFEEDFACE; // Mach-O 32-bit BE
-constexpr std::uint32_t MH_CIGAM    = 0xCEFAEDFE; // Mach-O 32-bit LE
-constexpr std::uint32_t MH_MAGIC_64 = 0xFEEDFACF; // Mach-O 64-bit BE
-constexpr std::uint32_t MH_CIGAM_64 = 0xCFFAEDFE; // Mach-O 64-bit LE
-constexpr std::uint32_t FAT_MAGIC   = 0xCAFEBABE; // Fat BE
-constexpr std::uint32_t FAT_CIGAM   = 0xBEBAFECA; // Fat LE
-
 constexpr std::uint32_t LC_LOAD_DYLIB = 0x0C;
 
 #pragma pack(push, 1)
-struct MachHeader32
-{
-    std::uint32_t magic;
-    std::uint32_t cputype;
-    std::uint32_t cpusubtype;
-    std::uint32_t filetype;
-    std::uint32_t ncmds;
-    std::uint32_t sizeofcmds;
-    std::uint32_t flags;
-};
-
-struct MachHeader64
-{
-    std::uint32_t magic;
-    std::uint32_t cputype;
-    std::uint32_t cpusubtype;
-    std::uint32_t filetype;
-    std::uint32_t ncmds;
-    std::uint32_t sizeofcmds;
-    std::uint32_t flags;
-    std::uint32_t reserved;
-};
-
-struct LoadCommand
-{
-    std::uint32_t cmd;
-    std::uint32_t cmdsize;
-};
-
 struct DylibCommand
 {
     std::uint32_t cmd;
@@ -56,44 +23,7 @@ struct DylibCommand
     std::uint32_t current_version;
     std::uint32_t compat_version;
 };
-
-struct FatHeader
-{
-    std::uint32_t magic;
-    std::uint32_t nfat_arch;
-};
-
-struct FatArch
-{
-    std::uint32_t cputype;
-    std::uint32_t cpusubtype;
-    std::uint32_t offset;
-    std::uint32_t size;
-    std::uint32_t align;
-};
 #pragma pack(pop)
-
-std::vector<std::uint8_t> ReadFileBytes(const std::string &file_path)
-{
-    std::ifstream input(file_path, std::ios::binary);
-    if(!input.is_open())
-    {
-        throw std::runtime_error("Unable to open file: " + file_path);
-    }
-    input.seekg(0, std::ios::end);
-    const std::streamsize size = input.tellg();
-    input.seekg(0, std::ios::beg);
-    if(size < 0)
-    {
-        throw std::runtime_error("Unable to read file size");
-    }
-    std::vector<std::uint8_t> bytes(static_cast<std::size_t>(size));
-    if(size > 0)
-    {
-        input.read(reinterpret_cast<char *>(bytes.data()), size);
-    }
-    return bytes;
-}
 
 std::uint32_t ReadMagic(const std::vector<std::uint8_t> &bytes)
 {
@@ -123,21 +53,16 @@ T ReadField(const std::vector<std::uint8_t> &bytes, std::size_t offset, bool big
     return ByteSwapIfNeeded(value, !big_endian); // big_endian file → file_is_little_endian = false
 }
 
-std::string ReadCString(const std::vector<std::uint8_t> &bytes, std::size_t offset)
+std::string ReadCStringPermissive(const std::vector<std::uint8_t> &bytes, std::size_t offset)
 {
-    if(offset >= bytes.size())
+    try
+    {
+        return ReadCString(bytes, offset);
+    }
+    catch(const std::runtime_error &)
     {
         return "";
     }
-    std::size_t end = offset;
-    while(end < bytes.size() && bytes[end] != 0)
-    {
-        ++end;
-    }
-    return std::string(
-        reinterpret_cast<const char *>(bytes.data() + offset),
-        reinterpret_cast<const char *>(bytes.data() + end)
-    );
 }
 
 } // anonymous namespace
@@ -281,7 +206,7 @@ std::vector<std::string> MachOParser::ListDependencies(const std::string &file_p
             const auto name_offset = ReadField<std::uint32_t>(bytes, cmd_offset + 8, big_endian);
             if(name_offset < cmdsize)
             {
-                deps.push_back(ReadCString(bytes, cmd_offset + name_offset));
+                deps.push_back(ReadCStringPermissive(bytes, cmd_offset + name_offset));
             }
         }
 
