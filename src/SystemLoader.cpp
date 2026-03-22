@@ -1,82 +1,69 @@
 #include <libthe-seed/SystemLoader.hpp>
+#include <libthe-seed/LibraryLoader.hpp>
 #include "NameParser.hpp"
+#include <shared_mutex>
+#include <stdexcept>
 
-namespace SystemLoader
+SystemLoader::SystemLoader() = default;
+
+SystemLoader::~SystemLoader() = default;
+
+std::unique_ptr<ecs::System> SystemLoader::Create(const std::string &name)
 {
-    std::map<std::string, std::unique_ptr<SystemLoader::Loader>> system_loaders;
-    std::vector<std::string> system_paths;
+    return Create(name, nullptr);
+}
 
-    Loader::Loader(const std::string &library)
+std::unique_ptr<ecs::System> SystemLoader::Create(const std::string &name, void *data)
+{
+    auto creator = Get(name);
+    return std::unique_ptr<ecs::System>(creator(data));
+}
+
+SystemLoader::SystemCreator SystemLoader::Get(const std::string &name)
+{
     {
-        auto name = NameParser(library);
-
-        this->library = std::make_unique<LibraryLoader>(name.library);
-        this->library->PathAdd("./");
-        this->library->PathAdd("../../" + name.library + "/src/.libs/");
-        if(!name.org.empty())
-        {
-            auto path = "../node_modules/" + name.org + "/" + name.library + "/src/.libs";
-            this->library->PathAdd(path);
-        }
-
-        for(const auto &path : system_paths) this->library->PathAdd(path);
+        std::shared_lock lock(mutex_);
+        auto it = creators_.find(name);
+        if (it != creators_.end())
+            return it->second;
     }
 
-    SystemCreator Loader::Get()
+    std::unique_lock lock(mutex_);
+    auto it = creators_.find(name);
+    if (it != creators_.end())
+        return it->second;
+
+    auto parsed = NameParser(name);
+    auto lib = std::make_unique<LibraryLoader>(parsed.library);
+
+    lib->PathAdd("./");
+    lib->PathAdd("../../" + parsed.library + "/src/.libs/");
+    if (!parsed.org.empty())
     {
-        if(!this->cached_creator)
-        {
-            auto ptr = this->library->FunctionGet("create_system");
-            this->cached_creator = reinterpret_cast<SystemCreator>(ptr);
-        }
-        return this->cached_creator;
+        auto path = "../node_modules/" + parsed.org + "/" + parsed.library + "/src/.libs";
+        lib->PathAdd(path);
     }
 
-    ecs::System *Loader::Create(void *data)
-    {
-        return this->Get()(data);
-    }
+    for (const auto &path : paths_)
+        lib->PathAdd(path);
 
-    std::unique_ptr<ecs::System> Create(const std::string &system)
-    {
-        auto &loader = system_loaders[system];
-        if(!loader) 
-        {
-            loader = std::make_unique<Loader>(system);
-        }
+    void *ptr = lib->FunctionGet("create_system");
+    auto creator = reinterpret_cast<SystemCreator>(ptr);
 
-        return std::unique_ptr<ecs::System>(loader->Create(nullptr));
-    }
+    cache_[name] = std::move(lib);
+    creators_[name] = creator;
 
-    std::unique_ptr<ecs::System> Create(const std::string &system, void *data)
-    {
-        auto &loader = system_loaders[system];
-        if(!loader)
-        {
-            loader = std::make_unique<Loader>(system);
-        }
+    return creator;
+}
 
-        return std::unique_ptr<ecs::System>(loader->Create(data));
-    }
+void SystemLoader::PathAdd(const std::string &path)
+{
+    std::unique_lock lock(mutex_);
+    paths_.push_back(path);
+}
 
-    SystemCreator Get(const std::string &system)
-    {
-        auto &loader = system_loaders[system];
-        if(!loader)
-        {
-            loader = std::make_unique<Loader>(system);
-        }
-
-        return loader->Get();
-    }
-
-    std::vector<std::string> PathsGet()
-    {
-        return system_paths;
-    }
-
-    void PathAdd(const std::string &path)
-    {
-        system_paths.push_back(path);
-    }
+std::vector<std::string> SystemLoader::PathsGet() const
+{
+    std::shared_lock lock(mutex_);
+    return paths_;
 }

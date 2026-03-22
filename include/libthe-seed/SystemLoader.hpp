@@ -1,31 +1,38 @@
 #pragma once
 
-#include <string>
+#include <map>
 #include <memory>
-#include "LibraryLoader.hpp"
+#include <shared_mutex>
+#include <string>
+#include <vector>
 #include <libecs-cpp/ecs.hpp>
 
-namespace SystemLoader
+class LibraryLoader;
+
+class SystemLoader
 {
+  public:
     using SystemCreator = ecs::System *(*)(void *);
-    class Loader
-    {
-      public:
-        Loader(const std::string &library);
-        ecs::System *Create(void *data);
-        SystemCreator Get();
-      private:
-        std::unique_ptr<LibraryLoader> library;
-        SystemCreator cached_creator = nullptr;
-    };
 
-    extern std::map<std::string, std::unique_ptr<SystemLoader::Loader>> system_loaders;
-    extern std::vector<std::string> system_paths;
+    SystemLoader();
+    ~SystemLoader();
 
-    std::unique_ptr<ecs::System> Create(const std::string &system);
-    std::unique_ptr<ecs::System> Create(const std::string &system, void *data);
-    SystemCreator Get(const std::string &system);
+    SystemLoader(const SystemLoader &) = delete;
+    SystemLoader &operator=(const SystemLoader &) = delete;
+    SystemLoader(SystemLoader &&) = delete;
+    SystemLoader &operator=(SystemLoader &&) = delete;
 
-    std::vector<std::string> PathsGet();
+    std::unique_ptr<ecs::System> Create(const std::string &name);
+    std::unique_ptr<ecs::System> Create(const std::string &name, void *data);
+
+    SystemCreator Get(const std::string &name);
+
     void PathAdd(const std::string &path);
-}
+    std::vector<std::string> PathsGet() const;
+
+  private:
+    std::vector<std::string> paths_;
+    std::map<std::string, std::unique_ptr<LibraryLoader>> cache_;
+    std::map<std::string, SystemCreator> creators_;
+    mutable std::shared_mutex mutex_;
+};

@@ -1,87 +1,69 @@
 #include <libthe-seed/ComponentLoader.hpp>
+#include <libthe-seed/LibraryLoader.hpp>
 #include "NameParser.hpp"
-#include <iostream>
+#include <shared_mutex>
+#include <stdexcept>
 
-namespace ComponentLoader
+ComponentLoader::ComponentLoader() = default;
+
+ComponentLoader::~ComponentLoader() = default;
+
+std::unique_ptr<ecs::Component> ComponentLoader::Create(const std::string &name)
 {
-    std::vector<std::string> component_paths;
+    return Create(name, nullptr);
+}
 
-    Loader::Loader(const std::string &library)
+std::unique_ptr<ecs::Component> ComponentLoader::Create(const std::string &name, void *data)
+{
+    auto creator = Get(name);
+    return std::unique_ptr<ecs::Component>(creator(data));
+}
+
+ComponentLoader::ComponentCreator ComponentLoader::Get(const std::string &name)
+{
     {
-        auto name = NameParser(library);
-        this->library = std::make_unique<LibraryLoader>(name.library);
-
-        this->library->PathAdd(".");
-        this->library->PathAdd("../../" + name.library + "/src/.libs/");
-        if (!name.org.empty())
-        {
-            auto path = "../node_modules/" + name.org + "/" + name.library + "/src/.libs";
-            this->library->PathAdd(path);
-        }
-
-        for (const auto &path : component_paths)
-            this->library->PathAdd(path);
+        std::shared_lock lock(mutex_);
+        auto it = creators_.find(name);
+        if (it != creators_.end())
+            return it->second;
     }
 
-    ComponentCreator Loader::Get()
+    std::unique_lock lock(mutex_);
+    auto it = creators_.find(name);
+    if (it != creators_.end())
+        return it->second;
+
+    auto parsed = NameParser(name);
+    auto lib = std::make_unique<LibraryLoader>(parsed.library);
+
+    lib->PathAdd(".");
+    lib->PathAdd("../../" + parsed.library + "/src/.libs/");
+    if (!parsed.org.empty())
     {
-        void *ptr = this->library->FunctionGet("create_component");
-        return reinterpret_cast<ComponentCreator>(ptr);
+        auto path = "../node_modules/" + parsed.org + "/" + parsed.library + "/src/.libs";
+        lib->PathAdd(path);
     }
 
-    ecs::Component *Loader::Create()
-    {
-        return this->Create(nullptr);
-    }
+    for (const auto &path : paths_)
+        lib->PathAdd(path);
 
-    ecs::Component *Loader::Create(void *data)
-    {
-        auto creator = this->Get();
-        return creator(data);
-    }
+    void *ptr = lib->FunctionGet("create_component");
+    auto creator = reinterpret_cast<ComponentCreator>(ptr);
 
-    std::map<std::string, std::unique_ptr<ComponentLoader::Loader>> component_loaders;
+    cache_[name] = std::move(lib);
+    creators_[name] = creator;
 
-    ecs::Component *Create(const std::string &component)
-    {
-        auto &loader = component_loaders[component];
-        if (!loader)
-        {
-            loader = std::make_unique<Loader>(component);
-        }
+    return creator;
+}
 
-        return loader->Create();
-    }
+void ComponentLoader::PathAdd(const std::string &path)
+{
+    std::unique_lock lock(mutex_);
+    paths_.push_back(path);
+}
 
-    ecs::Component *Create(const std::string &component, void *data)
-    {
-        auto &loader = component_loaders[component];
-        if (!loader)
-        {
-            loader = std::make_unique<Loader>(component);
-        }
-
-        return loader->Create(data);
-    }
-
-    ComponentCreator Get(const std::string &component)
-    {
-        auto &loader = component_loaders[component];
-        if (!loader)
-        {
-            loader = std::make_unique<Loader>(component);
-        }
-
-        return loader->Get();
-    }
-
-    std::vector<std::string> PathsGet()
-    {
-        return component_paths;
-    }
-
-    void PathAdd(const std::string &path)
-    {
-        component_paths.push_back(path);
-    }
+std::vector<std::string> ComponentLoader::PathsGet() const
+{
+    std::shared_lock lock(mutex_);
+    return paths_;
 }

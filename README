@@ -28,3 +28,103 @@ make
 sudo make install
 unset PKG_CONFIG_PATH
 ```
+
+## Usage
+
+All loaders are instance-based classes. Each instance owns its own search paths and caches, and is safe for concurrent use from multiple threads.
+
+### ComponentLoader
+
+Dynamically loads shared libraries that provide ECS components.
+
+```cpp
+#include <libthe-seed/ComponentLoader.hpp>
+
+ComponentLoader loader;
+loader.PathAdd("/usr/lib/the-seed/components");
+
+auto component = loader.Create("org/my-component");
+// Returns std::unique_ptr<ecs::Component>
+
+// Pass initialization data to the component factory
+auto component2 = loader.Create("org/my-component", &init_data);
+
+// Get the raw factory function pointer
+auto creator = loader.Get("org/my-component");
+```
+
+### SystemLoader
+
+Dynamically loads shared libraries that provide ECS systems. Same API pattern as ComponentLoader.
+
+```cpp
+#include <libthe-seed/SystemLoader.hpp>
+
+SystemLoader loader;
+loader.PathAdd("/usr/lib/the-seed/systems");
+
+auto system = loader.Create("org/my-system");
+// Returns std::unique_ptr<ecs::System>
+```
+
+### PakLoader
+
+Loads resource paks (bundled asset files).
+
+```cpp
+#include <libthe-seed/PakLoader.hpp>
+
+PakLoader loader;
+loader.PathAdd("/usr/share/the-seed/paks");
+
+// Load all resources from a pak
+auto resources = loader.Load("org/my-pak");
+// Returns std::unordered_map<std::string, std::shared_ptr<ecs::Resource>>
+
+// Load only specific resources
+auto filtered = loader.Load("org/my-pak", {"texture1", "mesh2"});
+```
+
+### JSONLoader
+
+Parses JSON scene files into an ECS container, using a ComponentLoader to instantiate components.
+
+```cpp
+#include <libthe-seed/JSONLoader.hpp>
+#include <libthe-seed/ComponentLoader.hpp>
+
+ecs::Container container;
+ComponentLoader comp_loader;
+comp_loader.PathAdd("/usr/lib/the-seed/components");
+
+JSONLoader json(&container, comp_loader);
+json.FileParse("scene.json");
+// Or parse from a string:
+// json.StringParse(json_string);
+```
+
+### Thread Safety
+
+All loader instances use `std::shared_mutex` internally. Multiple threads can safely call any method on the same instance concurrently.
+
+```cpp
+ComponentLoader loader;
+loader.PathAdd("/usr/lib/the-seed/components");
+
+std::thread t1([&]() { auto c = loader.Create("org/comp-a"); });
+std::thread t2([&]() { auto c = loader.Create("org/comp-b"); });
+t1.join();
+t2.join();
+```
+
+### Error Handling
+
+All loaders throw `std::runtime_error` when a library or resource pak cannot be found.
+
+```cpp
+try {
+    auto component = loader.Create("nonexistent/component");
+} catch (const std::runtime_error &e) {
+    // Handle missing library
+}
+```

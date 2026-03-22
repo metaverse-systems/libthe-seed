@@ -2,7 +2,8 @@
 #include <libthe-seed/ComponentLoader.hpp>
 #include <fstream>
 
-JSONLoader::JSONLoader(ecs::Container *container): container(container)
+JSONLoader::JSONLoader(ecs::Container *container, ComponentLoader &loader)
+    : container(container), loader_(loader)
 {
 }
 
@@ -15,7 +16,7 @@ void JSONLoader::StringParse(const std::string &data)
 
         for(auto &[type, component] : entity["Components"].items())
         {
-            e->Component(ComponentLoader::Create(type, &component));
+            e->Component(loader_.Create(type, &component).release());
         }
     }
 }
