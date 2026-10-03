@@ -103,6 +103,8 @@ json.FileParse("scene.json");
 // json.StringParse(json_string);
 ```
 
+`JSONLoader` hands the `std::unique_ptr` returned by `ComponentLoader::Create` to `Entity::Component` unchanged. libthe-seed 0.3.1 needs libecs-cpp 1.7.0 or later.
+
 ### Thread Safety
 
 All loader instances use `std::shared_mutex` internally. Multiple threads can safely call any method on the same instance concurrently.
