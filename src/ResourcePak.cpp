@@ -46,6 +46,7 @@ ResourcePak::ResourcePak(const std::string &filename): filename(filename)
 
 void ResourcePak::Load(ecs::Container *container, const std::string &name)
 {
+    // Load() returns a temporary, which ResourceAdd moves into the world.
     container->ResourceAdd(name, this->Load(name));
 }
 

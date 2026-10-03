@@ -16,7 +16,7 @@ void JSONLoader::StringParse(const std::string &data)
 
         for(auto &[type, component] : entity["Components"].items())
         {
-            e->Component(loader_.Create(type, &component).release());
+            e->Component(loader_.Create(type, &component));
         }
     }
 }

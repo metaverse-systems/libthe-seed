@@ -96,3 +96,69 @@ TEST_CASE("ResourcePak::Load throws on bounds-exceeding resource size", "[Resour
 
     std::remove(pakPath.c_str());
 }
+
+TEST_CASE("A resource loaded from a pak is shared read-only by the world", "[ResourcePak]")
+{
+    std::vector<uint8_t> expected = {0xCA, 0xFE, 0xBA, 0xBE, 0x10, 0x20, 0x30, 0x40, 0x50};
+    std::string pakPath = createTestPak(FIXTURES_DIR, "shared_res", expected);
+
+    ResourcePak pak(pakPath);
+    ecs::Manager manager;
+    auto *world = manager.Container("world");
+    pak.Load(world, "shared_res");
+
+    SECTION("The retrieved resource has the bytes of the pak entry")
+    {
+        std::shared_ptr<const ecs::Resource> found = world->ResourceGet("shared_res");
+        REQUIRE(found);
+        REQUIRE(found->Data == expected);
+    }
+
+    SECTION("An unknown name gives an empty result")
+    {
+        std::shared_ptr<const ecs::Resource> found;
+        REQUIRE_NOTHROW(found = world->ResourceGet("not_in_the_pak"));
+        REQUIRE_FALSE(found);
+    }
+
+    SECTION("Two retrievals share one stored object")
+    {
+        // The vector that Load produces is moved into the world, so its buffer cannot be observed
+        // from here; the bytes and the sharing are what this checks.
+        auto first = world->ResourceGet("shared_res");
+        auto second = world->ResourceGet("shared_res");
+        REQUIRE(first);
+        REQUIRE(first.get() == second.get());
+        REQUIRE(first->Data.data() == second->Data.data());
+    }
+
+    SECTION("A retrieved resource outlives the world")
+    {
+        auto manager2 = std::make_unique<ecs::Manager>();
+        auto *other = manager2->Container("other");
+        pak.Load(other, "shared_res");
+        auto held = other->ResourceGet("shared_res");
+        manager2.reset();
+        REQUIRE(held);
+        REQUIRE(held->Data == expected);
+    }
+
+    std::remove(pakPath.c_str());
+}
+
+TEST_CASE("LoadAll puts every pak resource in the world", "[ResourcePak]")
+{
+    std::vector<uint8_t> expected = {0x01, 0x02, 0x03};
+    std::string pakPath = createTestPak(FIXTURES_DIR, "only_res", expected);
+
+    ResourcePak pak(pakPath);
+    ecs::Manager manager;
+    auto *world = manager.Container("world");
+    pak.LoadAll(world);
+
+    auto found = world->ResourceGet("only_res");
+    REQUIRE(found);
+    REQUIRE(found->Data == expected);
+
+    std::remove(pakPath.c_str());
+}

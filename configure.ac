@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.69])
-AC_INIT([libthe-seed], [0.3.0], [tim@metaverse.systems])
+AC_INIT([libthe-seed], [0.3.1], [tim@metaverse.systems])
 LT_INIT
 AC_CONFIG_SRCDIR([src/LibraryLoader.cpp])
 AC_CONFIG_HEADERS([config.h])
@@ -19,7 +19,7 @@ AM_INIT_AUTOMAKE([subdir-objects])
 # Checks for libraries.
 AC_CHECK_LIB([pthread], [pthread_exit])
 
-PKG_CHECK_MODULES([LIBECS], [ecs-cpp >= 1.0.0])
+PKG_CHECK_MODULES([LIBECS], [ecs-cpp >= 1.7.0])
 PKG_CHECK_MODULES([CATCH2], catch2)
 
 # Checks for header files.

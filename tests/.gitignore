@@ -5,3 +5,4 @@ test_MachOSigner
 test_MsiSigner
 test_PeSigner
 test_ResourcePak
+test_JSONLoader
