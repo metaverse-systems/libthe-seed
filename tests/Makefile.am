@@ -4,10 +4,30 @@ AM_CPPFLAGS = ${LIBECS_CFLAGS} -I../include -I../external/Catch2/extras -I$(srcd
               -DMODULE_DIR=\"$(abs_builddir)/.libs\"
 AM_CXXFLAGS = -std=c++20
 
+LOG_COMPILER = $(SHELL) $(srcdir)/run-test.sh
+SH_LOG_COMPILER = $(SHELL)
+
+AM_TESTS_ENVIRONMENT = \
+    SEED_SANITIZER='@SANITIZER@'; export SEED_SANITIZER; \
+    SEED_KNOWN_GAPS_FILE='$(abs_srcdir)/known-gaps.txt'; export SEED_KNOWN_GAPS_FILE; \
+    SEED_TEST_PROGRAMS='$(check_PROGRAMS)'; export SEED_TEST_PROGRAMS; \
+    SEED_FIXTURES_DIR='$(abs_srcdir)/fixtures'; export SEED_FIXTURES_DIR; \
+    SEED_TESTS_SRCDIR='$(abs_srcdir)'; export SEED_TESTS_SRCDIR; \
+    ASAN_OPTIONS='halt_on_error=1:detect_leaks=1:abort_on_error=0:print_summary=1'; export ASAN_OPTIONS; \
+    UBSAN_OPTIONS='halt_on_error=1:print_stacktrace=1:print_summary=1'; export UBSAN_OPTIONS;
+
 check_PROGRAMS = test_NameParser test_LibraryLoader test_DependencyLister \
                  test_PeSigner test_MachOParser test_MachOSigner test_MsiSigner test_ResourcePak \
                  test_ComponentLoader test_SystemLoader test_PakLoader \
                  test_LoaderConcurrency test_JSONLoader
+
+if CROSS_COMPILING
+TESTS =
+check-local:
+	@echo "Test programs were built but not run: cross-compiling."
+else
+TESTS = $(check_PROGRAMS) run-test-selftest.sh
+endif
 
 check_LTLIBRARIES = libtestmodule.la libcatch.la
 

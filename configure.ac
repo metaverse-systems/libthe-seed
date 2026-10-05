@@ -24,6 +24,10 @@ AC_CHECK_FILE([$srcdir/external/Catch2/extras/catch_amalgamated.hpp],
     [],
     [AC_MSG_ERROR([external/Catch2 is missing: run git submodule update --init])])
 
+# Sanitizer builds are added by the sanitizer option; until then none is used.
+SANITIZER=none
+AC_SUBST([SANITIZER])
+
 AM_CONDITIONAL([CROSS_COMPILING], [test "x$cross_compiling" = xyes])
 
 # Checks for header files.
