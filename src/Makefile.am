@@ -21,9 +21,9 @@ noinst_HEADERS = \
 	internal/MachODefs.hpp \
 	internal/ReadCString.hpp
 
-libthe_seed_la_CXXFLAGS = -std=c++20 -I../include -I../external ${LIBECS_CFLAGS}
+libthe_seed_la_CXXFLAGS = -std=c++20 -I$(top_srcdir)/include -I$(top_srcdir)/external ${LIBECS_CFLAGS} $(SANITIZER_CXXFLAGS)
 libthe_seed_la_LIBADD = -lpthread ${LIBECS_LIBS}
-libthe_seed_la_LDFLAGS = -no-undefined -version-info 0:0:0
+libthe_seed_la_LDFLAGS = -no-undefined -version-info 0:0:0 $(SANITIZER_LDFLAGS)
 libthe_seed_la_SOURCES = LibraryLoader.cpp \
 		SystemLoader.cpp \
 		ComponentLoader.cpp \

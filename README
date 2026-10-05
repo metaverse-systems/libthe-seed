@@ -29,6 +29,40 @@ sudo make install
 unset PKG_CONFIG_PATH
 ```
 
+## Running the tests
+
+The tests need libecs-cpp installed where `pkg-config` finds it, and the Catch2 submodule, so clone with submodules:
+
+```
+git clone --recurse-submodules git@github.com:metaverse-systems/libthe-seed.git
+cd libthe-seed
+./autogen.sh && ./configure && make && make check
+```
+
+`make check` builds every test program, runs them all and fails if any test fails, if a program leaves files behind, or if a sample file under `tests/fixtures/` is missing or changed. Use `make check -j4` to run in parallel. The tests do not depend on the directory they are started from. When cross-compiling (for example `--host=x86_64-w64-mingw32`) the test programs are built but not run, a notice says so, and only `tests/check-fixtures.sh` runs.
+
+To check for memory errors and undefined behaviour, configure a build with the sanitizer variant (AddressSanitizer and UndefinedBehaviorSanitizer for the library and every test):
+
+```
+mkdir ../build-asan && cd ../build-asan
+../libthe-seed/configure --enable-sanitizer=address
+make && make check VERBOSE=1
+```
+
+`--enable-sanitizer=no`, or leaving the option out, builds without a sanitizer. Any other value is an error.
+
+### Known gaps
+
+Failures that a defect recorded in `docs/reviews/libthe-seed-1.md` causes are listed in `tests/known-gaps.txt`, one line per test case, with the finding and the roadmap task that fixes it. A listed failure is reported as `KNOWN GAP:` and does not fail the run; any other failure does. A `STALE KNOWN GAP:` line means a listed test now passes: the change that fixed the defect must remove the entry. A `MALFORMED KNOWN GAP:` line means an entry could not be read or matches no test case, and it fails the run.
+
+### Sample files
+
+The sample executables, DLL, installer and Mach-O files in `tests/fixtures/` are built from sources in `tests/fixtures/src/` and rebuilt only with `tests/fixtures/regenerate.sh`, which rewrites `SHA256SUMS`. `tests/fixtures/PROVENANCE.md` records the tool, version, command, licence and check for every file.
+
+### Hosted checks
+
+The workflow in `.github/workflows/ci.yaml` runs `make check` for the plain and the address+undefined variants on every pull request and on pushes to `master`. It builds libecs-cpp from commit `bd84b5a5bee05bed2006fc9ef9dbbfe3e58f9f7e` (version 2.1.0). Update `LIBECS_CPP_REF` in the workflow when the required libecs-cpp changes.
+
 ## Usage
 
 All loaders are instance-based classes. Each instance owns its own search paths and caches, and is safe for concurrent use from multiple threads.

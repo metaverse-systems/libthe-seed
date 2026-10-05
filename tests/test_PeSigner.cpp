@@ -1,4 +1,4 @@
-#include <catch_amalgamated.hpp>
+#include "TestPaths.hpp"
 
 #include <libthe-seed/PeSigner.hpp>
 
@@ -10,27 +10,10 @@
 
 namespace {
 
-std::string FixturePath(const std::string &name)
+std::string CopyFixture(const seedtest::ScratchDir &scratch, const std::string &name)
 {
-    // Try relative path from build directory
-    std::string path = "../tests/fixtures/" + name;
-    if (std::filesystem::exists(path))
-        return path;
-    // Try from test source directory
-    path = "tests/fixtures/" + name;
-    if (std::filesystem::exists(path))
-        return path;
-    // Try absolute
-    path = std::string(FIXTURES_DIR) + "/" + name;
-    if (std::filesystem::exists(path))
-        return path;
-    return "../tests/fixtures/" + name;
-}
-
-std::string CopyFixture(const std::string &name)
-{
-    auto src = FixturePath(name);
-    auto dst = std::filesystem::temp_directory_path() / ("test_pesigner_" + name);
+    auto src = seedtest::FixturePath(name);
+    auto dst = scratch.Path() / ("test_pesigner_" + name);
     std::filesystem::copy_file(src, dst, std::filesystem::copy_options::overwrite_existing);
     return dst.string();
 }
@@ -39,7 +22,7 @@ std::string CopyFixture(const std::string &name)
 
 TEST_CASE("PeSigner::ComputeAuthenticodeDigest computes valid digest", "[PeSigner]")
 {
-    auto fixturePath = FixturePath("tiny.exe");
+    auto fixturePath = seedtest::FixturePath("tiny.exe");
     REQUIRE(std::filesystem::exists(fixturePath));
 
     auto result = PeSigner::ComputeAuthenticodeDigest(fixturePath);
@@ -57,7 +40,7 @@ TEST_CASE("PeSigner::ComputeAuthenticodeDigest computes valid digest", "[PeSigne
 
 TEST_CASE("PeSigner::HasEmbeddedSignature returns false for unsigned PE", "[PeSigner]")
 {
-    auto fixturePath = FixturePath("tiny.exe");
+    auto fixturePath = seedtest::FixturePath("tiny.exe");
     REQUIRE(std::filesystem::exists(fixturePath));
 
     CHECK(PeSigner::HasEmbeddedSignature(fixturePath) == false);
@@ -65,7 +48,8 @@ TEST_CASE("PeSigner::HasEmbeddedSignature returns false for unsigned PE", "[PeSi
 
 TEST_CASE("PeSigner::EmbedSignature and ExtractSignature round-trip", "[PeSigner]")
 {
-    auto tempPath = CopyFixture("tiny.exe");
+    seedtest::ScratchDir scratch;
+    auto tempPath = CopyFixture(scratch, "tiny.exe");
 
     // Initially unsigned
     REQUIRE(PeSigner::HasEmbeddedSignature(tempPath) == false);
@@ -88,12 +72,12 @@ TEST_CASE("PeSigner::EmbedSignature and ExtractSignature round-trip", "[PeSigner
     CHECK(*extracted == fakePkcs7);
 
     // Clean up
-    std::filesystem::remove(tempPath);
 }
 
 TEST_CASE("PeSigner::StripSignature removes embedded signature", "[PeSigner]")
 {
-    auto tempPath = CopyFixture("tiny.exe");
+    seedtest::ScratchDir scratch;
+    auto tempPath = CopyFixture(scratch, "tiny.exe");
 
     // Embed a fake signature first
     std::vector<std::uint8_t> fakePkcs7(64, 0xAA);
@@ -111,12 +95,11 @@ TEST_CASE("PeSigner::StripSignature removes embedded signature", "[PeSigner]")
     CHECK_FALSE(extracted.has_value());
 
     // Clean up
-    std::filesystem::remove(tempPath);
 }
 
 TEST_CASE("PeSigner throws on non-PE file", "[PeSigner]")
 {
-    auto fixturePath = FixturePath("plain.txt");
+    auto fixturePath = seedtest::FixturePath("plain.txt");
     REQUIRE(std::filesystem::exists(fixturePath));
 
     CHECK_THROWS_AS(PeSigner::ComputeAuthenticodeDigest(fixturePath), std::runtime_error);
@@ -125,7 +108,8 @@ TEST_CASE("PeSigner throws on non-PE file", "[PeSigner]")
 
 TEST_CASE("PeSigner::ComputeAuthenticodeDigest changes after embed", "[PeSigner]")
 {
-    auto tempPath = CopyFixture("tiny.exe");
+    seedtest::ScratchDir scratch;
+    auto tempPath = CopyFixture(scratch, "tiny.exe");
 
     // Get digest before signing
     auto digestBefore = PeSigner::ComputeAuthenticodeDigest(tempPath);
@@ -139,5 +123,4 @@ TEST_CASE("PeSigner::ComputeAuthenticodeDigest changes after embed", "[PeSigner]
     auto digestAfter = PeSigner::ComputeAuthenticodeDigest(tempPath);
     CHECK(digestBefore.digest == digestAfter.digest);
 
-    std::filesystem::remove(tempPath);
 }

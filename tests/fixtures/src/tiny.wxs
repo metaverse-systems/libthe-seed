@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+  <Product Id="*" Name="Tiny Sample" Language="1033" Version="1.0.0.0"
+           Manufacturer="The Seed Test Samples"
+           UpgradeCode="6f1d6d1e-3b52-4e0d-9a57-2f0b1c3a8d11">
+    <Package InstallerVersion="200" Compressed="yes" InstallScope="perMachine"/>
+    <MediaTemplate EmbedCab="yes"/>
+    <Directory Id="TARGETDIR" Name="SourceDir">
+      <Directory Id="ProgramFilesFolder">
+        <Directory Id="INSTALLDIR" Name="TinySample">
+          <Component Id="TinyComponent" Guid="0b7e2a54-8c3f-4f6a-b1d2-5e9c7a4d3f22">
+            <File Id="TinyFile" Source="tiny.wxs" KeyPath="yes"/>
+          </Component>
+        </Directory>
+      </Directory>
+    </Directory>
+    <Feature Id="Main" Level="1">
+      <ComponentRef Id="TinyComponent"/>
+    </Feature>
+  </Product>
+</Wix>

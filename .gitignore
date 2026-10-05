@@ -77,3 +77,12 @@ Thumbs.db
 *.tmp
 *.swp
 src/internal/.dirstamp
+
+# Sample files are inputs, not build output
+!/tests/fixtures/
+!/tests/fixtures/**
+
+# Test harness output
+tests/*.log
+tests/*.trs
+tests/test-suite.log

@@ -1,4 +1,4 @@
-#include <catch_amalgamated.hpp>
+#include "TestPaths.hpp"
 
 #include <libthe-seed/MachOSigner.hpp>
 #include <libthe-seed/MachOParser.hpp>
@@ -11,33 +11,19 @@
 
 namespace {
 
-std::string FixturePath(const std::string &name)
+std::string CopyFixture(const seedtest::ScratchDir &scratch, const std::string &name)
 {
-    std::string path = "../tests/fixtures/" + name;
-    if (std::filesystem::exists(path))
-        return path;
-    path = "tests/fixtures/" + name;
-    if (std::filesystem::exists(path))
-        return path;
-    path = std::string(FIXTURES_DIR) + "/" + name;
-    if (std::filesystem::exists(path))
-        return path;
-    return "../tests/fixtures/" + name;
-}
-
-std::string CopyFixture(const std::string &name)
-{
-    auto src = FixturePath(name);
-    auto dst = std::filesystem::temp_directory_path() / ("test_machosigner_" + name);
+    auto src = seedtest::FixturePath(name);
+    auto dst = scratch.File(name);
     std::filesystem::copy_file(src, dst, std::filesystem::copy_options::overwrite_existing);
-    return dst.string();
+    return dst;
 }
 
 } // namespace
 
 TEST_CASE("MachOSigner::ComputeCodeDirectory computes valid CodeDirectory", "[MachOSigner]")
 {
-    auto fixturePath = FixturePath("tiny-macho-x86_64");
+    auto fixturePath = seedtest::FixturePath("tiny-macho-x86_64");
     REQUIRE(std::filesystem::exists(fixturePath));
 
     auto result = MachOSigner::ComputeCodeDirectory(fixturePath, "test-identity");
@@ -56,7 +42,7 @@ TEST_CASE("MachOSigner::ComputeCodeDirectory computes valid CodeDirectory", "[Ma
 
 TEST_CASE("MachOSigner::BuildSuperBlob creates valid blob", "[MachOSigner]")
 {
-    auto fixturePath = FixturePath("tiny-macho-x86_64");
+    auto fixturePath = seedtest::FixturePath("tiny-macho-x86_64");
     REQUIRE(std::filesystem::exists(fixturePath));
 
     auto cdResult = MachOSigner::ComputeCodeDirectory(fixturePath, "test-identity");
@@ -84,7 +70,7 @@ TEST_CASE("MachOSigner::BuildSuperBlob creates valid blob", "[MachOSigner]")
 
 TEST_CASE("MachOSigner::HasEmbeddedSignature returns false for unsigned", "[MachOSigner]")
 {
-    auto fixturePath = FixturePath("tiny-macho-x86_64");
+    auto fixturePath = seedtest::FixturePath("tiny-macho-x86_64");
     REQUIRE(std::filesystem::exists(fixturePath));
 
     CHECK(MachOSigner::HasEmbeddedSignature(fixturePath) == false);
@@ -92,7 +78,8 @@ TEST_CASE("MachOSigner::HasEmbeddedSignature returns false for unsigned", "[Mach
 
 TEST_CASE("MachOSigner::EmbedSignature and ExtractSignature round-trip", "[MachOSigner]")
 {
-    auto tempPath = CopyFixture("tiny-macho-x86_64");
+    seedtest::ScratchDir scratch;
+    auto tempPath = CopyFixture(scratch, "tiny-macho-x86_64");
 
     // Initially unsigned
     REQUIRE(MachOSigner::HasEmbeddedSignature(tempPath) == false);
@@ -114,13 +101,11 @@ TEST_CASE("MachOSigner::EmbedSignature and ExtractSignature round-trip", "[MachO
     CHECK(extracted->size() == superBlob.size());
     CHECK(*extracted == superBlob);
 
-    // Clean up
-    std::filesystem::remove(tempPath);
 }
 
 TEST_CASE("MachOSigner::ExtractCmsFromSuperBlob extracts CMS blob", "[MachOSigner]")
 {
-    auto fixturePath = FixturePath("tiny-macho-x86_64");
+    auto fixturePath = seedtest::FixturePath("tiny-macho-x86_64");
     auto cdResult = MachOSigner::ComputeCodeDirectory(fixturePath, "test");
 
     std::vector<std::uint8_t> fakeCms(48, 0xEE);
@@ -133,7 +118,7 @@ TEST_CASE("MachOSigner::ExtractCmsFromSuperBlob extracts CMS blob", "[MachOSigne
 
 TEST_CASE("MachOSigner::ExtractCodeDirectoryFromSuperBlob extracts CD", "[MachOSigner]")
 {
-    auto fixturePath = FixturePath("tiny-macho-x86_64");
+    auto fixturePath = seedtest::FixturePath("tiny-macho-x86_64");
     auto cdResult = MachOSigner::ComputeCodeDirectory(fixturePath, "test");
 
     std::vector<std::uint8_t> fakeCms(32, 0xFF);
@@ -154,7 +139,8 @@ TEST_CASE("MachOSigner::ComputeCodeDirectory rejects 32-bit Mach-O", "[MachOSign
     macho32[0] = 0xCE; macho32[1] = 0xFA; macho32[2] = 0xED; macho32[3] = 0xFE;
     // ncmds = 0, sizeofcmds = 0 (at offsets 16 and 20)
 
-    auto tmpPath = std::filesystem::temp_directory_path() / "test_macho32_reject.bin";
+    seedtest::ScratchDir scratch;
+    auto tmpPath = scratch.File("macho32_reject.bin");
     {
         std::ofstream out(tmpPath, std::ios::binary);
         out.write(reinterpret_cast<const char *>(macho32.data()),
@@ -162,9 +148,8 @@ TEST_CASE("MachOSigner::ComputeCodeDirectory rejects 32-bit Mach-O", "[MachOSign
     }
 
     REQUIRE_THROWS_AS(
-        MachOSigner::ComputeCodeDirectory(tmpPath.string(), "test-identity"),
+        MachOSigner::ComputeCodeDirectory(tmpPath, "test-identity"),
         std::runtime_error
     );
 
-    std::filesystem::remove(tmpPath);
 }

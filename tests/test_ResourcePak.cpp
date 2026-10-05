@@ -1,4 +1,4 @@
-#include <catch_amalgamated.hpp>
+#include "TestPaths.hpp"
 #include <libthe-seed/ResourcePak.hpp>
 #include <fstream>
 #include <cstdint>
@@ -40,7 +40,8 @@ TEST_CASE("ResourcePak round-trip loads Resource::Data correctly", "[ResourcePak
     // Known payload bytes
     std::vector<uint8_t> expected = {0xDE, 0xAD, 0xBE, 0xEF, 0x01, 0x02, 0x03};
 
-    std::string pakPath = createTestPak(FIXTURES_DIR, "test_res", expected);
+    seedtest::ScratchDir scratch;
+    std::string pakPath = createTestPak(scratch.Path().string(), "test_res", expected);
 
     ResourcePak pak(pakPath);
 
@@ -57,9 +58,6 @@ TEST_CASE("ResourcePak round-trip loads Resource::Data correctly", "[ResourcePak
         REQUIRE(names.size() == 1);
         REQUIRE(names[0] == "test_res");
     }
-
-    // Clean up
-    std::remove(pakPath.c_str());
 }
 
 TEST_CASE("ResourcePak::Load throws on bounds-exceeding resource size", "[ResourcePak]")
@@ -81,7 +79,8 @@ TEST_CASE("ResourcePak::Load throws on bounds-exceeding resource size", "[Resour
         raw = header.dump();
     }
 
-    std::string pakPath = std::string(FIXTURES_DIR) + "/test_bounds.pak";
+    seedtest::ScratchDir scratch;
+    std::string pakPath = scratch.File("test_bounds.pak");
     {
         std::ofstream out(pakPath, std::ios::binary);
         out << raw << '\n';
@@ -93,14 +92,13 @@ TEST_CASE("ResourcePak::Load throws on bounds-exceeding resource size", "[Resour
 
     ResourcePak pak(pakPath);
     REQUIRE_THROWS_AS(pak.Load("oversized"), std::runtime_error);
-
-    std::remove(pakPath.c_str());
 }
 
 TEST_CASE("A resource loaded from a pak is shared read-only by the world", "[ResourcePak]")
 {
     std::vector<uint8_t> expected = {0xCA, 0xFE, 0xBA, 0xBE, 0x10, 0x20, 0x30, 0x40, 0x50};
-    std::string pakPath = createTestPak(FIXTURES_DIR, "shared_res", expected);
+    seedtest::ScratchDir scratch;
+    std::string pakPath = createTestPak(scratch.Path().string(), "shared_res", expected);
 
     ResourcePak pak(pakPath);
     ecs::Manager manager;
@@ -142,14 +140,13 @@ TEST_CASE("A resource loaded from a pak is shared read-only by the world", "[Res
         REQUIRE(held);
         REQUIRE(held->Data == expected);
     }
-
-    std::remove(pakPath.c_str());
 }
 
 TEST_CASE("LoadAll puts every pak resource in the world", "[ResourcePak]")
 {
     std::vector<uint8_t> expected = {0x01, 0x02, 0x03};
-    std::string pakPath = createTestPak(FIXTURES_DIR, "only_res", expected);
+    seedtest::ScratchDir scratch;
+    std::string pakPath = createTestPak(scratch.Path().string(), "only_res", expected);
 
     ResourcePak pak(pakPath);
     ecs::Manager manager;
@@ -159,6 +156,4 @@ TEST_CASE("LoadAll puts every pak resource in the world", "[ResourcePak]")
     auto found = world->ResourceGet("only_res");
     REQUIRE(found);
     REQUIRE(found->Data == expected);
-
-    std::remove(pakPath.c_str());
 }
