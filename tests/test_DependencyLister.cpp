@@ -1,10 +1,11 @@
-#include <catch_amalgamated.hpp>
+#include "TestPaths.hpp"
 
 #include <libthe-seed/DependencyLister.hpp>
 
 #include "../src/PeParser.hpp"
 
 #include <algorithm>
+#include <cctype>
 #include <filesystem>
 #include <fstream>
 #include <string>
@@ -23,27 +24,16 @@ std::vector<std::string> DefaultSearchPaths()
     };
 }
 
-std::string ExistingElfBinaryPath()
+std::filesystem::path WriteTempFile(const seedtest::ScratchDir &scratch, const std::string &name, const std::vector<std::uint8_t> &content)
 {
-    const std::string built_library = "../src/.libs/libthe-seed.so";
-    if(std::filesystem::exists(built_library))
-    {
-        return built_library;
-    }
-
-    return "/bin/ls";
-}
-
-std::filesystem::path WriteTempFile(const std::string &name, const std::vector<std::uint8_t> &content)
-{
-    const auto path = std::filesystem::temp_directory_path() / name;
+    const auto path = scratch.Path() / name;
     std::ofstream output(path, std::ios::binary);
     output.write(reinterpret_cast<const char *>(content.data()), static_cast<std::streamsize>(content.size()));
     output.close();
     return path;
 }
 
-std::filesystem::path WriteStaticLikeElf(const std::string &name)
+std::filesystem::path WriteStaticLikeElf(const seedtest::ScratchDir &scratch, const std::string &name)
 {
     std::vector<std::uint8_t> bytes(64 + 56, 0);
 
@@ -88,7 +78,27 @@ std::filesystem::path WriteStaticLikeElf(const std::string &name)
     write64(96, 0);
     write64(104, 0);
 
-    return WriteTempFile(name, bytes);
+    return WriteTempFile(scratch, name, bytes);
+}
+
+// DLL names are case-insensitive; the sample records them as the linker wrote them.
+std::string Lower(std::string text)
+{
+    std::transform(text.begin(), text.end(), text.begin(),
+                   [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+    return text;
+}
+
+bool HasDll(const std::vector<std::string> &names, const std::string &dll)
+{
+    return std::any_of(names.begin(), names.end(),
+                       [&](const std::string &name) { return Lower(name) == dll; });
+}
+
+bool HasDll(const std::map<std::string, std::vector<std::string>> &dependencies, const std::string &dll)
+{
+    return std::any_of(dependencies.begin(), dependencies.end(),
+                       [&](const auto &entry) { return Lower(entry.first) == dll; });
 }
 
 bool ContainsKeyFragment(const std::map<std::string, std::vector<std::string>> &dependencies, const std::string &needle)
@@ -105,7 +115,7 @@ TEST_CASE("DependencyLister extracts direct dependencies from ELF", "[Dependency
 {
     DependencyLister lister;
 
-    const auto result = lister.ListDependencies({ExistingElfBinaryPath()}, DefaultSearchPaths());
+    const auto result = lister.ListDependencies({seedtest::LibraryPath()}, DefaultSearchPaths());
 
     REQUIRE(result.errors.empty());
     REQUIRE_FALSE(result.dependencies.empty());
@@ -113,17 +123,20 @@ TEST_CASE("DependencyLister extracts direct dependencies from ELF", "[Dependency
 
 TEST_CASE("DependencyLister reports missing file errors", "[DependencyLister][US1]")
 {
+    seedtest::ScratchDir scratch;
+    const std::string missing = scratch.File("file-that-does-not-exist");
     DependencyLister lister;
 
-    const auto result = lister.ListDependencies({"/tmp/file-that-does-not-exist-1234567"}, DefaultSearchPaths());
+    const auto result = lister.ListDependencies({missing}, DefaultSearchPaths());
 
     REQUIRE(result.dependencies.empty());
-    REQUIRE(result.errors.count("/tmp/file-that-does-not-exist-1234567") == 1);
+    REQUIRE(result.errors.count(missing) == 1);
 }
 
 TEST_CASE("DependencyLister reports non-binary file errors", "[DependencyLister][US1]")
 {
-    const auto text_file = std::filesystem::temp_directory_path() / "dependency_lister_non_binary.txt";
+    seedtest::ScratchDir scratch;
+    const auto text_file = scratch.Path() / "dependency_lister_non_binary.txt";
     {
         std::ofstream output(text_file);
         output << "not a binary";
@@ -135,28 +148,30 @@ TEST_CASE("DependencyLister reports non-binary file errors", "[DependencyLister]
     REQUIRE(result.dependencies.empty());
     REQUIRE(result.errors.count(text_file.string()) == 1);
 
-    std::filesystem::remove(text_file);
 }
 
 TEST_CASE("DependencyLister continues processing after per-file errors", "[DependencyLister][US1]")
 {
+    seedtest::ScratchDir scratch;
+    const std::string missing = scratch.File("missing-binary-for-dependency-lister");
     DependencyLister lister;
 
     const auto result = lister.ListDependencies(
         {
-            "/tmp/missing-binary-for-dependency-lister",
-            ExistingElfBinaryPath(),
+            missing,
+            seedtest::LibraryPath(),
         },
         DefaultSearchPaths()
     );
 
-    REQUIRE(result.errors.count("/tmp/missing-binary-for-dependency-lister") == 1);
+    REQUIRE(result.errors.count(missing) == 1);
     REQUIRE_FALSE(result.dependencies.empty());
 }
 
 TEST_CASE("ELF file without PT_DYNAMIC produces empty dependencies", "[DependencyLister][US1]")
 {
-    const auto static_like_elf = WriteStaticLikeElf("dependency_lister_static_like.elf");
+    seedtest::ScratchDir scratch;
+    const auto static_like_elf = WriteStaticLikeElf(scratch, "dependency_lister_static_like.elf");
 
     DependencyLister lister;
     const auto result = lister.ListDependencies({static_like_elf.string()}, DefaultSearchPaths());
@@ -164,14 +179,13 @@ TEST_CASE("ELF file without PT_DYNAMIC produces empty dependencies", "[Dependenc
     REQUIRE(result.errors.empty());
     REQUIRE(result.dependencies.empty());
 
-    std::filesystem::remove(static_like_elf);
 }
 
 TEST_CASE("DependencyLister resolves transitive dependencies", "[DependencyLister][US2]")
 {
     DependencyLister lister;
 
-    const auto result = lister.ListDependencies({ExistingElfBinaryPath()}, DefaultSearchPaths());
+    const auto result = lister.ListDependencies({seedtest::LibraryPath()}, DefaultSearchPaths());
 
     REQUIRE(result.errors.empty());
     REQUIRE(ContainsKeyFragment(result.dependencies, "libc.so"));
@@ -181,7 +195,7 @@ TEST_CASE("DependencyLister uses canonical absolute keys when resolvable", "[Dep
 {
     DependencyLister lister;
 
-    const auto result = lister.ListDependencies({ExistingElfBinaryPath()}, DefaultSearchPaths());
+    const auto result = lister.ListDependencies({seedtest::LibraryPath()}, DefaultSearchPaths());
 
     REQUIRE(result.errors.empty());
 
@@ -237,26 +251,27 @@ TEST_CASE("DependencyLister uses recorded name when unresolved", "[DependencyLis
 
 TEST_CASE("PeParser reads DLL dependencies from fixture", "[DependencyLister][US3]")
 {
-    const auto dependencies = PeParser::ListDependencies("fixtures/test.dll");
+    const auto dependencies = PeParser::ListDependencies(seedtest::FixturePath("test.dll"));
 
-    REQUIRE(std::find(dependencies.begin(), dependencies.end(), "kernel32.dll") != dependencies.end());
-    REQUIRE(std::find(dependencies.begin(), dependencies.end(), "msvcrt.dll") != dependencies.end());
+    REQUIRE(HasDll(dependencies, "kernel32.dll"));
+    REQUIRE(HasDll(dependencies, "msvcrt.dll"));
 }
 
 TEST_CASE("DependencyLister auto-detects PE format", "[DependencyLister][US3]")
 {
     DependencyLister lister;
 
-    const auto result = lister.ListDependencies({"fixtures/test.dll"}, {});
+    const auto result = lister.ListDependencies({seedtest::FixturePath("test.dll")}, {});
 
     REQUIRE(result.errors.empty());
-    REQUIRE(result.dependencies.count("kernel32.dll") == 1);
-    REQUIRE(result.dependencies.count("msvcrt.dll") == 1);
+    REQUIRE(HasDll(result.dependencies, "kernel32.dll"));
+    REQUIRE(HasDll(result.dependencies, "msvcrt.dll"));
 }
 
 TEST_CASE("DependencyLister reports errors for truncated PE files", "[DependencyLister][US3]")
 {
-    const auto corrupt_file = WriteTempFile("dependency_lister_truncated.dll", {'M', 'Z'});
+    seedtest::ScratchDir scratch;
+    const auto corrupt_file = WriteTempFile(scratch, "dependency_lister_truncated.dll", {'M', 'Z'});
 
     DependencyLister lister;
     const auto result = lister.ListDependencies({corrupt_file.string()}, {});
@@ -264,5 +279,4 @@ TEST_CASE("DependencyLister reports errors for truncated PE files", "[Dependency
     REQUIRE(result.dependencies.empty());
     REQUIRE(result.errors.count(corrupt_file.string()) == 1);
 
-    std::filesystem::remove(corrupt_file);
 }

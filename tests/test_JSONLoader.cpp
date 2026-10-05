@@ -1,4 +1,4 @@
-#include <catch_amalgamated.hpp>
+#include "TestPaths.hpp"
 #include <libthe-seed/ComponentLoader.hpp>
 #include <libthe-seed/JSONLoader.hpp>
 #include <libecs-cpp/ecs.hpp>
@@ -14,7 +14,7 @@ namespace
     {
         Scene()
         {
-            this->loader.PathAdd(MODULE_DIR);
+            this->loader.PathAdd(seedtest::ModuleDir());
             this->world = this->manager.Container("world");
         }
 
