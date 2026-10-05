@@ -1,4 +1,4 @@
-AM_CPPFLAGS = ${LIBECS_CFLAGS} -I../include -I../external/Catch2/extras -I$(srcdir) \
+AM_CPPFLAGS = ${LIBECS_CFLAGS} -I$(top_srcdir)/include -I$(top_srcdir)/external/Catch2/extras -I$(srcdir) \
               -DFIXTURES_DIR=\"$(abs_srcdir)/fixtures\" \
               -DLIBRARY_PATH_UNDER_TEST=\"$(abs_top_builddir)/src/.libs/libthe-seed.so\" \
               -DMODULE_DIR=\"$(abs_builddir)/.libs\"
@@ -11,23 +11,27 @@ SH_LOG_COMPILER = $(SHELL)
 AM_TESTS_ENVIRONMENT = \
     SEED_SANITIZER='@SANITIZER@'; export SEED_SANITIZER; \
     SEED_KNOWN_GAPS_FILE='$(abs_srcdir)/known-gaps.txt'; export SEED_KNOWN_GAPS_FILE; \
-    SEED_TEST_PROGRAMS='$(check_PROGRAMS)'; export SEED_TEST_PROGRAMS; \
+    SEED_TEST_PROGRAMS='$(seed_test_programs)'; export SEED_TEST_PROGRAMS; \
     SEED_FIXTURES_DIR='$(abs_srcdir)/fixtures'; export SEED_FIXTURES_DIR; \
     SEED_TESTS_SRCDIR='$(abs_srcdir)'; export SEED_TESTS_SRCDIR; \
     ASAN_OPTIONS='halt_on_error=1:detect_leaks=1:abort_on_error=0:print_summary=1'; export ASAN_OPTIONS; \
     UBSAN_OPTIONS='halt_on_error=1:print_stacktrace=1:print_summary=1'; export UBSAN_OPTIONS;
 
-check_PROGRAMS = test_NameParser test_LibraryLoader test_DependencyLister \
+# Bare program names: run-test.sh compares them with known-gaps.txt, and
+# check_PROGRAMS gets $(EXEEXT) appended when cross-compiling for Windows.
+seed_test_programs = test_NameParser test_LibraryLoader test_DependencyLister \
                  test_PeSigner test_MachOParser test_MachOSigner test_MsiSigner test_ResourcePak \
                  test_ComponentLoader test_SystemLoader test_PakLoader \
                  test_LoaderConcurrency test_JSONLoader
+
+check_PROGRAMS = $(seed_test_programs)
 
 if CROSS_COMPILING
 TESTS = check-fixtures.sh
 check-local:
 	@echo "Test programs were built but not run: cross-compiling."
 else
-TESTS = $(check_PROGRAMS) run-test-selftest.sh check-fixtures.sh
+TESTS = $(seed_test_programs) run-test-selftest.sh check-fixtures.sh
 endif
 
 check_LTLIBRARIES = libtestmodule.la libcatch.la

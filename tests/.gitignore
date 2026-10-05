@@ -6,3 +6,8 @@ test_MsiSigner
 test_PeSigner
 test_ResourcePak
 test_JSONLoader
+test_MachOParser
+test_ComponentLoader
+test_SystemLoader
+test_PakLoader
+test_LoaderConcurrency
