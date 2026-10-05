@@ -22,11 +22,11 @@ check_PROGRAMS = test_NameParser test_LibraryLoader test_DependencyLister \
                  test_LoaderConcurrency test_JSONLoader
 
 if CROSS_COMPILING
-TESTS =
+TESTS = check-fixtures.sh
 check-local:
 	@echo "Test programs were built but not run: cross-compiling."
 else
-TESTS = $(check_PROGRAMS) run-test-selftest.sh
+TESTS = $(check_PROGRAMS) run-test-selftest.sh check-fixtures.sh
 endif
 
 check_LTLIBRARIES = libtestmodule.la libcatch.la
