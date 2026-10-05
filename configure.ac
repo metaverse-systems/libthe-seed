@@ -20,7 +20,11 @@ AM_INIT_AUTOMAKE([subdir-objects])
 AC_CHECK_LIB([pthread], [pthread_exit])
 
 PKG_CHECK_MODULES([LIBECS], [ecs-cpp >= 2.0.0])
-PKG_CHECK_MODULES([CATCH2], catch2)
+AC_CHECK_FILE([$srcdir/external/Catch2/extras/catch_amalgamated.hpp],
+    [],
+    [AC_MSG_ERROR([external/Catch2 is missing: run git submodule update --init])])
+
+AM_CONDITIONAL([CROSS_COMPILING], [test "x$cross_compiling" = xyes])
 
 # Checks for header files.
 
