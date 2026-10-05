@@ -2,7 +2,8 @@ AM_CPPFLAGS = ${LIBECS_CFLAGS} -I../include -I../external/Catch2/extras -I$(srcd
               -DFIXTURES_DIR=\"$(abs_srcdir)/fixtures\" \
               -DLIBRARY_PATH_UNDER_TEST=\"$(abs_top_builddir)/src/.libs/libthe-seed.so\" \
               -DMODULE_DIR=\"$(abs_builddir)/.libs\"
-AM_CXXFLAGS = -std=c++20
+AM_CXXFLAGS = -std=c++20 $(SANITIZER_CXXFLAGS)
+AM_LDFLAGS = $(SANITIZER_LDFLAGS)
 
 LOG_COMPILER = $(SHELL) $(srcdir)/run-test.sh
 SH_LOG_COMPILER = $(SHELL)
@@ -71,8 +72,8 @@ test_LoaderConcurrency_LDADD = libcatch.la ../src/libthe-seed.la ${LIBECS_LIBS}
 test_LoaderConcurrency_LDFLAGS = $(AM_LDFLAGS) -pthread
 
 libtestmodule_la_SOURCES = TestModule.cpp
-libtestmodule_la_CXXFLAGS = -std=c++20 ${LIBECS_CFLAGS}
-libtestmodule_la_LDFLAGS = -no-undefined -rpath /nowhere -version-info 0:0:0
+libtestmodule_la_CXXFLAGS = -std=c++20 ${LIBECS_CFLAGS} $(SANITIZER_CXXFLAGS)
+libtestmodule_la_LDFLAGS = -no-undefined -rpath /nowhere -version-info 0:0:0 $(SANITIZER_LDFLAGS)
 libtestmodule_la_LIBADD = ${LIBECS_LIBS}
 
 test_JSONLoader_SOURCES = test_JSONLoader.cpp

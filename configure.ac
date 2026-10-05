@@ -24,9 +24,31 @@ AC_CHECK_FILE([$srcdir/external/Catch2/extras/catch_amalgamated.hpp],
     [],
     [AC_MSG_ERROR([external/Catch2 is missing: run git submodule update --init])])
 
-# Sanitizer builds are added by the sanitizer option; until then none is used.
-SANITIZER=none
+# Optional memory-error checking: --enable-sanitizer=address builds the library
+# and the tests with AddressSanitizer and UndefinedBehaviorSanitizer.
+AC_ARG_ENABLE([sanitizer],
+    [AS_HELP_STRING([--enable-sanitizer@<:@=no|address@:>@],
+        [build with address and undefined-behavior checking (default: no)])],
+    [],
+    [enable_sanitizer=no])
+case "$enable_sanitizer" in
+    no)
+        SANITIZER=none
+        SANITIZER_CXXFLAGS=
+        SANITIZER_LDFLAGS=
+        ;;
+    address)
+        SANITIZER=address
+        SANITIZER_CXXFLAGS="-fsanitize=address,undefined -fno-sanitize-recover=undefined -fno-omit-frame-pointer -g -O1"
+        SANITIZER_LDFLAGS="-fsanitize=address,undefined"
+        ;;
+    *)
+        AC_MSG_ERROR([invalid value '$enable_sanitizer' for --enable-sanitizer: use no or address])
+        ;;
+esac
 AC_SUBST([SANITIZER])
+AC_SUBST([SANITIZER_CXXFLAGS])
+AC_SUBST([SANITIZER_LDFLAGS])
 
 AM_CONDITIONAL([CROSS_COMPILING], [test "x$cross_compiling" = xyes])
 
