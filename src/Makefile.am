@@ -16,6 +16,7 @@ noinst_HEADERS = \
 	ElfParser.hpp \
 	PeParser.hpp \
 	ByteSwap.hpp \
+	internal/BoundedBytes.hpp \
 	NameParser.hpp \
 	internal/FileIO.hpp \
 	internal/MachODefs.hpp \
