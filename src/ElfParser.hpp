@@ -28,6 +28,7 @@ constexpr std::uint32_t PT_DYNAMIC = 2;
 constexpr std::int64_t DT_NULL = 0;
 constexpr std::int64_t DT_NEEDED = 1;
 constexpr std::int64_t DT_STRTAB = 5;
+constexpr std::int64_t DT_STRSZ = 10;
 
 #pragma pack(push, 1)
 struct Elf32_Ehdr
