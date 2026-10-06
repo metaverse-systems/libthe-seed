@@ -2,6 +2,7 @@
 #include <libthe-seed/MachOParser.hpp>
 
 #include "ByteSwap.hpp"
+#include "internal/BoundedBytes.hpp"
 #include "internal/FileIO.hpp"
 #include "internal/MachODefs.hpp"
 
@@ -10,6 +11,8 @@
 #include <filesystem>
 #include <fstream>
 #include <stdexcept>
+#include <string>
+#include <utility>
 
 #include "../external/picosha2.h"
 
@@ -110,14 +113,6 @@ void WriteBE32(std::vector<std::uint8_t> &buf, std::size_t offset, std::uint32_t
     buf[offset + 1] = static_cast<std::uint8_t>((value >> 16) & 0xFF);
     buf[offset + 2] = static_cast<std::uint8_t>((value >> 8)  & 0xFF);
     buf[offset + 3] = static_cast<std::uint8_t>(value & 0xFF);
-}
-
-std::uint32_t ReadBE32(const std::vector<std::uint8_t> &buf, std::size_t offset)
-{
-    return (static_cast<std::uint32_t>(buf[offset]) << 24) |
-           (static_cast<std::uint32_t>(buf[offset + 1]) << 16) |
-           (static_cast<std::uint32_t>(buf[offset + 2]) << 8) |
-           static_cast<std::uint32_t>(buf[offset + 3]);
 }
 
 void WriteBE64(std::vector<std::uint8_t> &buf, std::size_t offset, std::uint64_t value)
@@ -527,119 +522,128 @@ bool MachOSigner::HasEmbeddedSignature(const std::string &file_path)
     return layout.codesig_cmd_offset != 0;
 }
 
-std::optional<std::vector<std::uint8_t>> MachOSigner::ExtractCmsFromSuperBlob(
-    const std::vector<std::uint8_t> &super_blob)
+namespace
 {
-    if(super_blob.size() < 12)
+
+constexpr const char *kSignatureFormat = "Mach-O code signature";
+
+// Locates the blob in `slot` of a SuperBlob and returns its byte range as
+// (offset, length) within the SuperBlob, or nullopt when the SuperBlob is
+// well formed but has no such slot. Everything else that is wrong with the
+// data is a std::runtime_error.
+std::optional<std::pair<std::uint64_t, std::uint64_t>> FindSuperBlobSlot(
+    const std::vector<std::uint8_t> &super_blob, std::uint32_t slot, std::uint32_t blob_magic,
+    const char *blob_name)
+{
+    using seed::internal::ByteOrder;
+    using seed::internal::ByteSpan;
+    using seed::internal::RangeFits;
+    using seed::internal::ThrowMalformed;
+
+    const ByteSpan data(super_blob, kSignatureFormat, "the SuperBlob");
+    if(data.Size() < 12)
     {
-        return std::nullopt;
+        ThrowMalformed(kSignatureFormat, "SuperBlob header needs 12 bytes but only " +
+                                             std::to_string(data.Size()) + " are present");
     }
 
-    const auto magic = ReadBE32(super_blob, 0);
+    const auto magic = data.Read<std::uint32_t>(0, ByteOrder::Big, "SuperBlob magic");
     if(magic != CSMAGIC_EMBEDDED_SIGNATURE)
     {
-        return std::nullopt;
+        ThrowMalformed(kSignatureFormat, "SuperBlob magic is not the embedded signature magic");
     }
 
-    const auto count = ReadBE32(super_blob, 8);
-
-    for(std::uint32_t i = 0; i < count; ++i)
+    const std::uint64_t length = data.Read<std::uint32_t>(4, ByteOrder::Big, "SuperBlob length");
+    if(length < 12 || length > data.Size())
     {
-        const std::size_t idx_offset = 12 + static_cast<std::size_t>(i) * 8;
-        if(idx_offset + 8 > super_blob.size())
+        ThrowMalformed(kSignatureFormat, "SuperBlob length " + std::to_string(length) +
+                                             " is smaller than its header or past the " +
+                                             std::to_string(data.Size()) + " bytes present");
+    }
+
+    const std::uint64_t count = data.Read<std::uint32_t>(8, ByteOrder::Big, "SuperBlob count");
+    const std::uint64_t index_end = 12 + count * 8;
+    if(index_end > length)
+    {
+        ThrowMalformed(kSignatureFormat, "SuperBlob blob index of " + std::to_string(count) +
+                                             " entries does not fit in the SuperBlob length " +
+                                             std::to_string(length));
+    }
+
+    // Slots are looked up in the first `length` bytes only.
+    const ByteSpan blob = data.Sub(0, length, "SuperBlob");
+    for(std::uint64_t i = 0; i < count; ++i)
+    {
+        const std::uint64_t idx_offset = 12 + i * 8;
+        const auto slot_type = blob.Read<std::uint32_t>(idx_offset, ByteOrder::Big, "blob index slot");
+        const std::uint64_t blob_offset =
+            blob.Read<std::uint32_t>(idx_offset + 4, ByteOrder::Big, "blob index offset");
+        if(slot_type != slot)
         {
-            break;
+            continue;
         }
 
-        const auto slot_type = ReadBE32(super_blob, idx_offset);
-        const auto blob_offset = ReadBE32(super_blob, idx_offset + 4);
-
-        if(slot_type == CSSLOT_CMS_SIGNATURE)
+        if(blob_offset < index_end || !RangeFits(blob_offset, 8, length))
         {
-            if(blob_offset + 8 > super_blob.size())
-            {
-                return std::nullopt;
-            }
-
-            const auto blob_magic = ReadBE32(super_blob, blob_offset);
-            const auto blob_length = ReadBE32(super_blob, blob_offset + 4);
-
-            if(blob_magic != CSMAGIC_BLOBWRAPPER)
-            {
-                return std::nullopt;
-            }
-
-            const std::size_t cms_start = blob_offset + 8;
-            const std::size_t cms_size = blob_length - 8;
-
-            if(cms_start + cms_size > super_blob.size())
-            {
-                return std::nullopt;
-            }
-
-            return std::vector<std::uint8_t>(
-                super_blob.begin() + static_cast<std::ptrdiff_t>(cms_start),
-                super_blob.begin() + static_cast<std::ptrdiff_t>(cms_start + cms_size)
-            );
+            ThrowMalformed(kSignatureFormat,
+                           std::string("blob index offset ") + std::to_string(blob_offset) +
+                               " for the " + blob_name + " lies inside the index or past the SuperBlob length " +
+                               std::to_string(length));
         }
+
+        const auto inner_magic = blob.Read<std::uint32_t>(blob_offset, ByteOrder::Big, "blob magic");
+        if(inner_magic != blob_magic)
+        {
+            ThrowMalformed(kSignatureFormat, std::string("blob magic of the ") + blob_name +
+                                                 " is not the expected value");
+        }
+
+        const std::uint64_t inner_length =
+            blob.Read<std::uint32_t>(blob_offset + 4, ByteOrder::Big, "blob length");
+        if(inner_length < 8 || !RangeFits(blob_offset, inner_length, length))
+        {
+            ThrowMalformed(kSignatureFormat, std::string("blob length ") + std::to_string(inner_length) +
+                                                 " of the " + blob_name +
+                                                 " is below 8 or runs past the SuperBlob");
+        }
+        return std::make_pair(blob_offset, inner_length);
     }
 
     return std::nullopt;
 }
 
+} // anonymous namespace
+
+std::optional<std::vector<std::uint8_t>> MachOSigner::ExtractCmsFromSuperBlob(
+    const std::vector<std::uint8_t> &super_blob)
+{
+    return seed::internal::GuardEntryPoint(
+        kSignatureFormat, [&]() -> std::optional<std::vector<std::uint8_t>> {
+            const auto found =
+                FindSuperBlobSlot(super_blob, CSSLOT_CMS_SIGNATURE, CSMAGIC_BLOBWRAPPER, "CMS blob");
+            if(!found)
+            {
+                return std::nullopt;
+            }
+            const auto first = super_blob.begin() + static_cast<std::ptrdiff_t>(found->first + 8);
+            const auto last = super_blob.begin() + static_cast<std::ptrdiff_t>(found->first + found->second);
+            return std::vector<std::uint8_t>(first, last);
+        });
+}
+
 std::optional<std::vector<std::uint8_t>> MachOSigner::ExtractCodeDirectoryFromSuperBlob(
     const std::vector<std::uint8_t> &super_blob)
 {
-    if(super_blob.size() < 12)
-    {
-        return std::nullopt;
-    }
-
-    const auto magic = ReadBE32(super_blob, 0);
-    if(magic != CSMAGIC_EMBEDDED_SIGNATURE)
-    {
-        return std::nullopt;
-    }
-
-    const auto count = ReadBE32(super_blob, 8);
-
-    for(std::uint32_t i = 0; i < count; ++i)
-    {
-        const std::size_t idx_offset = 12 + static_cast<std::size_t>(i) * 8;
-        if(idx_offset + 8 > super_blob.size())
-        {
-            break;
-        }
-
-        const auto slot_type = ReadBE32(super_blob, idx_offset);
-        const auto blob_offset = ReadBE32(super_blob, idx_offset + 4);
-
-        if(slot_type == CSSLOT_CODEDIRECTORY)
-        {
-            if(blob_offset + 8 > super_blob.size())
+    return seed::internal::GuardEntryPoint(
+        kSignatureFormat, [&]() -> std::optional<std::vector<std::uint8_t>> {
+            const auto found = FindSuperBlobSlot(super_blob, CSSLOT_CODEDIRECTORY,
+                                                 CSMAGIC_CODEDIRECTORY, "code directory");
+            if(!found)
             {
                 return std::nullopt;
             }
-
-            const auto cd_magic = ReadBE32(super_blob, blob_offset);
-            const auto cd_length = ReadBE32(super_blob, blob_offset + 4);
-
-            if(cd_magic != CSMAGIC_CODEDIRECTORY)
-            {
-                return std::nullopt;
-            }
-
-            if(blob_offset + cd_length > super_blob.size())
-            {
-                return std::nullopt;
-            }
-
-            return std::vector<std::uint8_t>(
-                super_blob.begin() + static_cast<std::ptrdiff_t>(blob_offset),
-                super_blob.begin() + static_cast<std::ptrdiff_t>(blob_offset + cd_length)
-            );
-        }
-    }
-
-    return std::nullopt;
+            const auto first = super_blob.begin() + static_cast<std::ptrdiff_t>(found->first);
+            const auto last = super_blob.begin() + static_cast<std::ptrdiff_t>(found->first + found->second);
+            return std::vector<std::uint8_t>(first, last);
+        });
 }

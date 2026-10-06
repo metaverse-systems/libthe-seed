@@ -22,7 +22,7 @@ AM_TESTS_ENVIRONMENT = \
 seed_test_programs = test_NameParser test_LibraryLoader test_DependencyLister \
                  test_PeSigner test_MachOParser test_MachOSigner test_MsiSigner test_ResourcePak \
                  test_ComponentLoader test_SystemLoader test_PakLoader \
-                 test_LoaderConcurrency test_JSONLoader test_BoundedBytes test_MalformedPe test_MalformedElf
+                 test_LoaderConcurrency test_JSONLoader test_BoundedBytes test_MalformedPe test_MalformedElf test_MalformedMachO
 
 check_PROGRAMS = $(seed_test_programs)
 
@@ -83,6 +83,9 @@ test_MalformedPe_LDADD = libcatch.la ../src/libthe-seed.la ${LIBECS_LIBS}
 
 test_MalformedElf_SOURCES = test_MalformedElf.cpp
 test_MalformedElf_LDADD = libcatch.la ../src/libthe-seed.la ${LIBECS_LIBS}
+
+test_MalformedMachO_SOURCES = test_MalformedMachO.cpp
+test_MalformedMachO_LDADD = libcatch.la ../src/libthe-seed.la ${LIBECS_LIBS}
 
 libtestmodule_la_SOURCES = TestModule.cpp
 libtestmodule_la_CXXFLAGS = -std=c++20 ${LIBECS_CFLAGS} $(SANITIZER_CXXFLAGS)
