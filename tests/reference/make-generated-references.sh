@@ -1,6 +1,5 @@
 #!/bin/sh
-# Produces the generated members of the reference file set (see
-# contracts/reference-files.md in the feature notes): files made by independent
+# Produces the generated members of the reference file set: files made by independent
 # tools that are used to check a library change against real data. Nothing here
 # is committed and `make check` does not run it.
 #

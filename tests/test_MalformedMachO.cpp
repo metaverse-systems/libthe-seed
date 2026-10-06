@@ -876,7 +876,7 @@ TEST_CASE("ok: MachOParser::GetArchSlices on a synthetic universal file", "[Malf
 TEST_CASE("ok: tiny-macho-universal is rejected as today", "[MalformedMachO][ok]")
 {
     // The genuine universal file is read in the wrong byte order: its slice
-    // table is taken to hold 33,554,432 entries (known gap, finding 1).
+    // table is taken to hold 33,554,432 entries (a known gap).
     seedtest::ScratchDir scratch("malformed-macho");
     const Bytes bytes = Sample("tiny-macho-universal");
     const std::string path = WriteScratch(scratch, "input.bin", bytes);

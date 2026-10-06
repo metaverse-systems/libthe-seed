@@ -29,30 +29,34 @@ public:
 
     /**
      * Detect the Mach-O format by reading magic bytes.
+     * Answers NotMachO for a file without a Mach-O magic, including a very short one.
+     * @throws std::runtime_error if the file cannot be read
      */
     static Format DetectFormat(const std::string &file_path);
 
     /**
      * Check if a file is a Mach-O binary (single or fat).
+     * @throws std::runtime_error if the file cannot be read
      */
     static bool IsMachO(const std::string &file_path);
 
     /**
      * Check if a file is a universal (fat) Mach-O binary.
+     * @throws std::runtime_error if the file cannot be read
      */
     static bool IsFatBinary(const std::string &file_path);
 
     /**
      * List architecture slices in a fat binary.
      * For single-arch binaries, returns a single entry covering the whole file.
-     * @throws std::runtime_error if file is not a Mach-O binary
+     * @throws std::runtime_error if file is not a Mach-O binary or the slice table is malformed
      */
     static std::vector<ArchSlice> GetArchSlices(const std::string &file_path);
 
     /**
      * List dynamic library dependencies (DT_NEEDED equivalent for Mach-O).
      * Reads LC_LOAD_DYLIB load commands.
-     * @throws std::runtime_error if file is not a valid Mach-O binary
+     * @throws std::runtime_error if file is not a valid Mach-O binary or its load commands are malformed
      */
     static std::vector<std::string> ListDependencies(const std::string &file_path);
 };

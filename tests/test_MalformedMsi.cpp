@@ -36,7 +36,7 @@
 // look at an ordinary stream); the tests only impose a rejection on the
 // operations that must read the structure.
 //
-// Known gap (review finding 5): a signature the library embeds is written to
+// Known gap: a signature the library embeds is written to
 // regular sectors but read back through the mini-stream when it is smaller
 // than the cutoff, so ExtractSignature returns other bytes. The "ok:" cases
 // record only what is stable (the signature is present and has its length);
