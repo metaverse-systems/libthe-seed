@@ -56,10 +56,7 @@
 #include <string>
 #include <vector>
 
-#if __has_include("internal/MsiSignatureSize.hpp")
 #include "internal/MsiSignatureSize.hpp"
-#define SEED_HAVE_MSI_SIZE_CHECK 1
-#endif
 
 SEED_DEFINE_HEAP_COUNTER()
 
@@ -839,7 +836,6 @@ TEST_CASE("edge: MSI truncated inside a stream", "[MalformedMsi][edge]")
 
 TEST_CASE("edge: MSI oversized signature size check", "[MalformedMsi][edge]")
 {
-#ifdef SEED_HAVE_MSI_SIZE_CHECK
     // The check takes a length, so no 4 GiB buffer is allocated.
     const std::uint64_t largest = std::numeric_limits<std::uint32_t>::max();
     constexpr std::uint16_t kVersion3 = 3;
@@ -856,8 +852,4 @@ TEST_CASE("edge: MSI oversized signature size check", "[MalformedMsi][edge]")
         kFormat, "signature size");
     // Version 4 stores a 64-bit stream size.
     CHECK_NOTHROW(seed::internal::CheckMsiSignatureSize(largest + 1, kVersion4));
-#else
-    SKIP("the signature size check (src/internal/MsiSignatureSize.hpp, "
-         "seed::internal::CheckMsiSignatureSize) does not exist yet");
-#endif
 }

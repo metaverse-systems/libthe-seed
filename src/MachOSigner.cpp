@@ -293,7 +293,7 @@ MachOLayout ParseMachOLayout(const std::vector<std::uint8_t> &bytes)
             if(dataoff < cmd_offset)
             {
                 ThrowMalformed(kProgramFormat, "LC_CODE_SIGNATURE data at offset " + std::to_string(dataoff) +
-                                                   " lie inside the load-command area that ends at " +
+                                                   " lies inside the load-command area that ends at " +
                                                    std::to_string(cmd_offset));
             }
         }
@@ -642,44 +642,54 @@ std::optional<std::pair<std::uint64_t, std::uint64_t>> FindSuperBlobSlot(
 
     // Slots are looked up in the first `length` bytes only.
     const ByteSpan blob = data.Sub(0, length, "SuperBlob");
+    std::optional<std::uint64_t> wanted_offset;
     for(std::uint64_t i = 0; i < count; ++i)
     {
         const std::uint64_t idx_offset = 12 + i * 8;
         const auto slot_type = blob.Read<std::uint32_t>(idx_offset, ByteOrder::Big, "blob index slot");
         const std::uint64_t blob_offset =
             blob.Read<std::uint32_t>(idx_offset + 4, ByteOrder::Big, "blob index offset");
-        if(slot_type != slot)
+        if(blob_offset < index_end)
         {
-            continue;
+            ThrowMalformed(kSignatureFormat, "blob index " + std::to_string(i) + " offset " +
+                                                 std::to_string(blob_offset) + " is inside the index (" +
+                                                 std::to_string(index_end) + " bytes)");
         }
-
-        if(blob_offset < index_end || !RangeFits(blob_offset, 8, length))
+        if(!RangeFits(blob_offset, 8, length))
         {
-            ThrowMalformed(kSignatureFormat,
-                           std::string("blob index offset ") + std::to_string(blob_offset) +
-                               " for the " + blob_name + " lies inside the index or past the SuperBlob length " +
-                               std::to_string(length));
+            ThrowMalformed(kSignatureFormat, "blob index " + std::to_string(i) + " offset " +
+                                                 std::to_string(blob_offset) +
+                                                 " is past the end of the SuperBlob (" +
+                                                 std::to_string(length) + " bytes)");
         }
-
-        const auto inner_magic = blob.Read<std::uint32_t>(blob_offset, ByteOrder::Big, "blob magic");
-        if(inner_magic != blob_magic)
+        if(slot_type == slot && !wanted_offset.has_value())
         {
-            ThrowMalformed(kSignatureFormat, std::string("blob magic of the ") + blob_name +
-                                                 " is not the expected value");
+            wanted_offset = blob_offset;
         }
-
-        const std::uint64_t inner_length =
-            blob.Read<std::uint32_t>(blob_offset + 4, ByteOrder::Big, "blob length");
-        if(inner_length < 8 || !RangeFits(blob_offset, inner_length, length))
-        {
-            ThrowMalformed(kSignatureFormat, std::string("blob length ") + std::to_string(inner_length) +
-                                                 " of the " + blob_name +
-                                                 " is below 8 or runs past the SuperBlob");
-        }
-        return std::make_pair(blob_offset, inner_length);
     }
 
-    return std::nullopt;
+    if(!wanted_offset.has_value())
+    {
+        return std::nullopt;
+    }
+
+    const std::uint64_t blob_offset = *wanted_offset;
+    const auto inner_magic = blob.Read<std::uint32_t>(blob_offset, ByteOrder::Big, "blob magic");
+    if(inner_magic != blob_magic)
+    {
+        ThrowMalformed(kSignatureFormat, std::string("blob magic of the ") + blob_name +
+                                             " is not the expected value");
+    }
+
+    const std::uint64_t inner_length =
+        blob.Read<std::uint32_t>(blob_offset + 4, ByteOrder::Big, "blob length");
+    if(inner_length < 8 || !RangeFits(blob_offset, inner_length, length))
+    {
+        ThrowMalformed(kSignatureFormat, std::string("blob length ") + std::to_string(inner_length) +
+                                             " of the " + blob_name +
+                                             " is below 8 or runs past the SuperBlob");
+    }
+    return std::make_pair(blob_offset, inner_length);
 }
 
 } // anonymous namespace

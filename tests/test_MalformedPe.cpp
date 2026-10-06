@@ -21,10 +21,7 @@
 #include <utility>
 #include <vector>
 
-#if __has_include("internal/PeCertificate.hpp")
 #include "internal/PeCertificate.hpp"
-#define SEED_HAVE_PE_SIZE_CHECK 1
-#endif
 
 SEED_DEFINE_HEAP_COUNTER()
 
@@ -290,7 +287,7 @@ TEST_CASE("ok: PE with 3 bytes appended", "[MalformedPe][ok]")
 }
 
 // ---------------------------------------------------------------------------
-// The review's inputs and findings 14 and 18
+// Review inputs, certificate length items and the partial digest
 // ---------------------------------------------------------------------------
 
 TEST_CASE("review: PE e_lfanew -4", "[MalformedPe][review]")
@@ -580,7 +577,6 @@ TEST_CASE("edge: PE truncated inside the certificate table", "[MalformedPe][edge
 
 TEST_CASE("edge: PE oversized signature size check", "[MalformedPe][edge]")
 {
-#ifdef SEED_HAVE_PE_SIZE_CHECK
     // The check takes a length, so no UINT32_MAX buffer is allocated.
     const std::uint64_t largest_signature = std::numeric_limits<std::uint32_t>::max() - 8;
     CHECK_NOTHROW(seed::internal::CheckPeSignatureSize(0));
@@ -590,8 +586,4 @@ TEST_CASE("edge: PE oversized signature size check", "[MalformedPe][edge]")
     seedtest::malformed::RequireRejected(
         [&] { seed::internal::CheckPeSignatureSize(std::numeric_limits<std::uint32_t>::max()); },
         "PE", "signature");
-#else
-    SKIP("the signature size check (src/internal/PeCertificate.hpp, "
-         "seed::internal::CheckPeSignatureSize) does not exist yet");
-#endif
 }

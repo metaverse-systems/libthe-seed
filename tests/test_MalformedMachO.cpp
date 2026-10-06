@@ -10,8 +10,7 @@
 // Byte order. The library reads every header field of a program whose first
 // four bytes are CF FA ED FE (a real little-endian 64-bit Mach-O) as
 // big-endian, and every field of a universal file whose first four bytes are
-// CA FE BA BE as little-endian, so it misreads the genuine samples (the Mac
-// task of the roadmap fixes this). The synthetic images below are written in
+// CA FE BA BE as little-endian, so it misreads the genuine samples. The synthetic images below are written in
 // the order the code reads today, so that their commands are seen as they are
 // meant; the genuine samples are seen as today's misreading, which ends the
 // load-command walk at the first command. When the byte order is corrected
@@ -77,10 +76,7 @@
 #include <string>
 #include <vector>
 
-#if __has_include("internal/MachOSuperBlob.hpp")
 #include "internal/MachOSuperBlob.hpp"
-#define SEED_HAVE_MACHO_SIZE_CHECK 1
-#endif
 
 SEED_DEFINE_HEAP_COUNTER()
 
@@ -378,6 +374,27 @@ TEST_CASE("edge: SuperBlob slot offset past the length", "[MalformedMachO][edge]
         PatchBE<std::uint32_t>(blob, EntryOffsetField(helper.entry),
                                static_cast<std::uint32_t>(built.blob.size() - 4));
         RequireHelperRejects(helper, blob, "blob index");
+    });
+}
+
+TEST_CASE("edge: SuperBlob slot offset of an unwanted slot", "[MalformedMachO][edge]")
+{
+    // Every slot offset is checked, not only the one of the requested blob.
+    const Built built = MakeBuilt();
+    ForBothHelpers([&](const Helper &helper) {
+        for(const std::uint32_t other : {kCmsEntry, kCodeDirectoryEntry})
+        {
+            if(other == helper.entry)
+            {
+                continue;
+            }
+            for(const std::uint32_t offset : {0xFFFFFFFCu, 4u})
+            {
+                Bytes blob = built.blob;
+                PatchBE<std::uint32_t>(blob, EntryOffsetField(other), offset);
+                RequireHelperRejects(helper, blob, "blob index");
+            }
+        }
     });
 }
 
@@ -731,7 +748,7 @@ void RequireAllRejected(const Bytes &input, const std::vector<Operation> &ops, c
 }
 
 // For today's rejections of well-formed input: the message is only checked
-// for the text, because the format prefix arrives with the fix.
+// for the text, because these messages carry no format prefix.
 template <typename F>
 void RequireThrowsText(F &&callable, const std::string &text)
 {
@@ -1376,7 +1393,6 @@ TEST_CASE("edge: Mach-O truncated inside the signature data", "[MalformedMachO][
 
 TEST_CASE("edge: Mach-O oversized SuperBlob size check", "[MalformedMachO][edge]")
 {
-#ifdef SEED_HAVE_MACHO_SIZE_CHECK
     // The check takes a length, so no 4 GiB buffer is allocated.
     const std::uint64_t largest = std::numeric_limits<std::uint32_t>::max();
     CHECK_NOTHROW(seed::internal::CheckMachOSuperBlobSize(0));
@@ -1386,8 +1402,4 @@ TEST_CASE("edge: Mach-O oversized SuperBlob size check", "[MalformedMachO][edge]
     seedtest::malformed::RequireRejected(
         [&] { seed::internal::CheckMachOSuperBlobSize(std::numeric_limits<std::uint64_t>::max()); },
         kProgramFormat, "SuperBlob");
-#else
-    SKIP("the SuperBlob size check (src/internal/MachOSuperBlob.hpp, "
-         "seed::internal::CheckMachOSuperBlobSize) does not exist yet");
-#endif
 }

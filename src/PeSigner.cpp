@@ -115,7 +115,7 @@ CertificateTable ValidateCertificateTable(const ByteSpan &file, const PeLayout &
     table.size = file.Read<std::uint32_t>(layout.dd_security_offset + 4, ByteOrder::Little,
                                           "certificate directory size");
 
-    // C1: either field 0 means unsigned.
+    // either field 0 means unsigned.
     if(table.address == 0 || table.size == 0)
     {
         table.present = false;
@@ -123,10 +123,10 @@ CertificateTable ValidateCertificateTable(const ByteSpan &file, const PeLayout &
     }
     table.present = true;
 
-    // C2: the table lies in the file.
+    // the table lies in the file.
     const ByteSpan span = file.Sub(table.address, table.size, "certificate table");
 
-    // C3: the table does not overlap the headers up to the end of the directory entry.
+    // the table does not overlap the headers up to the end of the directory entry.
     const std::uint64_t headers_end = layout.dd_security_offset + 8;
     if(table.address < headers_end)
     {
@@ -136,7 +136,7 @@ CertificateTable ValidateCertificateTable(const ByteSpan &file, const PeLayout &
                                     " bytes)");
     }
 
-    // C4: the first WIN_CERTIFICATE.
+    // the first WIN_CERTIFICATE.
     if(table.size < 8)
     {
         ThrowMalformed(kFormat, "certificate table size " + std::to_string(table.size) +

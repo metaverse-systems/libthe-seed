@@ -596,7 +596,7 @@ struct CfbDocument
         const auto chain = this->WalkChain(entry.start_sector, this->sector_owner, id, "stream");
 
         const std::uint64_t sector_size = this->header.sector_size;
-        const std::uint64_t needed = UnitsFor(entry.stream_size, sector_size);
+        const std::uint64_t needed = this->UnitsFor(entry.stream_size, sector_size);
         if(chain.size() < needed)
         {
             ThrowMalformed(kFormat, "stream size " + std::to_string(entry.stream_size) +
@@ -654,7 +654,7 @@ struct CfbDocument
         const auto chain = this->WalkMiniChain(entry.start_sector, id);
 
         const std::uint64_t unit = this->header.mini_sector_size;
-        const std::uint64_t needed = UnitsFor(entry.stream_size, unit);
+        const std::uint64_t needed = this->UnitsFor(entry.stream_size, unit);
         if(chain.size() < needed)
         {
             ThrowMalformed(kFormat, "stream size " + std::to_string(entry.stream_size) +
@@ -1154,15 +1154,26 @@ struct CfbDocument
             }
             else
             {
-                // Mini-stream: free mini-FAT chain. Each step frees the entry
-                // it leaves, so a chain that loops ends at the freed entry.
+                // Mini-stream: free the mini-FAT chain. A link that leads
+                // nowhere ends the walk quietly; a loop is rejected.
+                std::vector<bool> seen(this->mini_fat.size(), false);
+                std::vector<std::uint32_t> chain;
                 std::uint32_t mini_sector = entry.start_sector;
-                while(mini_sector != ENDOFCHAIN &&
+                while(mini_sector != ENDOFCHAIN && mini_sector != FREESECT &&
                       mini_sector < static_cast<std::uint32_t>(this->mini_fat.size()))
                 {
-                    const auto next = this->mini_fat[mini_sector];
-                    this->mini_fat[mini_sector] = FREESECT;
-                    mini_sector = next;
+                    if(seen[mini_sector])
+                    {
+                        ThrowMalformed(kFormat, "mini stream chain has a loop at mini sector " +
+                                                    std::to_string(mini_sector));
+                    }
+                    seen[mini_sector] = true;
+                    chain.push_back(mini_sector);
+                    mini_sector = this->mini_fat[mini_sector];
+                }
+                for(const auto sid : chain)
+                {
+                    this->mini_fat[sid] = FREESECT;
                 }
             }
         }
