@@ -23,7 +23,7 @@ seed_test_programs = test_NameParser test_LibraryLoader test_DependencyLister \
                  test_PeSigner test_MachOParser test_MachOSigner test_MsiSigner test_ResourcePak \
                  test_ComponentLoader test_SystemLoader test_PakLoader \
                  test_LoaderConcurrency test_JSONLoader test_BoundedBytes test_MalformedPe test_MalformedElf test_MalformedMachO \
-                 test_MalformedMsi
+                 test_MalformedMsi test_TruncatedSamples test_FuzzCorpus
 
 check_PROGRAMS = $(seed_test_programs)
 
@@ -91,6 +91,13 @@ test_MalformedMachO_LDADD = libcatch.la ../src/libthe-seed.la ${LIBECS_LIBS}
 test_MalformedMsi_SOURCES = test_MalformedMsi.cpp
 test_MalformedMsi_LDADD = libcatch.la ../src/libthe-seed.la ${LIBECS_LIBS}
 
+test_TruncatedSamples_SOURCES = test_TruncatedSamples.cpp fuzz/FuzzTargets.cpp
+test_TruncatedSamples_LDADD = libcatch.la ../src/libthe-seed.la ${LIBECS_LIBS}
+
+test_FuzzCorpus_SOURCES = test_FuzzCorpus.cpp fuzz/FuzzTargets.cpp
+test_FuzzCorpus_CPPFLAGS = $(AM_CPPFLAGS) -DFUZZ_CORPUS_DIR=\"$(abs_srcdir)/fuzz/corpus\"
+test_FuzzCorpus_LDADD = libcatch.la ../src/libthe-seed.la ${LIBECS_LIBS}
+
 libtestmodule_la_SOURCES = TestModule.cpp
 libtestmodule_la_CXXFLAGS = -std=c++20 ${LIBECS_CFLAGS} $(SANITIZER_CXXFLAGS)
 libtestmodule_la_LDFLAGS = -no-undefined -rpath /nowhere -version-info 0:0:0 $(SANITIZER_LDFLAGS)
@@ -103,4 +110,7 @@ test_JSONLoader_LDFLAGS = $(AM_LDFLAGS) -pthread
 EXTRA_DIST = TestPaths.hpp HeapCounter.hpp MalformedInput.hpp \
              reference/reference-dump.cpp reference/compare-reference.sh \
              reference/make-generated-references.sh run-test.sh run-test-selftest.sh check-fixtures.sh \
+             fuzz/FuzzTargets.hpp fuzz/FuzzTargets.cpp fuzz/fuzz_entry.cpp \
+             fuzz/build-fuzzers.sh fuzz/run-fuzzers.sh \
+             fuzz/corpus \
              known-gaps.txt fixtures
