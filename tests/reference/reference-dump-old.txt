@@ -1,0 +1,240 @@
+/home/tim/.cache/wine/wine-gecko-2.47.1-x86.msi	digest	ok	8c3d0c525220c5782db38198e4968292e93a4a8560d781e446a8bd45366feec0
+/home/tim/.cache/wine/wine-gecko-2.47.1-x86.msi	embed	ok	b84749ab21c9c3e2dd0dc55a22ef6fba48bbacf66204af05c812b1206f8f420e
+/home/tim/.cache/wine/wine-gecko-2.47.1-x86.msi	extract	ok	none
+/home/tim/.cache/wine/wine-gecko-2.47.1-x86.msi	format	ok	MSI
+/home/tim/.cache/wine/wine-gecko-2.47.1-x86.msi	presence	ok	no
+/home/tim/.cache/wine/wine-gecko-2.47.1-x86.msi	strip	ok	239140302ad9419bb9b9fcec40fd53dd2ab899d28fe241a1e9cae8f9747a3311
+/home/tim/client-0.0.1.0.msi	digest	ok	4a346be6aab38a8aaf282c05007b5af0ae9612e875760d93d9a9985bd066afe1
+/home/tim/client-0.0.1.0.msi	embed	ok	2735bdc010c2451021f87f518b3b91bb28a497180af64755f00355649fc123e6
+/home/tim/client-0.0.1.0.msi	extract	ok	none
+/home/tim/client-0.0.1.0.msi	format	ok	MSI
+/home/tim/client-0.0.1.0.msi	presence	ok	no
+/home/tim/client-0.0.1.0.msi	strip	ok	bfa01a4ded036eae04467f846c1ba9fd185995213312c3529a6ef8af50034601
+/home/tim/Downloads/16th webroot.msi	digest	ok	f3e319fd878781b0e1aacc971ec1402a8e71af4d651bad6a8fcf7e972fcc3de0
+/home/tim/Downloads/16th webroot.msi	embed	ok	12a76082f11b302e8acd8c48ea1e774f515b50ec03e64079e29ea425c6cd32de
+/home/tim/Downloads/16th webroot.msi	extract	ok	7b4ea4104ff5c94409eaa703eba8331ae6fc406fcfaac69455cf8554f2dd3dc6
+/home/tim/Downloads/16th webroot.msi	format	ok	MSI
+/home/tim/Downloads/16th webroot.msi	presence	ok	yes
+/home/tim/Downloads/16th webroot.msi	strip	ok	565bd09e0bb63d707e75ad4260aeb4ad904b4d66da4df9f4e16a3ee8f9a36d1e
+/home/tim/Downloads/wsasme.msi	digest	ok	df34870ebe5314864fd8d22743f22d2fa4d489e03f34beac4f4636fc276f724d
+/home/tim/Downloads/wsasme.msi	embed	ok	7534e57d911b9aace8da452e649505777da12a27e73ac78a57f82227614b3bae
+/home/tim/Downloads/wsasme.msi	extract	ok	5edefd445a92bde2f0c1cbb775e8dbd937b137d0cd63ad45bb1b03be366de6d5
+/home/tim/Downloads/wsasme.msi	format	ok	MSI
+/home/tim/Downloads/wsasme.msi	presence	ok	yes
+/home/tim/Downloads/wsasme.msi	strip	ok	649dc9ac6f52ca8c8758139a142ad1657db129da6e8572109d49c2324582fbe9
+/home/tim/projects/the-seed-030-work/b-base/src/.libs/libthe-seed.so	dependencies	ok	
+/home/tim/projects/the-seed-030-work/b-base/src/.libs/libthe-seed.so	format	ok	ELF
+/home/tim/projects/the-seed-030-work/ref-gen/bundle-arm64-adhoc.bundle	dependencies	rejected	Unsupported binary format
+/home/tim/projects/the-seed-030-work/ref-gen/bundle-arm64-adhoc.bundle	digest	ok	23841fc6fd64295347609b5dde87b45a332d4ac8bd144a5e789e8049f483c32c
+/home/tim/projects/the-seed-030-work/ref-gen/bundle-arm64-adhoc.bundle	embed	rejected	No space for new load command
+/home/tim/projects/the-seed-030-work/ref-gen/bundle-arm64-adhoc.bundle	extract	ok	none
+/home/tim/projects/the-seed-030-work/ref-gen/bundle-arm64-adhoc.bundle	format	ok	Mach-O
+/home/tim/projects/the-seed-030-work/ref-gen/bundle-arm64-adhoc.bundle	macho-dependencies	ok	
+/home/tim/projects/the-seed-030-work/ref-gen/bundle-arm64-adhoc.bundle	presence	ok	no
+/home/tim/projects/the-seed-030-work/ref-gen/bundle-arm64-adhoc.bundle	slices	ok	201326593:0:0:16816,
+/home/tim/projects/the-seed-030-work/ref-gen/elf32-mips-be.so	dependencies	ok	
+/home/tim/projects/the-seed-030-work/ref-gen/elf32-mips-be.so	format	ok	ELF
+/home/tim/projects/the-seed-030-work/ref-gen/elf32-x86.so	dependencies	ok	
+/home/tim/projects/the-seed-030-work/ref-gen/elf32-x86.so	format	ok	ELF
+/home/tim/projects/the-seed-030-work/ref-gen/exe-arm64-adhoc	dependencies	rejected	Unsupported binary format
+/home/tim/projects/the-seed-030-work/ref-gen/exe-arm64-adhoc	digest	ok	4322cc30a7575a88fc7daa21e8c0c790aa5b749efe9775544634ac8fc5e88cac
+/home/tim/projects/the-seed-030-work/ref-gen/exe-arm64-adhoc	embed	rejected	No space for new load command
+/home/tim/projects/the-seed-030-work/ref-gen/exe-arm64-adhoc	extract	ok	none
+/home/tim/projects/the-seed-030-work/ref-gen/exe-arm64-adhoc	format	ok	Mach-O
+/home/tim/projects/the-seed-030-work/ref-gen/exe-arm64-adhoc	macho-dependencies	ok	
+/home/tim/projects/the-seed-030-work/ref-gen/exe-arm64-adhoc	presence	ok	no
+/home/tim/projects/the-seed-030-work/ref-gen/exe-arm64-adhoc	slices	ok	201326593:0:0:16832,
+/home/tim/projects/the-seed-030-work/ref-gen/exe-x86_64	dependencies	rejected	Unsupported binary format
+/home/tim/projects/the-seed-030-work/ref-gen/exe-x86_64	digest	ok	99e0114d47faf6c9df116f941133711ab984fd83fa8e9b7ad455ac1173f03c0b
+/home/tim/projects/the-seed-030-work/ref-gen/exe-x86_64	embed	rejected	No space for new load command
+/home/tim/projects/the-seed-030-work/ref-gen/exe-x86_64	extract	ok	none
+/home/tim/projects/the-seed-030-work/ref-gen/exe-x86_64	format	ok	Mach-O
+/home/tim/projects/the-seed-030-work/ref-gen/exe-x86_64	macho-dependencies	ok	
+/home/tim/projects/the-seed-030-work/ref-gen/exe-x86_64	presence	ok	no
+/home/tim/projects/the-seed-030-work/ref-gen/exe-x86_64	slices	ok	117440513:50331776:0:4248,
+/home/tim/projects/the-seed-030-work/ref-gen/gecko-signed.msi	digest	ok	946e9effc412a51f275aaecdf4d0dfa43b0e2f33dc46557dbf6712d550ec58cd
+/home/tim/projects/the-seed-030-work/ref-gen/gecko-signed.msi	embed	ok	8e0e88a8abb7ff15312ec548aca24f58cf1261d197147f5b5da4d94291a0e021
+/home/tim/projects/the-seed-030-work/ref-gen/gecko-signed.msi	extract	ok	3bf8cf1282d3d26d1847d36a4abe46889e1d3f03cb3a6f2a628c2a75239369ef
+/home/tim/projects/the-seed-030-work/ref-gen/gecko-signed.msi	format	ok	MSI
+/home/tim/projects/the-seed-030-work/ref-gen/gecko-signed.msi	presence	ok	yes
+/home/tim/projects/the-seed-030-work/ref-gen/gecko-signed.msi	strip	ok	5df229955b6a85a41881ed2d57a814318ce69bce586690c11ce641a35576d88f
+/home/tim/projects/the-seed-030-work/ref-gen/libref-arm64-adhoc.dylib	dependencies	rejected	Unsupported binary format
+/home/tim/projects/the-seed-030-work/ref-gen/libref-arm64-adhoc.dylib	digest	ok	89f82b14c6fb7455e52f15c829def7c9b45da1f6da2d110e6412e0dd861dc0c7
+/home/tim/projects/the-seed-030-work/ref-gen/libref-arm64-adhoc.dylib	embed	rejected	No space for new load command
+/home/tim/projects/the-seed-030-work/ref-gen/libref-arm64-adhoc.dylib	extract	ok	none
+/home/tim/projects/the-seed-030-work/ref-gen/libref-arm64-adhoc.dylib	format	ok	Mach-O
+/home/tim/projects/the-seed-030-work/ref-gen/libref-arm64-adhoc.dylib	macho-dependencies	ok	
+/home/tim/projects/the-seed-030-work/ref-gen/libref-arm64-adhoc.dylib	presence	ok	no
+/home/tim/projects/the-seed-030-work/ref-gen/libref-arm64-adhoc.dylib	slices	ok	201326593:0:0:16800,
+/home/tim/projects/the-seed-030-work/ref-gen/libref-x86_64.dylib	dependencies	rejected	Unsupported binary format
+/home/tim/projects/the-seed-030-work/ref-gen/libref-x86_64.dylib	digest	ok	d29b9e9f1ef479f447ed73c3df504fa94dbe76d72aff6d608b3cdb500d3fd33d
+/home/tim/projects/the-seed-030-work/ref-gen/libref-x86_64.dylib	embed	rejected	No space for new load command
+/home/tim/projects/the-seed-030-work/ref-gen/libref-x86_64.dylib	extract	ok	none
+/home/tim/projects/the-seed-030-work/ref-gen/libref-x86_64.dylib	format	ok	Mach-O
+/home/tim/projects/the-seed-030-work/ref-gen/libref-x86_64.dylib	macho-dependencies	ok	
+/home/tim/projects/the-seed-030-work/ref-gen/libref-x86_64.dylib	presence	ok	no
+/home/tim/projects/the-seed-030-work/ref-gen/libref-x86_64.dylib	slices	ok	117440513:50331648:0:4216,
+/home/tim/projects/the-seed-030-work/ref-gen/superblob-built.bin	format	ok	superblob
+/home/tim/projects/the-seed-030-work/ref-gen/superblob-built.bin	superblob-cms	ok	3b34240629311f96144fbd49d885f4576c7b6acbe7538025a737439faa429a5d
+/home/tim/projects/the-seed-030-work/ref-gen/superblob-built.bin	superblob-code-directory	ok	c8bf1d9a144816fa3bcc68ba890f7038d0c1482e3c19cae61b585ef703474e1b
+/home/tim/projects/the-seed-030-work/ref-gen/superblob-bundle.bin	format	ok	superblob
+/home/tim/projects/the-seed-030-work/ref-gen/superblob-bundle.bin	superblob-cms	ok	none
+/home/tim/projects/the-seed-030-work/ref-gen/superblob-bundle.bin	superblob-code-directory	ok	ef46691d7948bccf166828609e891af3c9e3925b1d04d021ae921c1c85d4fdbd
+/home/tim/projects/the-seed-030-work/ref-gen/superblob-dylib.bin	format	ok	superblob
+/home/tim/projects/the-seed-030-work/ref-gen/superblob-dylib.bin	superblob-cms	ok	none
+/home/tim/projects/the-seed-030-work/ref-gen/superblob-dylib.bin	superblob-code-directory	ok	c5f1076954be13788e0972b11d63d06d0ce0c53327f4e781c6762db65f64d424
+/home/tim/projects/the-seed-030-work/ref-gen/superblob-exe.bin	format	ok	superblob
+/home/tim/projects/the-seed-030-work/ref-gen/superblob-exe.bin	superblob-cms	ok	none
+/home/tim/projects/the-seed-030-work/ref-gen/superblob-exe.bin	superblob-code-directory	ok	00b34582569d2a6d4bc86e5b1b0055d2425a41c4fa045d41e525dff934c89fdf
+/home/tim/projects/the-seed-030-work/ref-gen/tiny-plus3.exe	dependencies	ok	
+/home/tim/projects/the-seed-030-work/ref-gen/tiny-plus3.exe	digest	ok	e99d1f620053fe88324fb52c2b9ac5aeff10e053b4bc5d9e26938cacdec66ddf pe32+
+/home/tim/projects/the-seed-030-work/ref-gen/tiny-plus3.exe	embed	ok	db155d6b54770543aec2b4f9037eff2951170de41a2bd089f61103c742fedda2
+/home/tim/projects/the-seed-030-work/ref-gen/tiny-plus3.exe	extract	ok	none
+/home/tim/projects/the-seed-030-work/ref-gen/tiny-plus3.exe	format	ok	PE
+/home/tim/projects/the-seed-030-work/ref-gen/tiny-plus3.exe	presence	ok	no
+/home/tim/projects/the-seed-030-work/ref-gen/tiny-plus3.exe	strip	ok	3924edea95756ee4765acdeac1c93adc436f0986bc7b00890271a7303832db30
+/home/tim/projects/the-seed-030-work/ref-gen/tiny-signed.exe	dependencies	ok	
+/home/tim/projects/the-seed-030-work/ref-gen/tiny-signed.exe	digest	ok	947e0a67a3a548c7bade62813f78c32740bda430684e59941f86dd1caa0066cb pe32+
+/home/tim/projects/the-seed-030-work/ref-gen/tiny-signed.exe	embed	ok	d873b1c711dd95b8b839a7a808d8d683cfd666e13d1c5c1ae0ee1f58dffc1017
+/home/tim/projects/the-seed-030-work/ref-gen/tiny-signed.exe	extract	ok	cb124dd1fe607e4341edf4a72e48150cefa9b1d74660b402859ce1e69060eb61
+/home/tim/projects/the-seed-030-work/ref-gen/tiny-signed.exe	format	ok	PE
+/home/tim/projects/the-seed-030-work/ref-gen/tiny-signed.exe	presence	ok	yes
+/home/tim/projects/the-seed-030-work/ref-gen/tiny-signed.exe	strip	ok	0aa6005dbe3224a903c346a4fe71e0cedde26699843f0dbcb56d89c7f8f81ca9
+/home/tim/projects/the-seed-030-work/ref-gen/tiny-signed.msi	digest	ok	505332678f7c31b101302e7b63d110a2c418e520203ddddf6c2ec15ef29585fc
+/home/tim/projects/the-seed-030-work/ref-gen/tiny-signed.msi	embed	ok	2387481007870b21081ee1df0c2c26969d66a1d0686dcbd0d97382deddb741fb
+/home/tim/projects/the-seed-030-work/ref-gen/tiny-signed.msi	extract	ok	577cdfc9082d188a67965e59a80caaa4af3edf847890e0edfe9f164be5152c33
+/home/tim/projects/the-seed-030-work/ref-gen/tiny-signed.msi	format	ok	MSI
+/home/tim/projects/the-seed-030-work/ref-gen/tiny-signed.msi	presence	ok	yes
+/home/tim/projects/the-seed-030-work/ref-gen/tiny-signed.msi	strip	ok	be32a71418a625e6bad29fe02c15923978a42154cbcfa3ac089d7274209a7221
+/home/tim/projects/the-seed-030-work/ref-gen/universal	dependencies	rejected	Unsupported binary format
+/home/tim/projects/the-seed-030-work/ref-gen/universal	digest	rejected	Not a single-arch Mach-O binary
+/home/tim/projects/the-seed-030-work/ref-gen/universal	embed	rejected	Not a single-arch Mach-O binary
+/home/tim/projects/the-seed-030-work/ref-gen/universal	extract	rejected	Not a single-arch Mach-O binary
+/home/tim/projects/the-seed-030-work/ref-gen/universal	format	ok	Mach-O
+/home/tim/projects/the-seed-030-work/ref-gen/universal	macho-dependencies	rejected	Not a single-arch Mach-O binary
+/home/tim/projects/the-seed-030-work/ref-gen/universal	presence	rejected	Not a single-arch Mach-O binary
+/home/tim/projects/the-seed-030-work/ref-gen/universal	slices	rejected	Truncated fat_arch entry
+/home/tim/projects/the-seed-030-work/ref-gen/user32-signed.dll	dependencies	ok	
+/home/tim/projects/the-seed-030-work/ref-gen/user32-signed.dll	digest	ok	48cde8b1ef3b529fb63ff27efa537a197ab740c7f32405df065b703b589607e9 pe32+
+/home/tim/projects/the-seed-030-work/ref-gen/user32-signed.dll	embed	ok	80439f21b8688126f22edd539569b31688b64ae28e5e520e44fca4e61728b8b2
+/home/tim/projects/the-seed-030-work/ref-gen/user32-signed.dll	extract	ok	545d7e715ed98da81b4fa6f827472d1f021c53e2c3a28a5ccb38127468c7bc82
+/home/tim/projects/the-seed-030-work/ref-gen/user32-signed.dll	format	ok	PE
+/home/tim/projects/the-seed-030-work/ref-gen/user32-signed.dll	presence	ok	yes
+/home/tim/projects/the-seed-030-work/ref-gen/user32-signed.dll	strip	ok	edfb572c92326a94fe9706e9b143801a4e9e58bf544e0853d4990ca13fed259e
+/home/tim/projects/the-seed-dev/libthe-seed/tests/fixtures/test.dll	dependencies	ok	
+/home/tim/projects/the-seed-dev/libthe-seed/tests/fixtures/test.dll	digest	ok	dc6cedf1a1df1ac30d44d44f71142132b6bfcbc324e360428c78228ccce66d05 pe32+
+/home/tim/projects/the-seed-dev/libthe-seed/tests/fixtures/test.dll	embed	ok	d1d6bdfe29fe851802956ee41dce9ac669a27c5026806336c1df1486562e72c9
+/home/tim/projects/the-seed-dev/libthe-seed/tests/fixtures/test.dll	extract	ok	none
+/home/tim/projects/the-seed-dev/libthe-seed/tests/fixtures/test.dll	format	ok	PE
+/home/tim/projects/the-seed-dev/libthe-seed/tests/fixtures/test.dll	presence	ok	no
+/home/tim/projects/the-seed-dev/libthe-seed/tests/fixtures/test.dll	strip	ok	08e2cd430f42fd8be59f86f489ce51cce3d335ee2235177ae9b5f98e897e5bec
+/home/tim/projects/the-seed-dev/libthe-seed/tests/fixtures/tiny.exe	dependencies	ok	
+/home/tim/projects/the-seed-dev/libthe-seed/tests/fixtures/tiny.exe	digest	ok	947e0a67a3a548c7bade62813f78c32740bda430684e59941f86dd1caa0066cb pe32+
+/home/tim/projects/the-seed-dev/libthe-seed/tests/fixtures/tiny.exe	embed	ok	d873b1c711dd95b8b839a7a808d8d683cfd666e13d1c5c1ae0ee1f58dffc1017
+/home/tim/projects/the-seed-dev/libthe-seed/tests/fixtures/tiny.exe	extract	ok	none
+/home/tim/projects/the-seed-dev/libthe-seed/tests/fixtures/tiny.exe	format	ok	PE
+/home/tim/projects/the-seed-dev/libthe-seed/tests/fixtures/tiny.exe	presence	ok	no
+/home/tim/projects/the-seed-dev/libthe-seed/tests/fixtures/tiny.exe	strip	ok	0aa6005dbe3224a903c346a4fe71e0cedde26699843f0dbcb56d89c7f8f81ca9
+/home/tim/projects/the-seed-dev/libthe-seed/tests/fixtures/tiny-macho-arm64	dependencies	rejected	Unsupported binary format
+/home/tim/projects/the-seed-dev/libthe-seed/tests/fixtures/tiny-macho-arm64	digest	ok	c8bf1d9a144816fa3bcc68ba890f7038d0c1482e3c19cae61b585ef703474e1b
+/home/tim/projects/the-seed-dev/libthe-seed/tests/fixtures/tiny-macho-arm64	embed	rejected	No space for new load command
+/home/tim/projects/the-seed-dev/libthe-seed/tests/fixtures/tiny-macho-arm64	extract	ok	none
+/home/tim/projects/the-seed-dev/libthe-seed/tests/fixtures/tiny-macho-arm64	format	ok	Mach-O
+/home/tim/projects/the-seed-dev/libthe-seed/tests/fixtures/tiny-macho-arm64	macho-dependencies	ok	
+/home/tim/projects/the-seed-dev/libthe-seed/tests/fixtures/tiny-macho-arm64	presence	ok	no
+/home/tim/projects/the-seed-dev/libthe-seed/tests/fixtures/tiny-macho-arm64	slices	ok	201326593:0:0:16536,
+/home/tim/projects/the-seed-dev/libthe-seed/tests/fixtures/tiny-macho-universal	dependencies	rejected	Unsupported binary format
+/home/tim/projects/the-seed-dev/libthe-seed/tests/fixtures/tiny-macho-universal	digest	rejected	Not a single-arch Mach-O binary
+/home/tim/projects/the-seed-dev/libthe-seed/tests/fixtures/tiny-macho-universal	embed	rejected	Not a single-arch Mach-O binary
+/home/tim/projects/the-seed-dev/libthe-seed/tests/fixtures/tiny-macho-universal	extract	rejected	Not a single-arch Mach-O binary
+/home/tim/projects/the-seed-dev/libthe-seed/tests/fixtures/tiny-macho-universal	format	ok	Mach-O
+/home/tim/projects/the-seed-dev/libthe-seed/tests/fixtures/tiny-macho-universal	macho-dependencies	rejected	Not a single-arch Mach-O binary
+/home/tim/projects/the-seed-dev/libthe-seed/tests/fixtures/tiny-macho-universal	presence	rejected	Not a single-arch Mach-O binary
+/home/tim/projects/the-seed-dev/libthe-seed/tests/fixtures/tiny-macho-universal	slices	rejected	Truncated fat_arch entry
+/home/tim/projects/the-seed-dev/libthe-seed/tests/fixtures/tiny-macho-x86_64	dependencies	rejected	Unsupported binary format
+/home/tim/projects/the-seed-dev/libthe-seed/tests/fixtures/tiny-macho-x86_64	digest	ok	0a31e27c3f4a7692733639d3989b38031c2fd2d65ea820f54d99d4d7e0142625
+/home/tim/projects/the-seed-dev/libthe-seed/tests/fixtures/tiny-macho-x86_64	embed	rejected	No space for new load command
+/home/tim/projects/the-seed-dev/libthe-seed/tests/fixtures/tiny-macho-x86_64	extract	ok	none
+/home/tim/projects/the-seed-dev/libthe-seed/tests/fixtures/tiny-macho-x86_64	format	ok	Mach-O
+/home/tim/projects/the-seed-dev/libthe-seed/tests/fixtures/tiny-macho-x86_64	macho-dependencies	ok	
+/home/tim/projects/the-seed-dev/libthe-seed/tests/fixtures/tiny-macho-x86_64	presence	ok	no
+/home/tim/projects/the-seed-dev/libthe-seed/tests/fixtures/tiny-macho-x86_64	slices	ok	117440513:50331776:0:4248,
+/home/tim/projects/the-seed-dev/libthe-seed/tests/fixtures/tiny.msi	digest	ok	505332678f7c31b101302e7b63d110a2c418e520203ddddf6c2ec15ef29585fc
+/home/tim/projects/the-seed-dev/libthe-seed/tests/fixtures/tiny.msi	embed	ok	8b28b4bf5fe91b0661d52ee10820dbf89553846663264afbdd065e9caad62807
+/home/tim/projects/the-seed-dev/libthe-seed/tests/fixtures/tiny.msi	extract	ok	none
+/home/tim/projects/the-seed-dev/libthe-seed/tests/fixtures/tiny.msi	format	ok	MSI
+/home/tim/projects/the-seed-dev/libthe-seed/tests/fixtures/tiny.msi	presence	ok	no
+/home/tim/projects/the-seed-dev/libthe-seed/tests/fixtures/tiny.msi	strip	ok	cfa5eab43745a9228f62443bead3c8b728c7e44a9494ba97497b1ca52f16fd72
+/home/tim/.steam/debian-installation/steamapps/common/Proton 11.0/files/share/wine/mono/wine-mono-11.2.0/support/winemono-support.msi	digest	ok	8d09bc7b901718ed0dbd886c0deff71c61d76031c97e879f7a0bbe7377759472
+/home/tim/.steam/debian-installation/steamapps/common/Proton 11.0/files/share/wine/mono/wine-mono-11.2.0/support/winemono-support.msi	embed	ok	cf4dd1a75fefe51c34b6dc33ae68c2c5133ded938ca2ef4313a9e3916dddc41c
+/home/tim/.steam/debian-installation/steamapps/common/Proton 11.0/files/share/wine/mono/wine-mono-11.2.0/support/winemono-support.msi	extract	ok	none
+/home/tim/.steam/debian-installation/steamapps/common/Proton 11.0/files/share/wine/mono/wine-mono-11.2.0/support/winemono-support.msi	format	ok	MSI
+/home/tim/.steam/debian-installation/steamapps/common/Proton 11.0/files/share/wine/mono/wine-mono-11.2.0/support/winemono-support.msi	presence	ok	no
+/home/tim/.steam/debian-installation/steamapps/common/Proton 11.0/files/share/wine/mono/wine-mono-11.2.0/support/winemono-support.msi	strip	ok	46ab6012243d396bda1571eed9d2123865f9c4fdd159ce37f52abee9f04ab4f9
+/home/tim/.wine/drive_c/ProgramData/Package Cache/{922480B5-CAEB-4B1B-AAA4-9716EFDCE26B}v14.44.35211/packages/vcRuntimeMinimum_x86/vc_runtimeMinimum_x86.msi	digest	ok	67f5a837c7b2e9639b4b7ac3b0a2ede000501c5424ded71c3d537642ba626858
+/home/tim/.wine/drive_c/ProgramData/Package Cache/{922480B5-CAEB-4B1B-AAA4-9716EFDCE26B}v14.44.35211/packages/vcRuntimeMinimum_x86/vc_runtimeMinimum_x86.msi	embed	ok	380743ebcec376dc73ebf72075ee04c6b0862709f6a2ccea34a90814a6f78648
+/home/tim/.wine/drive_c/ProgramData/Package Cache/{922480B5-CAEB-4B1B-AAA4-9716EFDCE26B}v14.44.35211/packages/vcRuntimeMinimum_x86/vc_runtimeMinimum_x86.msi	extract	ok	af47389be4c73f78bd7f5f4119fb61e64b6c2a5a5e14cf2ab46970d55aa5c077
+/home/tim/.wine/drive_c/ProgramData/Package Cache/{922480B5-CAEB-4B1B-AAA4-9716EFDCE26B}v14.44.35211/packages/vcRuntimeMinimum_x86/vc_runtimeMinimum_x86.msi	format	ok	MSI
+/home/tim/.wine/drive_c/ProgramData/Package Cache/{922480B5-CAEB-4B1B-AAA4-9716EFDCE26B}v14.44.35211/packages/vcRuntimeMinimum_x86/vc_runtimeMinimum_x86.msi	presence	ok	yes
+/home/tim/.wine/drive_c/ProgramData/Package Cache/{922480B5-CAEB-4B1B-AAA4-9716EFDCE26B}v14.44.35211/packages/vcRuntimeMinimum_x86/vc_runtimeMinimum_x86.msi	strip	ok	714ee2f4e3db698b39f7659e48c2e4efddbc685d29fa4231a5bbdb314bb74e78
+/home/tim/.wine/drive_c/ProgramData/Package Cache/{C18FB403-1E88-43C8-AD8A-CED50F23DE8B}v14.44.35211/packages/vcRuntimeAdditional_x86/vc_runtimeAdditional_x86.msi	digest	ok	80e1778ffc3d1ff1df66228688141ec161bae696fcaedc653b68660d084059a1
+/home/tim/.wine/drive_c/ProgramData/Package Cache/{C18FB403-1E88-43C8-AD8A-CED50F23DE8B}v14.44.35211/packages/vcRuntimeAdditional_x86/vc_runtimeAdditional_x86.msi	embed	ok	3ebc76ea17426bf97b353b91e55c7c91d783bd4174d2a671229cbe72eecb8f42
+/home/tim/.wine/drive_c/ProgramData/Package Cache/{C18FB403-1E88-43C8-AD8A-CED50F23DE8B}v14.44.35211/packages/vcRuntimeAdditional_x86/vc_runtimeAdditional_x86.msi	extract	ok	62232d8dfbd4bd10e5e587bd25f2b2faffa96bb17960e2c5826cbfb424f5b208
+/home/tim/.wine/drive_c/ProgramData/Package Cache/{C18FB403-1E88-43C8-AD8A-CED50F23DE8B}v14.44.35211/packages/vcRuntimeAdditional_x86/vc_runtimeAdditional_x86.msi	format	ok	MSI
+/home/tim/.wine/drive_c/ProgramData/Package Cache/{C18FB403-1E88-43C8-AD8A-CED50F23DE8B}v14.44.35211/packages/vcRuntimeAdditional_x86/vc_runtimeAdditional_x86.msi	presence	ok	yes
+/home/tim/.wine/drive_c/ProgramData/Package Cache/{C18FB403-1E88-43C8-AD8A-CED50F23DE8B}v14.44.35211/packages/vcRuntimeAdditional_x86/vc_runtimeAdditional_x86.msi	strip	ok	e841ba2563e2c949ad74393dc3de3f61c958b50421fbc7ed31f566494d741258
+/home/tim/.wine/drive_c/Program Files/client/libgcc_s_seh-1.dll	dependencies	ok	
+/home/tim/.wine/drive_c/Program Files/client/libgcc_s_seh-1.dll	digest	ok	fac96e6ab03c65b4a5c98a8655bbe8d274bee73c861c857434e9912d55d27dcc pe32+
+/home/tim/.wine/drive_c/Program Files/client/libgcc_s_seh-1.dll	embed	ok	0410ea5e610703abd45c0ce1661772a5b730f8f56a5ca54b6769ae7c49c344fe
+/home/tim/.wine/drive_c/Program Files/client/libgcc_s_seh-1.dll	extract	ok	none
+/home/tim/.wine/drive_c/Program Files/client/libgcc_s_seh-1.dll	format	ok	PE
+/home/tim/.wine/drive_c/Program Files/client/libgcc_s_seh-1.dll	presence	ok	no
+/home/tim/.wine/drive_c/Program Files/client/libgcc_s_seh-1.dll	strip	ok	e4e3138405443133d53952c465a06bd85fbc66592a6b2ce74fd6e499bafcc1b9
+/home/tim/.wine/drive_c/Program Files/client/libstdc++-6.dll	dependencies	ok	
+/home/tim/.wine/drive_c/Program Files/client/libstdc++-6.dll	digest	ok	6b88aade9b57018a6e81f807539537c2aeac5f6ecb8b454a45be42ba39218412 pe32+
+/home/tim/.wine/drive_c/Program Files/client/libstdc++-6.dll	embed	ok	4e7948a87e1d2535024eca5e820bf9130f2e01e806db5dbe119ee32126010f32
+/home/tim/.wine/drive_c/Program Files/client/libstdc++-6.dll	extract	ok	none
+/home/tim/.wine/drive_c/Program Files/client/libstdc++-6.dll	format	ok	PE
+/home/tim/.wine/drive_c/Program Files/client/libstdc++-6.dll	presence	ok	no
+/home/tim/.wine/drive_c/Program Files/client/libstdc++-6.dll	strip	ok	5a8ca459dd00ef7ea46deeefd4beb2a74c6e5a89655968c16d6ae9cb26a3046d
+/home/tim/.wine/drive_c/Program Files/client/libwinpthread-1.dll	dependencies	ok	
+/home/tim/.wine/drive_c/Program Files/client/libwinpthread-1.dll	digest	ok	e3a6207fe562ed9523436fe3b18dd7b4dfc6682d85e08eb18e18df14c0e310df pe32+
+/home/tim/.wine/drive_c/Program Files/client/libwinpthread-1.dll	embed	ok	dedbcd3f5a1fde8d407fdbb4cde4a95955ae65aa731f69770ca4e74b3c1ae5ba
+/home/tim/.wine/drive_c/Program Files/client/libwinpthread-1.dll	extract	ok	none
+/home/tim/.wine/drive_c/Program Files/client/libwinpthread-1.dll	format	ok	PE
+/home/tim/.wine/drive_c/Program Files/client/libwinpthread-1.dll	presence	ok	no
+/home/tim/.wine/drive_c/Program Files/client/libwinpthread-1.dll	strip	ok	a537c1759cf4f91405b84e8f772d8641e5eb37eea7b12c7217438bf283a2da1e
+/home/tim/.wine/drive_c/Program Files/client/zlib1.dll	dependencies	ok	
+/home/tim/.wine/drive_c/Program Files/client/zlib1.dll	digest	ok	594e9f17a2aeac55d71344029b772621c03e3914c09f6a1d40456669d7ba6ac9 pe32+
+/home/tim/.wine/drive_c/Program Files/client/zlib1.dll	embed	ok	4665fc26636cc7ef630b02dfc7354b7aefe361c5aaed0ee2df70cb50cdf7c0c1
+/home/tim/.wine/drive_c/Program Files/client/zlib1.dll	extract	ok	none
+/home/tim/.wine/drive_c/Program Files/client/zlib1.dll	format	ok	PE
+/home/tim/.wine/drive_c/Program Files/client/zlib1.dll	presence	ok	no
+/home/tim/.wine/drive_c/Program Files/client/zlib1.dll	strip	ok	c17c73cb781ed3b14f7a9b5b28bf59a7ff45af2b8f3f869bd40ef219c2f57688
+/home/tim/.wine/drive_c/windows/system32/kernel32.dll	dependencies	ok	
+/home/tim/.wine/drive_c/windows/system32/kernel32.dll	digest	ok	bcc0a3c9d5449ea8a9e425c106d7f2ab17ae9d4cd58cc0af639b665f0d44d4dc pe32+
+/home/tim/.wine/drive_c/windows/system32/kernel32.dll	embed	ok	83ed8679c14117c41b9b8be7ab63b5d0582b8a034ce8dcd5c62e2c1513393e77
+/home/tim/.wine/drive_c/windows/system32/kernel32.dll	extract	ok	none
+/home/tim/.wine/drive_c/windows/system32/kernel32.dll	format	ok	PE
+/home/tim/.wine/drive_c/windows/system32/kernel32.dll	presence	ok	no
+/home/tim/.wine/drive_c/windows/system32/kernel32.dll	strip	ok	16341c44a3b53c3c51702ce41a6305d0f7d79b3a01b844bf100ec7b3023a6893
+/home/tim/.wine/drive_c/windows/system32/ntdll.dll	dependencies	ok	
+/home/tim/.wine/drive_c/windows/system32/ntdll.dll	digest	ok	840c3e6f6b331815abbea6f12eab3aa639490eaaaab09b3b1b1558d1976f1e85 pe32+
+/home/tim/.wine/drive_c/windows/system32/ntdll.dll	embed	ok	4e3520a5f765fa6a732ac6f6edaeec061c7fde240271ee439e8e67c548bd5e91
+/home/tim/.wine/drive_c/windows/system32/ntdll.dll	extract	ok	none
+/home/tim/.wine/drive_c/windows/system32/ntdll.dll	format	ok	PE
+/home/tim/.wine/drive_c/windows/system32/ntdll.dll	presence	ok	no
+/home/tim/.wine/drive_c/windows/system32/ntdll.dll	strip	ok	c2bf3e4261031d7926f83a0e78ce51be2f8662c85a8ed770d1bcebb48d6874e2
+/home/tim/.wine/drive_c/windows/system32/user32.dll	dependencies	ok	
+/home/tim/.wine/drive_c/windows/system32/user32.dll	digest	ok	7e6ad7221b3bba339a3137494b8b643fce434f1a184fc9df60e935ba9710c3e2 pe32+
+/home/tim/.wine/drive_c/windows/system32/user32.dll	embed	ok	80439f21b8688126f22edd539569b31688b64ae28e5e520e44fca4e61728b8b2
+/home/tim/.wine/drive_c/windows/system32/user32.dll	extract	ok	none
+/home/tim/.wine/drive_c/windows/system32/user32.dll	format	ok	PE
+/home/tim/.wine/drive_c/windows/system32/user32.dll	presence	ok	no
+/home/tim/.wine/drive_c/windows/system32/user32.dll	strip	ok	edfb572c92326a94fe9706e9b143801a4e9e58bf544e0853d4990ca13fed259e
+/usr/bin/ls	dependencies	ok	
+/usr/bin/ls	format	ok	ELF
+/usr/lib/x86_64-linux-gnu/libc.so.6	dependencies	ok	
+/usr/lib/x86_64-linux-gnu/libc.so.6	format	ok	ELF
+/usr/lib/x86_64-linux-gnu/libstdc++.so.6	dependencies	ok	
+/usr/lib/x86_64-linux-gnu/libstdc++.so.6	format	ok	ELF

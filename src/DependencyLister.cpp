@@ -1,6 +1,7 @@
 #include <libthe-seed/DependencyLister.hpp>
 
 #include "ElfParser.hpp"
+#include "internal/BoundedBytes.hpp"
 #include "PeParser.hpp"
 
 #include <algorithm>
@@ -53,9 +54,11 @@ std::vector<std::string> ParseBinaryDependencies(const std::string &binary_path)
     switch(DetectFormat(binary_path))
     {
         case BinaryFormat::Elf:
-            return ElfParser::ListDependencies(binary_path);
+            return seed::internal::GuardEntryPoint(
+                "ELF", [&] { return ElfParser::ListDependencies(binary_path); });
         case BinaryFormat::Pe:
-            return PeParser::ListDependencies(binary_path);
+            return seed::internal::GuardEntryPoint(
+                "PE", [&] { return PeParser::ListDependencies(binary_path); });
     }
 
     throw std::runtime_error("Unsupported binary format");
