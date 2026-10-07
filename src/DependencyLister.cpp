@@ -35,6 +35,49 @@ std::string LowerAscii(std::string text)
     return text;
 }
 
+const char *const kMachODeclined = ": Mach-O files are not supported for dependency listing";
+
+// True when the bytes start with one of the six Mach-O magics. A fat header
+// shares its magic with Java class files, so it counts only when the
+// architecture count, in the byte order the magic implies, is plausible.
+bool IsMachO(const std::vector<std::uint8_t> &bytes)
+{
+    if(bytes.size() < 4)
+    {
+        return false;
+    }
+    const std::uint32_t magic = (static_cast<std::uint32_t>(bytes[0]) << 24) |
+                                (static_cast<std::uint32_t>(bytes[1]) << 16) |
+                                (static_cast<std::uint32_t>(bytes[2]) << 8) | bytes[3];
+    switch(magic)
+    {
+    case 0xFEEDFACEu:
+    case 0xCEFAEDFEu:
+    case 0xFEEDFACFu:
+    case 0xCFFAEDFEu:
+        return true;
+    case 0xCAFEBABEu:
+    case 0xBEBAFECAu:
+    {
+        if(bytes.size() < 8)
+        {
+            return false;
+        }
+        const bool big_endian = magic == 0xCAFEBABEu;
+        const std::uint32_t count =
+            big_endian ? (static_cast<std::uint32_t>(bytes[4]) << 24) |
+                             (static_cast<std::uint32_t>(bytes[5]) << 16) |
+                             (static_cast<std::uint32_t>(bytes[6]) << 8) | bytes[7]
+                       : (static_cast<std::uint32_t>(bytes[7]) << 24) |
+                             (static_cast<std::uint32_t>(bytes[6]) << 16) |
+                             (static_cast<std::uint32_t>(bytes[5]) << 8) | bytes[4];
+        return count <= 30;
+    }
+    default:
+        return false;
+    }
+}
+
 // Reads the format from the bytes already in memory and lists the names the
 // file records.
 std::vector<std::string> ParseBytes(const std::vector<std::uint8_t> &bytes, NodeFormat &format)
@@ -141,6 +184,13 @@ NodeId FileNode(DependencyGraph &graph, const std::string &path, const std::stri
     try
     {
         const std::vector<std::uint8_t> bytes = ReadFileBytes(key);
+        if(IsMachO(bytes))
+        {
+            // Declined without parsing; kept as a node so its credits stay.
+            graph.nodes[id].format = NodeFormat::MachO;
+            graph.nodes[id].reason = key + kMachODeclined;
+            return id;
+        }
         NodeFormat format = NodeFormat::None;
         std::vector<std::string> refs = ParseBytes(bytes, format);
         DependencyNode &node = graph.nodes[id];
@@ -321,7 +371,9 @@ DependencyResult DependencyLister::ListDependencies(
         input.node = FileNode(graph, input.spelling, input.canonical.empty() ? nullptr : &input.canonical);
         if(graph.nodes[input.node].status == NodeStatus::Unreadable)
         {
-            result.errors[input.spelling] = graph.nodes[input.node].reason;
+            result.errors[input.spelling] = graph.nodes[input.node].format == NodeFormat::MachO
+                                                ? input.spelling + kMachODeclined
+                                                : graph.nodes[input.node].reason;
         }
     }
 

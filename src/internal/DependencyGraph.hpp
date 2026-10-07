@@ -27,7 +27,9 @@ enum class NodeFormat
 {
     None,
     Elf,
-    Pe
+    Pe,
+    // Recognised only so that it can be declined; never parsed.
+    MachO
 };
 
 // One file (or one name that was not found) in a dependency request.
