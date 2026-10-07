@@ -388,7 +388,7 @@ TEST_CASE("layout: damaged load commands are rejected with a named message", "[M
     RequireRejected(Program({Command(0x1D, 16, 200, 100), Command(0x1D, 16, 200, 100)}), "second LC_CODE_SIGNATURE");
     RequireRejected(Program({Command(0x1D, 16, 500, 100)}), "extends past the end");
     RequireRejected(Program({Command(0x1D, 16, 40, 16)}), "inside the load commands");
-    RequireRejected(Program({Command(0x0C, 16)}), "dylib command");
+    RequireRejected(Program({Command(0x0C, 16)}), "LC_LOAD_DYLIB command");
     RequireRejected(Program({Command(0x0C, 32, 5000)}), "outside the command");
     RequireRejected(Program({Command(0x99, 16), Command(0x99, 16)}, 512, 16),
                     "does not fit in the load command area");

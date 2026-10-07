@@ -41,6 +41,23 @@ bool IsReferenceCommand(std::uint32_t cmd)
            cmd == macho::kLcLoadUpwardDylib;
 }
 
+const char *ReferenceCommandName(std::uint32_t cmd)
+{
+    switch(cmd)
+    {
+    case macho::kLcLoadDylib:
+        return "LC_LOAD_DYLIB";
+    case macho::kLcLoadWeakDylib:
+        return "LC_LOAD_WEAK_DYLIB";
+    case macho::kLcReexportDylib:
+        return "LC_REEXPORT_DYLIB";
+    case macho::kLcLazyLoadDylib:
+        return "LC_LAZY_LOAD_DYLIB";
+    default:
+        return "LC_LOAD_UPWARD_DYLIB";
+    }
+}
+
 bool IsZeroFill(std::uint32_t section_flags)
 {
     const std::uint32_t type = section_flags & macho::kSectionTypeMask;
@@ -163,6 +180,7 @@ SliceLayout ParseMachOSlice(const ByteSpan &file, std::uint64_t base, std::uint6
     const ByteSpan area = view.Sub(macho::kHeader64Size, layout.sizeofcmds, "load commands");
 
     std::uint64_t cursor = 0; // within the load command area
+    std::string segment_problem;
     for(std::uint32_t i = 0; i < layout.ncmds; ++i)
     {
         const std::string index = std::to_string(i);
@@ -176,8 +194,16 @@ SliceLayout ParseMachOSlice(const ByteSpan &file, std::uint64_t base, std::uint6
         const auto cmdsize = area.Read<std::uint32_t>(cursor + 4, le, "load command size");
         if(cmdsize < macho::kLoadCommandHeaderSize)
         {
-            ThrowMalformed(kFormat, "load command " + index + " size " + std::to_string(cmdsize) +
-                                        " is smaller than 8");
+            std::string message = "load command " + index + " size " + std::to_string(cmdsize) +
+                                  " is smaller than 8";
+            if(cmdsize == 0)
+            {
+                // A program signed again by an earlier version of the signer
+                // could be left with an emptied signature command.
+                message += "; this can be a program signed by an earlier version of the-seed; "
+                           "rebuild it from the unsigned original";
+            }
+            ThrowMalformed(kFormat, message);
         }
         if(cmdsize % 4 != 0)
         {
@@ -209,10 +235,13 @@ SliceLayout ParseMachOSlice(const ByteSpan &file, std::uint64_t base, std::uint6
             segment.fileoff = command.Read<std::uint64_t>(40, le, "segment file offset");
             segment.filesize = command.Read<std::uint64_t>(48, le, "segment file size");
             const auto nsects = command.Read<std::uint32_t>(64, le, "section count");
-            if(!RangeFits(segment.fileoff, segment.filesize, size))
+            if(!RangeFits(segment.fileoff, segment.filesize, size) && segment_problem.empty())
             {
-                ThrowMalformed(kFormat, name + " (" + segment.name + ") file range extends past the end of " +
-                                            std::string(scope));
+                // Reported after the whole table is read, so that a problem
+                // in a command that explains it (a signature that runs past
+                // the end) is named first.
+                segment_problem = name + " (" + segment.name + ") file range extends past the end of " +
+                                  std::string(scope);
             }
             const std::uint64_t sections_end =
                 macho::kSegment64CommandSize + static_cast<std::uint64_t>(nsects) * macho::kSection64Size;
@@ -268,7 +297,7 @@ SliceLayout ParseMachOSlice(const ByteSpan &file, std::uint64_t base, std::uint6
                                             ", size " + std::to_string(sig.datasize) +
                                             ") extends past the end of " + std::string(scope));
             }
-            if(sig.dataoff < layout.header_end)
+            if(sig.datasize != 0 && sig.dataoff < layout.header_end)
             {
                 ThrowMalformed(kFormat, name + " data at offset " + std::to_string(sig.dataoff) +
                                             " is inside the load commands");
@@ -277,7 +306,7 @@ SliceLayout ParseMachOSlice(const ByteSpan &file, std::uint64_t base, std::uint6
         }
         else if(IsReferenceCommand(cmd))
         {
-            const std::string name = "dylib command " + index;
+            const std::string name = std::string(ReferenceCommandName(cmd)) + " command " + index;
             if(cmdsize < macho::kDylibCommandMinSize)
             {
                 ThrowMalformed(kFormat, name + " size " + std::to_string(cmdsize) +
@@ -305,6 +334,10 @@ SliceLayout ParseMachOSlice(const ByteSpan &file, std::uint64_t base, std::uint6
         ThrowMalformed(kFormat, "the " + std::to_string(layout.ncmds) + " load commands use " +
                                     std::to_string(cursor) + " bytes but the header says " +
                                     std::to_string(layout.sizeofcmds));
+    }
+    if(!segment_problem.empty())
+    {
+        ThrowMalformed(kFormat, segment_problem);
     }
     return layout;
 }
