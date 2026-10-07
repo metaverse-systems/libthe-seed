@@ -1,4 +1,4 @@
-AM_CPPFLAGS = ${LIBECS_CFLAGS} -I$(top_srcdir)/include -I$(top_srcdir)/src -I$(top_srcdir)/external/Catch2/extras -I$(srcdir) \
+AM_CPPFLAGS = -I$(top_srcdir)/include ${LIBECS_CFLAGS} -I$(top_srcdir)/src -I$(top_srcdir)/external/Catch2/extras -I$(srcdir) \
               -DFIXTURES_DIR=\"$(abs_srcdir)/fixtures\" \
               -DLIBRARY_PATH_UNDER_TEST=\"$(abs_top_builddir)/src/.libs/libthe-seed.so\" \
               -DMODULE_DIR=\"$(abs_builddir)/.libs\"
@@ -19,7 +19,7 @@ AM_TESTS_ENVIRONMENT = \
 
 # Bare program names: run-test.sh compares them with known-gaps.txt, and
 # check_PROGRAMS gets $(EXEEXT) appended when cross-compiling for Windows.
-seed_test_programs = test_NameParser test_LibraryLoader test_DependencyLister \
+seed_test_programs = test_NameParser test_LibraryLoader test_DependencyLister test_DependencyAttribution test_DependencyReporting \
                  test_PeSigner test_MachOParser test_MachOSigner test_MsiSigner test_ResourcePak \
                  test_ComponentLoader test_SystemLoader test_PakLoader \
                  test_LoaderConcurrency test_JSONLoader test_BoundedBytes test_MalformedPe test_PeDigestReference test_PeRoundTrip test_MalformedElf test_MalformedMachO \
@@ -48,6 +48,12 @@ test_LibraryLoader_LDADD = libcatch.la ../src/libthe-seed.la ${LIBECS_LIBS}
 
 test_DependencyLister_SOURCES = test_DependencyLister.cpp
 test_DependencyLister_LDADD = libcatch.la ../src/libthe-seed.la ${LIBECS_LIBS}
+
+test_DependencyAttribution_SOURCES = test_DependencyAttribution.cpp
+test_DependencyAttribution_LDADD = libcatch.la ../src/libthe-seed.la ${LIBECS_LIBS}
+
+test_DependencyReporting_SOURCES = test_DependencyReporting.cpp
+test_DependencyReporting_LDADD = libcatch.la ../src/libthe-seed.la ${LIBECS_LIBS}
 
 test_PeSigner_SOURCES = test_PeSigner.cpp
 test_PeSigner_LDADD = libcatch.la ../src/libthe-seed.la ${LIBECS_LIBS}

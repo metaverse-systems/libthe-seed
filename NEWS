@@ -1,0 +1,37 @@
+libthe-seed 0.5.0
+
+* DependencyLister now credits every input program with every library it
+  needs, directly or through other libraries. Before, a library reached by
+  several programs was credited only to the first one that reached it, so the
+  result depended on the order of the inputs.
+
+  Packaging output for existing projects can grow: more libraries are now
+  attributed to the programs that need them, including libraries that were
+  previously missing from every program but the first, and delay-loaded Windows
+  libraries. This is the intended correction. Check bundle contents and sizes
+  after upgrading.
+
+* Delay-loaded libraries of Windows programs (the delay-load import table) are
+  now listed. A malformed delay-load table is rejected like any other
+  malformed PE structure.
+
+* New field DependencyResult::libraryErrors (additive; a caller that ignores
+  it sees the same keys and errors as before). A library that was found but
+  cannot be read is still listed in `dependencies`, and is now reported here
+  with the reason and the sorted list of inputs that need it. `errors` still
+  holds only inputs named in the request.
+
+* The lists in `dependencies` are now sorted. Libraries are keyed by the real
+  file's canonical path, or by the recorded name when not found. PE library
+  names match without regard to letter case; ELF names match exactly. Names
+  containing a folder separator, "..", a drive prefix or a NUL are not joined
+  to a search folder; they are listed under the recorded name.
+
+* Mach-O inputs are declined: the input appears in `errors` with
+  "<path>: Mach-O files are not supported for dependency listing" (a Mach-O
+  library gets the same text in `libraryErrors`). This will be revisited after
+  roadmap task 5. MachOParser::ListDependencies now reads weak, re-exported,
+  lazy and upward references, reads every slice of a universal file and
+  rejects an unterminated library name.
+
+* Version 0.5.0 (was 0.4.1). The libtool library version is unchanged.

@@ -184,46 +184,53 @@ std::vector<std::string> ParseElf(const ByteSpan &file, bool file_is_little_endi
 
     return dependencies;
 }
+
+std::vector<std::string> ListFromBytes(const std::vector<std::uint8_t> &bytes)
+{
+    const ByteSpan file(bytes, kFormat);
+
+    if(bytes.size() < EI_NIDENT)
+    {
+        ThrowMalformed(kFormat, "ELF header is too small (" + std::to_string(bytes.size()) +
+                                    " bytes, " + std::to_string(EI_NIDENT) + " needed)");
+    }
+
+    if(bytes[EI_MAG0] != ELFMAG0 || bytes[EI_MAG1] != ELFMAG1 || bytes[EI_MAG2] != ELFMAG2 ||
+       bytes[EI_MAG3] != ELFMAG3)
+    {
+        ThrowMalformed(kFormat, "ELF header magic is invalid");
+    }
+
+    const std::uint8_t elf_class = bytes[EI_CLASS];
+    const std::uint8_t elf_data = bytes[EI_DATA];
+
+    if(elf_data != ELFDATA2LSB && elf_data != ELFDATA2MSB)
+    {
+        ThrowMalformed(kFormat, "ELF header endianness " + std::to_string(elf_data) + " is not supported");
+    }
+
+    const bool file_is_little_endian = elf_data == ELFDATA2LSB;
+
+    if(elf_class == ELFCLASS32)
+    {
+        return ParseElf<Elf32_Ehdr, Elf32_Phdr, Elf32_Dyn>(file, file_is_little_endian);
+    }
+
+    if(elf_class == ELFCLASS64)
+    {
+        return ParseElf<Elf64_Ehdr, Elf64_Phdr, Elf64_Dyn>(file, file_is_little_endian);
+    }
+
+    ThrowMalformed(kFormat, "ELF header class " + std::to_string(elf_class) + " is not supported");
+}
 } // namespace
 
 std::vector<std::string> ElfParser::ListDependencies(const std::string &file_path)
 {
-    return seed::internal::GuardEntryPoint(kFormat, [&] {
-        const auto bytes = ReadFileBytes(file_path);
-        const ByteSpan file(bytes, kFormat);
+    return seed::internal::GuardEntryPoint(kFormat, [&] { return ListFromBytes(ReadFileBytes(file_path)); });
+}
 
-        if(bytes.size() < EI_NIDENT)
-        {
-            ThrowMalformed(kFormat, "ELF header is too small (" + std::to_string(bytes.size()) +
-                                        " bytes, " + std::to_string(EI_NIDENT) + " needed)");
-        }
-
-        if(bytes[EI_MAG0] != ELFMAG0 || bytes[EI_MAG1] != ELFMAG1 || bytes[EI_MAG2] != ELFMAG2 ||
-           bytes[EI_MAG3] != ELFMAG3)
-        {
-            ThrowMalformed(kFormat, "ELF header magic is invalid");
-        }
-
-        const std::uint8_t elf_class = bytes[EI_CLASS];
-        const std::uint8_t elf_data = bytes[EI_DATA];
-
-        if(elf_data != ELFDATA2LSB && elf_data != ELFDATA2MSB)
-        {
-            ThrowMalformed(kFormat, "ELF header endianness " + std::to_string(elf_data) + " is not supported");
-        }
-
-        const bool file_is_little_endian = elf_data == ELFDATA2LSB;
-
-        if(elf_class == ELFCLASS32)
-        {
-            return ParseElf<Elf32_Ehdr, Elf32_Phdr, Elf32_Dyn>(file, file_is_little_endian);
-        }
-
-        if(elf_class == ELFCLASS64)
-        {
-            return ParseElf<Elf64_Ehdr, Elf64_Phdr, Elf64_Dyn>(file, file_is_little_endian);
-        }
-
-        ThrowMalformed(kFormat, "ELF header class " + std::to_string(elf_class) + " is not supported");
-    });
+std::vector<std::string> ElfParser::ListDependenciesFromBytes(const std::vector<std::uint8_t> &bytes)
+{
+    return seed::internal::GuardEntryPoint(kFormat, [&] { return ListFromBytes(bytes); });
 }

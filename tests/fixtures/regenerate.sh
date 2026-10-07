@@ -8,7 +8,7 @@
 #        regenerate.sh --reference FILE write the recorded program fingerprints
 #                                       (pe-reference-digests.txt) to FILE
 #
-# Tools: x86_64-w64-mingw32-gcc, wixl, clang, ld64.lld, llvm-lipo for the
+# Tools: gcc, x86_64-w64-mingw32-gcc, wixl, clang, ld64.lld, llvm-lipo for the
 # rebuild; osslsigncode, openssl, llvm-objdump, llvm-otool, file for --verify;
 # osslsigncode and openssl for --reference.
 # Versioned names such as ld64.lld-21 are found when the plain name is absent.
@@ -23,6 +23,9 @@ set -eu
 here=$(cd "$(dirname "$0")" && pwd)
 src=$here/src
 samples="tiny.exe test.dll tiny.msi tiny-macho-x86_64 tiny-macho-arm64 tiny-macho-universal plain.txt"
+# The dependency chain libbaz <- libbar <- libfoo <- appA, appB, built for ELF
+# and for PE. Listed in SHA256SUMS and PROVENANCE.md like the other samples.
+dep_samples="dep/libbaz.so dep/libbar.so dep/libfoo.so dep/appA dep/appB dep/libbaz.dll dep/libbar.dll dep/libfoo.dll dep/appA.exe dep/appB.exe"
 
 find_tool() { # name -> prints the command to run, or nothing
     if command -v "$1" >/dev/null 2>&1; then
@@ -189,6 +192,16 @@ if [ "${1:-}" = "--verify" ]; then
         [ "$r" = ok ] || status=1
     done
 
+    for s in $dep_samples; do
+        kind=$(file -b "$here/$s")
+        case $s:$kind in
+            dep/*.so:*"ELF 64-bit LSB shared object"*|dep/appA:*"ELF 64-bit LSB"*|dep/appB:*"ELF 64-bit LSB"*) r=ok ;;
+            dep/*.dll:PE32+*DLL*|dep/*.exe:PE32+*) r=ok ;;
+            *) r=FAIL ;;
+        esac
+        report "$s" "$r" "file: $kind" | cut -c 1-110
+    done
+
     for s in tiny-macho-x86_64 tiny-macho-arm64; do
         if "$T_llvm_objdump" --macho -f "$here/$s" >/dev/null 2>&1 &&
             "$T_llvm_otool" -l "$here/$s" 2>&1 | grep -q 'cmd LC_MAIN'; then
@@ -233,7 +246,7 @@ if [ $# -ne 0 ]; then
     exit 2
 fi
 
-need x86_64-w64-mingw32-gcc wixl clang ld64.lld llvm-lipo
+need gcc x86_64-w64-mingw32-gcc wixl clang ld64.lld llvm-lipo
 
 # Windows executable and library.
 x86_64-w64-mingw32-gcc -Os -s -Wl,--gc-sections,--file-alignment,512,--no-insert-timestamp \
@@ -254,8 +267,44 @@ done
 "$T_llvm_lipo" -create "$here/tiny-macho-x86_64" "$here/tiny-macho-arm64" \
     -output "$here/tiny-macho-universal"
 
+# The dependency chain, ELF then PE. Each library names the next one with an
+# explicit -l (and --no-as-needed) so that the dependency is recorded, and has
+# no other dependency (-nostdlib). The import libraries and the ELF link-time
+# search folder are scratch files. Programs are never run.
+mkdir -p "$here/dep" "$scratch/elf" "$scratch/pe"
+elf_flags="-Os -s -nostdlib -Wl,-z,noseparate-code -Wl,-z,max-page-size=16 -Wl,-z,common-page-size=16 -Wl,--hash-style=gnu -Wl,--build-id=none -Wl,-z,norelro -Wl,--no-eh-frame-hdr -fno-asynchronous-unwind-tables -fno-unwind-tables"
+(
+    cd "$scratch/elf"
+    gcc $elf_flags -shared -fPIC -Wl,-soname,libbaz.so -o libbaz.so "$src/dep/libbaz.c"
+    gcc $elf_flags -shared -fPIC -Wl,-soname,libbar.so -o libbar.so "$src/dep/libbar.c" \
+        -L. -Wl,--no-as-needed -lbaz
+    gcc $elf_flags -shared -fPIC -Wl,-soname,libfoo.so -o libfoo.so "$src/dep/libfoo.c" \
+        -L. -Wl,--no-as-needed -lbar
+    for app in appA appB; do
+        gcc $elf_flags -o "$app" "$src/dep/$app.c" -L. -Wl,--no-as-needed -lfoo \
+            -Wl,-rpath-link,. -Wl,-e,_start
+    done
+)
+cp "$scratch/elf/libbaz.so" "$scratch/elf/libbar.so" "$scratch/elf/libfoo.so" \
+    "$scratch/elf/appA" "$scratch/elf/appB" "$here/dep/"
+pe_flags="-Os -s -nostdlib -fno-asynchronous-unwind-tables -fno-unwind-tables -Wl,--gc-sections,--file-alignment,512,--section-alignment,512,--no-insert-timestamp"
+(
+    cd "$scratch/pe"
+    x86_64-w64-mingw32-gcc $pe_flags -shared -Wl,-e,0 -o libbaz.dll "$src/dep/libbaz.c" \
+        -Wl,--out-implib,libbaz.dll.a
+    x86_64-w64-mingw32-gcc $pe_flags -shared -Wl,-e,0 -o libbar.dll "$src/dep/libbar.c" \
+        -L. -lbaz -Wl,--out-implib,libbar.dll.a
+    x86_64-w64-mingw32-gcc $pe_flags -shared -Wl,-e,0 -o libfoo.dll "$src/dep/libfoo.c" \
+        -L. -lbar -Wl,--out-implib,libfoo.dll.a
+    for app in appA appB; do
+        x86_64-w64-mingw32-gcc $pe_flags -Wl,-e,_start -o "$app.exe" "$src/dep/$app.c" -L. -lfoo
+    done
+)
+cp "$scratch/pe/libbaz.dll" "$scratch/pe/libbar.dll" "$scratch/pe/libfoo.dll" \
+    "$scratch/pe/appA.exe" "$scratch/pe/appB.exe" "$here/dep/"
+
 # Hashes of every sample, in the order of the contract.
-(cd "$here" && sha256sum $samples pe-reference-digests.txt >SHA256SUMS)
+(cd "$here" && sha256sum $samples $dep_samples pe-reference-digests.txt >SHA256SUMS)
 
 echo "regenerate.sh: rebuilt the samples and rewrote SHA256SUMS."
 echo "Update PROVENANCE.md (tool versions, commands, sizes) and run regenerate.sh --verify."

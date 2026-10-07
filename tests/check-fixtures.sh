@@ -11,7 +11,7 @@
 here=$(cd "$(dirname "$0")" && pwd)
 dir=${1:-$here/fixtures}
 root=$(cd "$dir/../.." && pwd)
-budget=102400
+budget=131072
 fail=0
 
 bad() { # sample rule message
@@ -20,6 +20,8 @@ bad() { # sample rule message
 }
 
 samples="tiny.exe test.dll tiny.msi tiny-macho-x86_64 tiny-macho-arm64 tiny-macho-universal plain.txt"
+samples="$samples dep/libbaz.so dep/libbar.so dep/libfoo.so dep/appA dep/appB"
+samples="$samples dep/libbaz.dll dep/libbar.dll dep/libfoo.dll dep/appA.exe dep/appB.exe"
 
 # Rule 1: hashes, and no unlisted files.
 sums=$dir/SHA256SUMS
@@ -39,11 +41,11 @@ else
         grep -q "^[0-9a-f]*  $s\$" "$sums" || bad "$s" 1 "not listed in SHA256SUMS"
     done
 fi
-for f in "$dir"/* "$dir"/.[!.]*; do
+for f in "$dir"/* "$dir"/.[!.]* "$dir"/dep/*; do
     [ -e "$f" ] || continue
-    n=$(basename "$f")
+    n=${f#"$dir"/}
     case $n in
-        SHA256SUMS|PROVENANCE.md|regenerate.sh|src) continue ;;
+        SHA256SUMS|PROVENANCE.md|regenerate.sh|src|dep) continue ;;
     esac
     if [ ! -f "$sums" ] || ! grep -q "^[0-9a-f]*  $n\$" "$sums"; then
         bad "$n" 1 "file is not listed in SHA256SUMS"
@@ -86,7 +88,7 @@ for s in $samples; do
     f=$dir/$s
     [ -f "$f" ] || continue
     case $s in
-        tiny.exe|test.dll)
+        tiny.exe|test.dll|dep/*.dll|dep/*.exe)
             if [ "$(hex "$f" 0 2)" != 4d5a ]; then
                 bad "$s" 4 "does not begin with MZ"
                 continue
@@ -94,6 +96,9 @@ for s in $samples; do
             off=$(od -An -tu4 -j 60 -N 4 "$f" | tr -d ' \n')
             [ -n "$off" ] && [ "$(hex "$f" "$off" 4)" = 50450000 ] ||
                 bad "$s" 4 "no PE\\0\\0 signature at the offset in the header"
+            ;;
+        dep/*.so|dep/appA|dep/appB)
+            [ "$(hex "$f" 0 4)" = 7f454c46 ] || bad "$s" 4 "does not begin with the ELF magic"
             ;;
         tiny.msi)
             [ "$(hex "$f" 0 8)" = d0cf11e0a1b11ae1 ] || bad "$s" 4 "does not begin with the Compound File signature"

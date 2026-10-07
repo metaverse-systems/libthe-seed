@@ -21,6 +21,10 @@ using seed::internal::ThrowMalformed;
 constexpr const char *kFormat = "Mach-O";
 
 constexpr std::uint32_t LC_LOAD_DYLIB = 0x0C;
+constexpr std::uint32_t LC_LOAD_WEAK_DYLIB = 0x80000018;
+constexpr std::uint32_t LC_REEXPORT_DYLIB = 0x8000001F;
+constexpr std::uint32_t LC_LAZY_LOAD_DYLIB = 0x20;
+constexpr std::uint32_t LC_LOAD_UPWARD_DYLIB = 0x80000023;
 constexpr std::uint64_t kDylibCommandSize = 24;
 constexpr std::uint64_t kFatArchEntrySize = 20;
 
@@ -38,6 +42,26 @@ std::uint32_t ReadMagic(const std::vector<std::uint8_t> &bytes)
 bool IsBigEndianMachO(std::uint32_t magic)
 {
     return magic == MH_MAGIC || magic == MH_MAGIC_64 || magic == FAT_MAGIC;
+}
+
+// The name of a command that refers to another library, or null.
+const char *ReferenceCommandName(std::uint32_t cmd)
+{
+    switch(cmd)
+    {
+    case LC_LOAD_DYLIB:
+        return "LC_LOAD_DYLIB";
+    case LC_LOAD_WEAK_DYLIB:
+        return "LC_LOAD_WEAK_DYLIB";
+    case LC_REEXPORT_DYLIB:
+        return "LC_REEXPORT_DYLIB";
+    case LC_LAZY_LOAD_DYLIB:
+        return "LC_LAZY_LOAD_DYLIB";
+    case LC_LOAD_UPWARD_DYLIB:
+        return "LC_LOAD_UPWARD_DYLIB";
+    default:
+        return nullptr;
+    }
 }
 
 ByteOrder OrderFor(bool big_endian)
@@ -187,73 +211,115 @@ std::vector<std::string> MachOParser::ListDependencies(const std::string &file_p
             ThrowMalformed(kFormat, "File too small to be a Mach-O binary");
         }
 
-        const auto magic = ReadMagic(bytes);
-        const ByteOrder order = OrderFor(IsBigEndianMachO(magic));
-        std::uint64_t header_size = 0;
-
-        switch(magic)
-        {
-        case MH_MAGIC:
-        case MH_CIGAM:
-            header_size = sizeof(MachHeader32);
-            break;
-        case MH_MAGIC_64:
-        case MH_CIGAM_64:
-            header_size = sizeof(MachHeader64);
-            break;
-        default:
-            ThrowMalformed(kFormat, "Not a single-arch Mach-O binary");
-        }
-
-        const ByteSpan file(bytes, kFormat);
-        (void)file.Sub(0, header_size, "Mach-O header");
-        const auto ncmds = file.Read<std::uint32_t>(16, order, "load command count");
+        const auto outer_magic = ReadMagic(bytes);
         std::vector<std::string> deps;
-        std::uint64_t cmd_offset = header_size;
 
-        for(std::uint32_t i = 0; i < ncmds; ++i)
-        {
-            // A command header that does not fit in the file ends the walk.
-            if(!RangeFits(cmd_offset, sizeof(LoadCommand), file.Size()))
+        // Appends the references of one single-arch image, keeping the first
+        // occurrence of each name.
+        const auto list_image = [&](const ByteSpan &file) {
+            std::uint32_t magic = 0;
+            if(file.Size() >= 4)
             {
+                magic = file.Read<std::uint32_t>(0, ByteOrder::Little, "Mach-O magic");
+            }
+            const ByteOrder order = OrderFor(IsBigEndianMachO(magic));
+            std::uint64_t header_size = 0;
+
+            switch(magic)
+            {
+            case MH_MAGIC:
+            case MH_CIGAM:
+                header_size = sizeof(MachHeader32);
                 break;
+            case MH_MAGIC_64:
+            case MH_CIGAM_64:
+                header_size = sizeof(MachHeader64);
+                break;
+            default:
+                ThrowMalformed(kFormat, "Not a single-arch Mach-O binary");
             }
 
-            const auto cmd = file.Read<std::uint32_t>(cmd_offset, order, "load command");
-            const auto cmdsize = file.Read<std::uint32_t>(cmd_offset + 4, order, "load command size");
-            const std::string index = std::to_string(i);
+            (void)file.Sub(0, header_size, "Mach-O header");
+            const auto ncmds = file.Read<std::uint32_t>(16, order, "load command count");
+            std::uint64_t cmd_offset = header_size;
 
-            if(cmdsize < sizeof(LoadCommand))
+            for(std::uint32_t i = 0; i < ncmds; ++i)
             {
-                ThrowMalformed(kFormat, "load command " + index + " size " + std::to_string(cmdsize) +
-                                            " is smaller than 8");
-            }
-            if(cmdsize % 4 != 0)
-            {
-                ThrowMalformed(kFormat, "load command " + index + " size " + std::to_string(cmdsize) +
-                                            " is not a multiple of 4");
-            }
-
-            if(cmd == LC_LOAD_DYLIB)
-            {
-                const std::string name = "LC_LOAD_DYLIB command " + index;
-                if(cmdsize < kDylibCommandSize)
+                // A command header that does not fit in the file ends the walk.
+                if(!RangeFits(cmd_offset, sizeof(LoadCommand), file.Size()))
                 {
-                    ThrowMalformed(kFormat, name + " size " + std::to_string(cmdsize) +
-                                                " is smaller than " + std::to_string(kDylibCommandSize));
+                    break;
                 }
-                const ByteSpan command = file.Sub(cmd_offset, cmdsize, name);
-                const auto name_offset = command.Read<std::uint32_t>(8, order, "dylib name offset");
-                if(name_offset >= cmdsize)
-                {
-                    ThrowMalformed(kFormat, name + " has its name at offset " + std::to_string(name_offset) +
-                                                ", outside the command of " + std::to_string(cmdsize) +
-                                                " bytes");
-                }
-                deps.push_back(command.CString(name_offset, cmdsize, "LC_LOAD_DYLIB name"));
-            }
 
-            cmd_offset += cmdsize;
+                const auto cmd = file.Read<std::uint32_t>(cmd_offset, order, "load command");
+                const auto cmdsize = file.Read<std::uint32_t>(cmd_offset + 4, order, "load command size");
+                const std::string index = std::to_string(i);
+
+                if(cmdsize < sizeof(LoadCommand))
+                {
+                    ThrowMalformed(kFormat, "load command " + index + " size " + std::to_string(cmdsize) +
+                                                " is smaller than 8");
+                }
+                if(cmdsize % 4 != 0)
+                {
+                    ThrowMalformed(kFormat, "load command " + index + " size " + std::to_string(cmdsize) +
+                                                " is not a multiple of 4");
+                }
+
+                const char *command_name = ReferenceCommandName(cmd);
+                if(command_name != nullptr)
+                {
+                    const std::string name = std::string(command_name) + " command " + index;
+                    if(cmdsize < kDylibCommandSize)
+                    {
+                        ThrowMalformed(kFormat, name + " size " + std::to_string(cmdsize) +
+                                                    " is smaller than " + std::to_string(kDylibCommandSize));
+                    }
+                    const ByteSpan command = file.Sub(cmd_offset, cmdsize, name);
+                    const auto name_offset = command.Read<std::uint32_t>(8, order, "dylib name offset");
+                    if(name_offset >= cmdsize)
+                    {
+                        ThrowMalformed(kFormat, name + " has its name at offset " + std::to_string(name_offset) +
+                                                    ", outside the command of " + std::to_string(cmdsize) +
+                                                    " bytes");
+                    }
+                    std::string library = command.CString(name_offset, cmdsize, name + " name");
+                    if(std::find(deps.begin(), deps.end(), library) == deps.end())
+                    {
+                        deps.push_back(std::move(library));
+                    }
+                }
+
+                cmd_offset += cmdsize;
+            }
+        };
+
+        if(outer_magic == FAT_MAGIC || outer_magic == FAT_CIGAM)
+        {
+            // GetArchSlices checks the slice table and that every slice lies
+            // inside the file and apart from the others.
+            const ByteSpan whole(bytes, kFormat);
+            // A slice table that does not fit in the file is reported as it
+            // always was for this call: the file is not taken as a fat file.
+            // (The genuine universal sample lands here until the byte order is
+            // corrected.)
+            if(bytes.size() >= sizeof(FatHeader))
+            {
+                const std::uint64_t count = whole.Read<std::uint32_t>(
+                    4, OrderFor(outer_magic == FAT_MAGIC), "fat_arch count");
+                if(sizeof(FatHeader) + count * kFatArchEntrySize > whole.Size())
+                {
+                    ThrowMalformed(kFormat, "Not a single-arch Mach-O binary");
+                }
+            }
+            for(const ArchSlice &slice : MachOParser::GetArchSlices(file_path))
+            {
+                list_image(whole.Sub(slice.offset, slice.size, "fat slice"));
+            }
+        }
+        else
+        {
+            list_image(ByteSpan(bytes, kFormat));
         }
 
         return deps;

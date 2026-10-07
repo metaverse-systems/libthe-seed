@@ -116,4 +116,7 @@ class ElfParser
 {
   public:
     static std::vector<std::string> ListDependencies(const std::string &file_path);
+
+    // The same listing for a file already held in memory.
+    static std::vector<std::string> ListDependenciesFromBytes(const std::vector<std::uint8_t> &bytes);
 };

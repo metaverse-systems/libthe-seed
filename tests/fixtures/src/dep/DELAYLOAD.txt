@@ -1,0 +1,12 @@
+Windows delay-load samples
+==========================
+
+No sample for delay-load imports is built here. The mingw-w64 linker has no
+option that writes a delay-load import table (data directory 13); the table
+only comes from the Microsoft linker's /DELAYLOAD option or from a separate
+helper library.
+
+Tests that need a program with delay-load imports build the bytes in test code
+(see tests/DepFixtures.hpp): a PE32+ header with an import table naming one
+library and a delay-load table naming another, laid out by hand. Nothing in
+this folder is read for them.
