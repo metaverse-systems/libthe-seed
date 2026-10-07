@@ -7,6 +7,12 @@
 // Reads a whole file. Throws std::runtime_error when it cannot be opened or read.
 std::vector<std::uint8_t> ReadFileBytes(const std::string &file_path);
 
+// Number of calls to ReadFileBytes since the process started or since the last
+// reset. A call that throws is counted too. Tests use it to check how often a
+// file is read; it has no effect on behaviour.
+std::uint64_t ReadFileBytesCallCount();
+void ResetReadFileBytesCallCount();
+
 // Replaces the content of an existing regular file with `bytes`.
 //
 // The new content is written to a working file beside the target, flushed and

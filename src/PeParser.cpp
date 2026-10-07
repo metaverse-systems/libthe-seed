@@ -67,7 +67,11 @@ std::uint64_t RvaToOffset(
 
 std::vector<std::string> PeParser::ListDependencies(const std::string &file_path)
 {
-    const auto bytes = ReadFileBytes(file_path);
+    return PeParser::ListDependenciesFromBytes(ReadFileBytes(file_path));
+}
+
+std::vector<std::string> PeParser::ListDependenciesFromBytes(const std::vector<std::uint8_t> &bytes)
+{
     const ByteSpan file(bytes, kFormat);
     const std::uint64_t file_size = file.Size();
 

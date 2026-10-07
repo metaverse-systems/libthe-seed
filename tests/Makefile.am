@@ -1,4 +1,4 @@
-AM_CPPFLAGS = ${LIBECS_CFLAGS} -I$(top_srcdir)/include -I$(top_srcdir)/src -I$(top_srcdir)/external/Catch2/extras -I$(srcdir) \
+AM_CPPFLAGS = -I$(top_srcdir)/include ${LIBECS_CFLAGS} -I$(top_srcdir)/src -I$(top_srcdir)/external/Catch2/extras -I$(srcdir) \
               -DFIXTURES_DIR=\"$(abs_srcdir)/fixtures\" \
               -DLIBRARY_PATH_UNDER_TEST=\"$(abs_top_builddir)/src/.libs/libthe-seed.so\" \
               -DMODULE_DIR=\"$(abs_builddir)/.libs\"

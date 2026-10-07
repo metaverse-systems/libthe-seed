@@ -144,8 +144,24 @@ std::vector<FileReplaceCall> RecordedFileReplaceCalls()
 
 }
 
+namespace
+{
+std::atomic<std::uint64_t> read_file_bytes_calls{0};
+}
+
+std::uint64_t ReadFileBytesCallCount()
+{
+    return read_file_bytes_calls.load();
+}
+
+void ResetReadFileBytesCallCount()
+{
+    read_file_bytes_calls.store(0);
+}
+
 std::vector<std::uint8_t> ReadFileBytes(const std::string &file_path)
 {
+    ++read_file_bytes_calls;
     std::ifstream input(file_path, std::ios::binary);
     if(!input.is_open())
     {
