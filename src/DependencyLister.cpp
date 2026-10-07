@@ -453,7 +453,8 @@ DependencyResult DependencyLister::ListDependencies(
             {
                 const std::string &key = graph.nodes[id].key;
                 const std::string &reason = graph.nodes[id].reason;
-                report.reason = reason.compare(0, key.size(), key) == 0 ? reason : key + ": " + reason;
+                const std::string prefix = key + ": ";
+                report.reason = reason.compare(0, prefix.size(), prefix) == 0 ? reason : prefix + reason;
             }
             for(const std::uint32_t index : credits[id])
             {

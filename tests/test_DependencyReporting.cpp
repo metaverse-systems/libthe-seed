@@ -569,6 +569,19 @@ TEST_CASE("A delay-loaded library reached from two programs is credited to both"
     CHECK(Slice(result, second) == NameSet{Canon(site.folder / "libbar.dll"), Canon(site.folder / "libbaz.dll"), "ext1.dll"});
 }
 
+TEST_CASE("The delay-load list ends at the end of the directory the header declares", "[DependencyReporting][US3]")
+{
+    dep::Bytes program = dep::PeImporting({}, {"ext1.dll", "ext2.dll"});
+    // Data directory 13 size field: room for the first descriptor only.
+    constexpr std::size_t kDelaySizeField = kDirectoryCountField + 4 + 8 * 13 + 4;
+    program[kDelaySizeField] = 32;
+    program[kDelaySizeField + 1] = 0;
+    program[kDelaySizeField + 2] = 0;
+    program[kDelaySizeField + 3] = 0;
+
+    CHECK(ListedNames(program) == NameSet{"ext1.dll"});
+}
+
 // ---------------------------------------------------------------------------
 // Mac programs are declined, not reported as having no dependencies
 // ---------------------------------------------------------------------------

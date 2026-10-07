@@ -155,6 +155,7 @@ std::vector<std::string> PeParser::ListDependenciesFromBytes(const std::vector<s
     // The delay-load directory (index 13) exists only when the file declares
     // more than 13 directories and the optional header is large enough to hold it.
     std::uint32_t delay_table_rva = 0;
+    std::uint32_t delay_table_size = 0;
     const std::uint32_t directory_count = FromLittleEndian(file.Read<std::uint32_t>(
         optional_header_offset + data_directory_offset - sizeof(std::uint32_t), ByteOrder::Little,
         "NumberOfRvaAndSizes"));
@@ -165,6 +166,7 @@ std::vector<std::string> PeParser::ListDependenciesFromBytes(const std::vector<s
             optional_header_offset + data_directory_offset + (kDelayImportDirectory * sizeof(IMAGE_DATA_DIRECTORY)),
             ByteOrder::Little, "delay-load directory");
         delay_table_rva = FromLittleEndian(delay_directory.VirtualAddress);
+        delay_table_size = FromLittleEndian(delay_directory.Size);
     }
 
     if(import_table_rva == 0 && delay_table_rva == 0)
@@ -228,7 +230,10 @@ std::vector<std::string> PeParser::ListDependenciesFromBytes(const std::vector<s
 
         std::uint64_t delay_offset = RvaToOffset(delay_table_rva, sections, size_of_headers, file_size,
                                                  "delay-load descriptor table");
-        while(true)
+        const std::uint64_t delay_start = delay_offset;
+        // The list ends at an all-zero descriptor or at the end of the
+        // directory as the header declares it (a size of 0 declares nothing).
+        while(delay_table_size == 0 || delay_offset - delay_start < delay_table_size)
         {
             const ByteSpan descriptor = file.Sub(delay_offset, kDelayDescriptorSize, "delay-load descriptor");
             bool all_zero = true;
