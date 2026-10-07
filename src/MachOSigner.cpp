@@ -158,28 +158,13 @@ MachOContainer ParseInput(const std::vector<std::uint8_t> &bytes)
     throw std::runtime_error(path + ": " + text);
 }
 
-std::string ArchName(std::uint32_t cputype)
-{
-    if(cputype == CPU_TYPE_ARM64)
-    {
-        return "arm64";
-    }
-    if(cputype == CPU_TYPE_X86_64)
-    {
-        return "x86_64";
-    }
-    char text[16];
-    std::snprintf(text, sizeof(text), "cpu 0x%X", static_cast<unsigned>(cputype));
-    return text;
-}
-
 // Refuses with the reason; in a universal file the slice is named first.
 [[noreturn]] void RefuseSlice(const std::string &path, bool universal, std::size_t index,
                               std::uint32_t cputype, const std::string &reason)
 {
     if(universal)
     {
-        Refuse(path, "slice " + std::to_string(index) + " (" + ArchName(cputype) + "): " + reason);
+        Refuse(path, "slice " + std::to_string(index) + " (" + seed::internal::ArchName(cputype) + "): " + reason);
     }
     Refuse(path, reason);
 }
@@ -404,7 +389,7 @@ std::vector<std::uint8_t> AssembleUniversal(const std::string &path, const ByteS
         const ContainerEntry &entry = container.entries[i];
         if(entry.align >= 32)
         {
-            Refuse(path, "slice " + std::to_string(i) + " (" + ArchName(entry.cputype) +
+            Refuse(path, "slice " + std::to_string(i) + " (" + seed::internal::ArchName(entry.cputype) +
                              "): alignment 2^" + std::to_string(entry.align) + " is not supported");
         }
         offsets[i] = AlignUp(cursor, std::uint64_t{1} << entry.align);
@@ -412,7 +397,7 @@ std::vector<std::uint8_t> AssembleUniversal(const std::string &path, const ByteS
         old_end = std::max(old_end, entry.offset + entry.size);
         if(!wide && cursor > UINT32_MAX)
         {
-            Refuse(path, "slice " + std::to_string(i) + " (" + ArchName(entry.cputype) + ") would end at offset " +
+            Refuse(path, "slice " + std::to_string(i) + " (" + seed::internal::ArchName(entry.cputype) + ") would end at offset " +
                              std::to_string(cursor) + ", past what a 32-bit universal table can describe");
         }
     }

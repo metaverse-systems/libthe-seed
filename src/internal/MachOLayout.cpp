@@ -3,6 +3,7 @@
 #include "MachODefs.hpp"
 
 #include <algorithm>
+#include <cstdio>
 #include <numeric>
 
 namespace seed::internal
@@ -143,6 +144,21 @@ std::string DeclineText(SliceSupport support)
     return DeclineKind(support) +
            " Mac programs are not supported (supported: 64-bit little-endian arm64 and x86-64, "
            "alone or in a universal file)";
+}
+
+std::string ArchName(std::uint32_t cputype)
+{
+    if(cputype == 0x0100000C)
+    {
+        return "arm64";
+    }
+    if(cputype == 0x01000007)
+    {
+        return "x86_64";
+    }
+    char text[16];
+    std::snprintf(text, sizeof(text), "cpu 0x%X", static_cast<unsigned>(cputype));
+    return text;
 }
 
 SliceLayout ParseMachOSlice(const ByteSpan &file, std::uint64_t base, std::uint64_t size,

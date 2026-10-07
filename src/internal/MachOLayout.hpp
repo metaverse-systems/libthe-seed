@@ -54,6 +54,9 @@ std::string DeclineKind(SliceSupport support);
 // and x86-64, alone or in a universal file)"; callers put the path in front.
 std::string DeclineText(SliceSupport support);
 
+// "arm64", "x86_64", or "cpu 0x%X" of the CPU type for any other.
+std::string ArchName(std::uint32_t cputype);
+
 struct LoadCommandEntry
 {
     std::uint64_t offset; // within the slice

@@ -19,7 +19,19 @@
  * The table of a universal file is big-endian in both forms; the fields of a
  * little-endian program are little-endian. Only 64-bit little-endian programs
  * are interpreted; other programs are recognised and reported as unsupported.
- * Every rejection is a std::runtime_error whose text starts with "Mach-O: ".
+ * Every rejection is a std::runtime_error whose text starts with "Mach-O: ",
+ * except the refusal of an unsupported shape by ListDependencies and by the
+ * MachOSigner operations: it is "<path>: <kind> Mac programs are not supported
+ * (supported: 64-bit little-endian arm64 and x86-64, alone or in a universal
+ * file)", with "slice <i> (<arch>): " before the kind for a slice of a universal
+ * file. <kind> is "big-endian", "32-bit" or "32-bit big-endian".
+ *
+ * Format::MachO32 is a 32-bit program of either byte order and Format::MachO64
+ * a 64-bit one of either byte order. Of these only 64-bit little-endian is
+ * supported; MachO32, and MachO64 in big-endian, are the declined shapes. The
+ * first bytes alone decide, so Format::Fat can also hold declined slices. Signing
+ * a universal file with any declined slice is refused whole, leaving the file
+ * unchanged.
  */
 class MachOParser
 {

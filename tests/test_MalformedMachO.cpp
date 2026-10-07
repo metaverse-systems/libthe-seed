@@ -58,6 +58,7 @@
 //   too small                 a file under 4 bytes given to an operation that needs a program
 //   SuperBlob                 a SuperBlob that its 32-bit size field cannot describe
 
+#include "MachOReference.hpp"
 #include "MalformedInput.hpp"
 #include "DepFixtures.hpp"
 
@@ -66,6 +67,7 @@
 
 #include <algorithm>
 #include <cstdint>
+#include <cstdio>
 #include <filesystem>
 #include <functional>
 #include <limits>
@@ -1430,6 +1432,318 @@ TEST_CASE("edge: Mach-O fat first slice that is not a Mach-O program", "[Malform
     Bytes fat = MakeFat(kGoodSlices);
     fat[4096] = 0;
     RequireAllRejected(fat, {SlicesOp(), ListOp()}, "not a Mach-O");
+}
+
+// ---------------------------------------------------------------------------
+// Older byte orders and 32-bit programs are declined
+//
+// The three shapes below are synthetic: a magic, the CPU fields and zero
+// padding, built by tests/MachOReference.hpp. ld64.lld cannot write big-endian
+// or (usable) 32-bit output, so no genuine sample exists; the files prove only
+// that the first bytes are judged and that nothing past them is read. Each
+// shape is offered alone and as a slice of a universal file that also holds a
+// supported slice. Every public operation must give the one decline message,
+// naming the file (and, in a universal file, the slice), and no file may change.
+// ---------------------------------------------------------------------------
+
+namespace {
+
+namespace mr = machoref;
+
+constexpr const char *kSupportedClause =
+    "Mac programs are not supported (supported: 64-bit little-endian arm64 and x86-64, "
+    "alone or in a universal file)";
+
+struct DeclinedShape
+{
+    std::string name;
+    Bytes bytes;
+    MachOParser::Format format;
+    std::string kind;      // the <kind> of the message
+    std::uint32_t cputype; // as the header (or the table) states it
+};
+
+std::vector<DeclinedShape> DeclinedShapes()
+{
+    return {
+        {"synthetic big-endian 64-bit", mr::BigEndian64(), MachOParser::Format::MachO64, "big-endian", 0x01000012},
+        {"synthetic big-endian 32-bit", mr::BigEndian32(), MachOParser::Format::MachO32, "32-bit big-endian", 18},
+        {"synthetic little-endian 32-bit", mr::Little32(), MachOParser::Format::MachO32, "32-bit", 7},
+    };
+}
+
+std::string DeclineMessage(const std::string &path, const std::string &kind)
+{
+    return path + ": " + kind + " " + kSupportedClause;
+}
+
+// "cpu 0x%X" is how the signer names an architecture it does not know.
+std::string SliceDeclineMessage(const std::string &path, std::size_t index, std::uint32_t cputype,
+                                const std::string &kind)
+{
+    char arch[24];
+    std::snprintf(arch, sizeof(arch), "cpu 0x%X", static_cast<unsigned>(cputype));
+    return path + ": slice " + std::to_string(index) + " (" + arch + "): " + kind + " " + kSupportedClause;
+}
+
+// Returns what a call throws as std::runtime_error, or "<no error>".
+template <typename F>
+std::string ThrownBy(F &&callable)
+{
+    try
+    {
+        callable();
+    }
+    catch(const std::runtime_error &error)
+    {
+        return error.what();
+    }
+    return "<no error>";
+}
+
+// A universal file of one supported slice and one declined shape, in both orders.
+struct MixedFile
+{
+    std::string name;
+    Bytes bytes;
+    std::size_t declined_index;
+};
+
+std::vector<MixedFile> MixedFiles(const DeclinedShape &shape, bool wide)
+{
+    const Bytes supported = Sample("tiny-macho-arm64-adhoc");
+    return {
+        {"supported then declined", mr::Universal({supported, shape.bytes}, wide, 14), 1},
+        {"declined then supported", mr::Universal({shape.bytes, supported}, wide, 14), 0},
+    };
+}
+
+// Prepares for a supported file, so that a declined file offered to
+// CompleteSignature has a signature to be compared with.
+MachOSigner::PreparedSignature PreparedFor(const Bytes &supported_file, seedtest::ScratchDir &scratch)
+{
+    const std::string path = WriteScratch(scratch, "prepared-for.bin", supported_file);
+    return MachOSigner::PrepareSignature(path, "test-identity", kCapacity);
+}
+
+} // namespace
+
+TEST_CASE("declined: the format queries still recognise the file", "[MalformedMachO][declined]")
+{
+    seedtest::ScratchDir scratch("malformed-macho");
+    for(const DeclinedShape &shape : DeclinedShapes())
+    {
+        DYNAMIC_SECTION(shape.name)
+        {
+            const std::string path = WriteScratch(scratch, "input.bin", shape.bytes);
+            CHECK(MachOParser::DetectFormat(path) == shape.format);
+            CHECK(MachOParser::IsMachO(path));
+            CHECK_FALSE(MachOParser::IsFatBinary(path));
+            RequireUnchanged(path, shape.bytes);
+        }
+        for(const bool wide : {false, true})
+        {
+            for(const MixedFile &mixed : MixedFiles(shape, wide))
+            {
+                DYNAMIC_SECTION(shape.name << " in a " << (wide ? "64-bit" : "32-bit") << "-table universal file "
+                                           << mixed.name)
+                {
+                    const std::string path = WriteScratch(scratch, "input.bin", mixed.bytes);
+                    CHECK(MachOParser::DetectFormat(path) == MachOParser::Format::Fat);
+                    CHECK(MachOParser::IsMachO(path));
+                    CHECK(MachOParser::IsFatBinary(path));
+                    RequireUnchanged(path, mixed.bytes);
+                }
+            }
+        }
+    }
+}
+
+TEST_CASE("declined: GetArchSlices reports the shape as unsupported without throwing", "[MalformedMachO][declined]")
+{
+    seedtest::ScratchDir scratch("malformed-macho");
+    for(const DeclinedShape &shape : DeclinedShapes())
+    {
+        DYNAMIC_SECTION(shape.name)
+        {
+            const std::string path = WriteScratch(scratch, "input.bin", shape.bytes);
+            std::vector<MachOParser::ArchSlice> slices;
+            REQUIRE_NOTHROW(slices = MachOParser::GetArchSlices(path));
+            REQUIRE(slices.size() == 1);
+            CHECK_FALSE(slices[0].supported);
+            CHECK(slices[0].unsupported_reason == shape.kind + " " + kSupportedClause);
+            CHECK(slices[0].cpu_type == shape.cputype);
+            CHECK(slices[0].offset == 0);
+            CHECK(slices[0].size == shape.bytes.size());
+            CHECK_FALSE(slices[0].is_signed);
+            RequireUnchanged(path, shape.bytes);
+        }
+        for(const bool wide : {false, true})
+        {
+            for(const MixedFile &mixed : MixedFiles(shape, wide))
+            {
+                DYNAMIC_SECTION(shape.name << " in a " << (wide ? "64-bit" : "32-bit") << "-table universal file "
+                                           << mixed.name)
+                {
+                    const std::string path = WriteScratch(scratch, "input.bin", mixed.bytes);
+                    std::vector<MachOParser::ArchSlice> slices;
+                    REQUIRE_NOTHROW(slices = MachOParser::GetArchSlices(path));
+                    REQUIRE(slices.size() == 2);
+                    const std::size_t good = 1 - mixed.declined_index;
+                    CHECK(slices[good].supported);
+                    CHECK(slices[good].unsupported_reason.empty());
+                    CHECK(slices[good].cpu_type == 0x0100000C);
+                    CHECK(slices[good].is_signed);
+                    CHECK_FALSE(slices[mixed.declined_index].supported);
+                    CHECK(slices[mixed.declined_index].unsupported_reason == shape.kind + " " + kSupportedClause);
+                    CHECK(slices[mixed.declined_index].cpu_type == shape.cputype);
+                    CHECK(slices[mixed.declined_index].size == shape.bytes.size());
+                    CHECK_FALSE(slices[mixed.declined_index].is_signed);
+                    RequireUnchanged(path, mixed.bytes);
+                }
+            }
+        }
+    }
+}
+
+TEST_CASE("declined: every other operation refuses a thin file with the one message", "[MalformedMachO][declined]")
+{
+    seedtest::ScratchDir scratch("malformed-macho");
+    const MachOSigner::PreparedSignature prepared = PreparedFor(Sample("tiny-macho-x86_64"), scratch);
+    for(const DeclinedShape &shape : DeclinedShapes())
+    {
+        const std::string path = WriteScratch(scratch, "input.bin", shape.bytes);
+        const std::string expected = DeclineMessage(path, shape.kind);
+        DYNAMIC_SECTION(shape.name)
+        {
+            SECTION("ListDependencies")
+            {
+                CHECK(ThrownBy([&] { (void)MachOParser::ListDependencies(path); }) == expected);
+            }
+            SECTION("HasEmbeddedSignature")
+            {
+                CHECK(ThrownBy([&] { (void)MachOSigner::HasEmbeddedSignature(path); }) == expected);
+            }
+            SECTION("ExtractSignature")
+            {
+                CHECK(ThrownBy([&] { (void)MachOSigner::ExtractSignature(path); }) == expected);
+            }
+            SECTION("ExtractSignatures")
+            {
+                CHECK(ThrownBy([&] { (void)MachOSigner::ExtractSignatures(path); }) == expected);
+            }
+            SECTION("PrepareSignature")
+            {
+                CHECK(ThrownBy([&] { (void)MachOSigner::PrepareSignature(path, "test-identity", kCapacity); }) ==
+                      expected);
+            }
+            SECTION("CompleteSignature")
+            {
+                CHECK(ThrownBy([&] { MachOSigner::CompleteSignature(path, prepared, {FakeCms()}); }) == expected);
+            }
+            SECTION("StripSignature")
+            {
+                CHECK(ThrownBy([&] { MachOSigner::StripSignature(path); }) == expected);
+            }
+            RequireUnchanged(path, shape.bytes);
+        }
+    }
+}
+
+TEST_CASE("declined: every other operation refuses a universal file whole naming the slice",
+          "[MalformedMachO][declined]")
+{
+    seedtest::ScratchDir scratch("malformed-macho");
+    const Bytes supported = Sample("tiny-macho-arm64-adhoc");
+    const MachOSigner::PreparedSignature prepared =
+        PreparedFor(mr::Universal({supported, supported}, false, 14), scratch);
+    for(const DeclinedShape &shape : DeclinedShapes())
+    {
+        for(const bool wide : {false, true})
+        {
+            for(const MixedFile &mixed : MixedFiles(shape, wide))
+            {
+                const std::string path = WriteScratch(scratch, "input.bin", mixed.bytes);
+                const std::string expected =
+                    SliceDeclineMessage(path, mixed.declined_index, shape.cputype, shape.kind);
+                DYNAMIC_SECTION(shape.name << " in a " << (wide ? "64-bit" : "32-bit") << "-table universal file "
+                                           << mixed.name)
+                {
+                    SECTION("ListDependencies")
+                    {
+                        CHECK(ThrownBy([&] { (void)MachOParser::ListDependencies(path); }) == expected);
+                    }
+                    SECTION("HasEmbeddedSignature")
+                    {
+                        CHECK(ThrownBy([&] { (void)MachOSigner::HasEmbeddedSignature(path); }) == expected);
+                    }
+                    SECTION("ExtractSignatures")
+                    {
+                        CHECK(ThrownBy([&] { (void)MachOSigner::ExtractSignatures(path); }) == expected);
+                    }
+                    SECTION("PrepareSignature")
+                    {
+                        CHECK(ThrownBy([&] {
+                                  (void)MachOSigner::PrepareSignature(path, "test-identity", kCapacity);
+                              }) == expected);
+                    }
+                    SECTION("CompleteSignature")
+                    {
+                        CHECK(ThrownBy([&] {
+                                  MachOSigner::CompleteSignature(path, prepared, {FakeCms(), FakeCms()});
+                              }) == expected);
+                    }
+                    SECTION("StripSignature")
+                    {
+                        CHECK(ThrownBy([&] { MachOSigner::StripSignature(path); }) == expected);
+                    }
+                    RequireUnchanged(path, mixed.bytes);
+                }
+            }
+        }
+    }
+}
+
+TEST_CASE("declined: ExtractSignature of a universal file answers for its first supported slice",
+          "[MalformedMachO][declined]")
+{
+    seedtest::ScratchDir scratch("malformed-macho");
+    const Bytes supported = Sample("tiny-macho-arm64-adhoc");
+    const std::string thin = WriteScratch(scratch, "thin.bin", supported);
+    const auto expected = MachOSigner::ExtractSignature(thin);
+    REQUIRE(expected.has_value());
+    for(const DeclinedShape &shape : DeclinedShapes())
+    {
+        for(const MixedFile &mixed : MixedFiles(shape, false))
+        {
+            DYNAMIC_SECTION(shape.name << " " << mixed.name)
+            {
+                const std::string path = WriteScratch(scratch, "input.bin", mixed.bytes);
+                std::optional<Bytes> got;
+                REQUIRE_NOTHROW(got = MachOSigner::ExtractSignature(path));
+                CHECK(got == expected);
+                RequireUnchanged(path, mixed.bytes);
+            }
+        }
+    }
+}
+
+TEST_CASE("declined: a universal file of only declined slices is refused at its first slice",
+          "[MalformedMachO][declined]")
+{
+    seedtest::ScratchDir scratch("malformed-macho");
+    const Bytes bytes = mr::Universal({mr::BigEndian32(), mr::Little32()}, false, 14);
+    const std::string path = WriteScratch(scratch, "input.bin", bytes);
+    const std::string expected = SliceDeclineMessage(path, 0, 18, "32-bit big-endian");
+    const auto slices = MachOParser::GetArchSlices(path);
+    REQUIRE(slices.size() == 2);
+    CHECK_FALSE(slices[0].supported);
+    CHECK_FALSE(slices[1].supported);
+    CHECK(ThrownBy([&] { (void)MachOParser::ListDependencies(path); }) == expected);
+    CHECK(ThrownBy([&] { (void)MachOSigner::ExtractSignature(path); }) == expected);
+    CHECK(ThrownBy([&] { (void)MachOSigner::PrepareSignature(path, "test-identity", kCapacity); }) == expected);
+    CHECK(ThrownBy([&] { MachOSigner::StripSignature(path); }) == expected);
+    RequireUnchanged(path, bytes);
 }
 
 // ---------------------------------------------------------------------------

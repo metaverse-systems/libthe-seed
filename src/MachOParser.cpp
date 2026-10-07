@@ -108,7 +108,12 @@ std::vector<std::string> MachOParser::ListDependencies(const std::string &file_p
             const auto &slice = container.entries[i].slice;
             if(slice.support != SliceSupport::Supported)
             {
-                ThrowMalformed(kFormat, "slice " + std::to_string(i) + ": " + DeclineText(slice.support));
+                const auto &entry = container.entries[i];
+                const std::string where = container.form == seed::internal::ContainerForm::Thin
+                                              ? std::string()
+                                              : "slice " + std::to_string(i) + " (" +
+                                                    seed::internal::ArchName(entry.cputype) + "): ";
+                throw std::runtime_error(file_path + ": " + where + DeclineText(slice.support));
             }
             for(const std::string &library : slice.dylibs)
             {
