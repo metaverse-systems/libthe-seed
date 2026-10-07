@@ -11,6 +11,11 @@
 //   - hashing first and embedding afterwards (the order the library used to
 //     offer) gives a signature the checker rejects, hashing the finished layout
 //     gives one it accepts;
+//   - signing again: a signed program (signed here or by another tool) keeps one
+//     signature command, updated in place, with no entry of size zero and no
+//     leftover of the old signature; a signature followed by other data is
+//     refused; StripSignature leaves an unsigned program and signing after a
+//     strip gives the file signed once;
 //   - universal files: each slice is signed as its own program, the table is
 //     rewritten for the new lengths with alignment and order kept, and a refusal
 //     in any slice refuses the whole file.
@@ -561,10 +566,10 @@ TEST_CASE("MachOSigner a stale PreparedSignature is refused", "[MachOSigner]")
     {
         MachOSigner::CompleteSignature(path, prepared, cms);
         const Bytes signed_once = ms::ReadAll(path);
-        // The same value cannot be used a second time: the program is no
-        // longer the one that was prepared.
-        const std::string message = ms::ErrorOf([&] { MachOSigner::CompleteSignature(path, prepared, cms); });
-        CHECK(NamesTheFile(message, path));
+        // A signed program is signed again in place, and the same inputs give
+        // the same CodeDirectory, so the prepared value still describes the
+        // result: completing it again changes nothing.
+        MachOSigner::CompleteSignature(path, prepared, cms);
         CHECK(ms::ReadAll(path) == signed_once);
     }
 }
@@ -1015,4 +1020,617 @@ TEST_CASE("MachOSigner the lld signatures are read back by ExtractSignature", "[
         CHECK(length == blob->size());
         CHECK(MachOSigner::ExtractCodeDirectoryFromSuperBlob(*blob).has_value());
     }
+}
+
+// ---------------------------------------------------------------------------
+// Signing again (US3): a signed program, whoever signed it, gets its single
+// signature command updated in place; a strip operation removes the signature.
+// ---------------------------------------------------------------------------
+
+namespace {
+
+// cmdsize of every load command of a slice, in file order.
+std::vector<std::uint64_t> CommandSizes(const Bytes &file, const mr::SliceReport &s)
+{
+    std::vector<std::uint64_t> sizes;
+    std::uint64_t at = s.offset + 32;
+    for(std::uint64_t i = 0; i < s.ncmds; ++i)
+    {
+        std::uint64_t size = 0;
+        if(!mr::ReadLE(file, at + 4, 4, size))
+        {
+            break;
+        }
+        sizes.push_back(size);
+        at += size == 0 ? 8 : size;
+    }
+    return sizes;
+}
+
+void ExpectOneCommandNoZeroEntry(const Bytes &file, const mr::FileReport &report)
+{
+    for(std::size_t i = 0; i < report.slices.size(); ++i)
+    {
+        INFO("slice " << i);
+        const mr::SliceReport &s = report.slices[i];
+        const std::vector<std::uint64_t> sizes = CommandSizes(file, s);
+        CHECK(s.signature_commands == 1);
+        CHECK(sizes.size() == s.ncmds);
+        std::uint64_t sum = 0;
+        for(const std::uint64_t size : sizes)
+        {
+            CHECK(size >= 8);
+            sum += size;
+        }
+        CHECK(sum == s.sizeofcmds);
+    }
+}
+
+// Absolute file offset of the vmsize field (and, 16 bytes later, filesize) of
+// the __LINKEDIT segment command of a slice; 0 when there is none.
+std::uint64_t LinkeditSizeFields(const Bytes &file, const mr::SliceReport &s)
+{
+    std::uint64_t at = s.offset + 32;
+    for(std::uint64_t i = 0; i < s.ncmds; ++i)
+    {
+        std::uint64_t cmd = 0, size = 0;
+        if(!mr::ReadLE(file, at, 4, cmd) || !mr::ReadLE(file, at + 4, 4, size) || size < 8)
+        {
+            return 0;
+        }
+        if(cmd == 0x19 && mr::Fits(file, at + 8, 16) &&
+           std::string(reinterpret_cast<const char *>(&file[at + 8]), 10) == "__LINKEDIT")
+        {
+            return at + 32;
+        }
+        at += size;
+    }
+    return 0;
+}
+
+// True when a and b hold the same bytes over `length` bytes (at `a_at` and
+// `b_at`) apart from the two 8-byte __LINKEDIT size fields at `fields_a` and
+// `fields_b` (vmsize at +0, filesize at +16).
+bool SameExceptLinkeditSizes(const Bytes &a, std::uint64_t a_at, std::uint64_t fields_a, const Bytes &b,
+                             std::uint64_t b_at, std::uint64_t fields_b, std::uint64_t length)
+{
+    if(!mr::Fits(a, a_at, length) || !mr::Fits(b, b_at, length))
+    {
+        return false;
+    }
+    for(std::uint64_t i = 0; i < length; ++i)
+    {
+        const std::uint64_t pa = a_at + i;
+        const std::uint64_t pb = b_at + i;
+        const bool skip_a = fields_a != 0 && ((pa >= fields_a && pa < fields_a + 8) ||
+                                              (pa >= fields_a + 16 && pa < fields_a + 24));
+        const bool skip_b = fields_b != 0 && ((pb >= fields_b && pb < fields_b + 8) ||
+                                              (pb >= fields_b + 16 && pb < fields_b + 24));
+        if(skip_a != skip_b)
+        {
+            return false;
+        }
+        if(!skip_a && a[pa] != b[pb])
+        {
+            return false;
+        }
+    }
+    return true;
+}
+
+// A copy of the file with the size field of the signature command of a slice
+// set to zero. That field describes the signature, which is the one thing in
+// the table that changes when a program is signed again.
+Bytes WithoutSignatureSize(Bytes file, const mr::SliceReport &s)
+{
+    std::uint64_t at = s.offset + 32;
+    for(std::uint64_t i = 0; i < s.ncmds; ++i)
+    {
+        std::uint64_t cmd = 0, size = 0;
+        if(!mr::ReadLE(file, at, 4, cmd) || !mr::ReadLE(file, at + 4, 4, size) || size < 8)
+        {
+            break;
+        }
+        if(cmd == 0x1D && mr::Fits(file, at + 12, 4))
+        {
+            std::fill(file.begin() + static_cast<std::ptrdiff_t>(at + 12),
+                      file.begin() + static_cast<std::ptrdiff_t>(at + 16), static_cast<std::uint8_t>(0));
+        }
+        at += size;
+    }
+    return file;
+}
+
+// What a program signed by another tool must look like after it was signed
+// here: same place, same command, new data, nothing else changed.
+void ExpectResigned(const Bytes &old, const Bytes &finished, const MachOSigner::PreparedSignature &prepared,
+                    const std::vector<Bytes> &cms)
+{
+    const mr::FileReport before = mr::CheckFile(old);
+    const mr::FileReport after = mr::CheckFile(finished);
+    INFO("problems: " << ms::JoinProblems(after));
+    CHECK(after.Ok());
+    CHECK(after.form == before.form);
+    REQUIRE(after.slices.size() == before.slices.size());
+    REQUIRE(after.slices.size() == prepared.slices.size());
+    REQUIRE(cms.size() == prepared.slices.size());
+    ExpectOneCommandNoZeroEntry(finished, after);
+    for(std::size_t i = 0; i < after.slices.size(); ++i)
+    {
+        INFO("slice " << i);
+        const mr::SliceReport &o = before.slices[i];
+        const mr::SliceReport &s = after.slices[i];
+        const MachOSigner::PreparedSlice &p = prepared.slices[i];
+        REQUIRE(o.has_signature);
+        const Bytes blob = MachOSigner::BuildSuperBlob(p.code_directory, cms[i]);
+        const Bytes reserved_blob = MachOSigner::BuildSuperBlob(p.code_directory, Bytes(prepared.cms_capacity));
+
+        CHECK(s.cputype == o.cputype);
+        CHECK(s.ncmds == o.ncmds);
+        CHECK(s.sizeofcmds == o.sizeofcmds);
+        CHECK(s.walked_commands == s.ncmds);
+        CHECK(s.has_signature);
+        CHECK(s.dataoff == o.dataoff); // updated in place
+        CHECK(s.datasize == ms::Align16(reserved_blob.size()));
+        CHECK(s.dataoff + s.datasize == s.size);
+        CHECK(s.linkedit_fileoff == o.linkedit_fileoff);
+        CHECK(s.linkedit_fileoff + s.linkedit_filesize == s.size);
+        CHECK(s.linkedit_vmsize == ms::AlignUp(s.linkedit_filesize, ms::LinkeditPage(s.cputype)));
+        CHECK(s.code_limit == s.dataoff);
+        CHECK(s.n_code_slots == (s.code_limit + 4095) / 4096);
+        REQUIRE(s.page_ok.size() == s.n_code_slots);
+        for(std::size_t page = 0; page < s.page_ok.size(); ++page)
+        {
+            INFO("page " << page);
+            CHECK(s.page_ok[page]);
+        }
+        CHECK(s.requirements_ok);
+        CHECK(s.identifier == prepared.identity);
+        CHECK(s.identifier != o.identifier);
+        CHECK(s.superblob_length == blob.size());
+        // Everything before the signature is the old content, apart from the
+        // two sizes of the link-edit segment and the size in the signature command.
+        CHECK(SameExceptLinkeditSizes(WithoutSignatureSize(old, o), o.offset, LinkeditSizeFields(old, o),
+                                      WithoutSignatureSize(finished, s), s.offset,
+                                      LinkeditSizeFields(finished, s), o.dataoff));
+        // The signature data is ours, byte for byte, and zero after it.
+        REQUIRE(mr::Fits(finished, s.offset + s.dataoff, s.datasize));
+        const Bytes written(finished.begin() + static_cast<std::ptrdiff_t>(s.offset + s.dataoff),
+                            finished.begin() + static_cast<std::ptrdiff_t>(s.offset + s.dataoff + blob.size()));
+        CHECK(written == blob);
+        for(std::uint64_t k = blob.size(); k < s.datasize; ++k)
+        {
+            REQUIRE(finished[s.offset + s.dataoff + k] == 0);
+        }
+        // Nothing of the other tool's signature is left.
+        const std::string old_identifier = o.identifier;
+        const auto begin = finished.begin() + static_cast<std::ptrdiff_t>(s.offset + s.dataoff);
+        const auto end = finished.begin() + static_cast<std::ptrdiff_t>(s.offset + s.size);
+        CHECK(std::search(begin, end, old_identifier.begin(), old_identifier.end()) == end);
+        const auto cd = MachOSigner::ExtractCodeDirectoryFromSuperBlob(written);
+        REQUIRE(cd.has_value());
+        CHECK(*cd == p.code_directory);
+    }
+    if(after.form == 0)
+    {
+        CHECK(finished.size() == old.size() - before.slices[0].datasize + after.slices[0].datasize);
+        CHECK(finished.size() == after.slices[0].size);
+    }
+}
+
+// The slice of a program as it must be after a strip: the signature command
+// removed from the table (later commands move up, the freed bytes are zero),
+// ncmds and sizeofcmds smaller, the data cut off.
+Bytes ExpectedStrippedSlice(const Bytes &signed_file, const mr::SliceReport &o)
+{
+    Bytes slice(signed_file.begin() + static_cast<std::ptrdiff_t>(o.offset),
+                signed_file.begin() + static_cast<std::ptrdiff_t>(o.offset + o.dataoff));
+    std::uint64_t at = 32;
+    std::uint64_t found = 0;
+    for(std::uint64_t i = 0; i < o.ncmds; ++i)
+    {
+        std::uint64_t cmd = 0, size = 0;
+        mr::ReadLE(slice, at, 4, cmd);
+        mr::ReadLE(slice, at + 4, 4, size);
+        if(cmd == 0x1D)
+        {
+            found = at;
+        }
+        at += size;
+    }
+    REQUIRE(found != 0);
+    const std::uint64_t table_end = 32 + o.sizeofcmds;
+    std::copy(slice.begin() + static_cast<std::ptrdiff_t>(found + 16),
+              slice.begin() + static_cast<std::ptrdiff_t>(table_end),
+              slice.begin() + static_cast<std::ptrdiff_t>(found));
+    std::fill(slice.begin() + static_cast<std::ptrdiff_t>(table_end - 16),
+              slice.begin() + static_cast<std::ptrdiff_t>(table_end), static_cast<std::uint8_t>(0));
+    PutLE(slice, 16, o.ncmds - 1, 4);
+    PutLE(slice, 20, o.sizeofcmds - 16, 4);
+    return slice;
+}
+
+// A signed program and its strip: well formed, unsigned, the signature gone
+// and nothing else touched.
+void ExpectStripped(const Bytes &signed_file, const Bytes &stripped)
+{
+    const mr::FileReport before = mr::CheckFile(signed_file);
+    const mr::FileReport after = mr::CheckFile(stripped);
+    INFO("problems: " << ms::JoinProblems(after));
+    CHECK(after.Ok());
+    CHECK(after.form == before.form);
+    REQUIRE(after.slices.size() == before.slices.size());
+    for(std::size_t i = 0; i < after.slices.size(); ++i)
+    {
+        INFO("slice " << i);
+        const mr::SliceReport &o = before.slices[i];
+        const mr::SliceReport &s = after.slices[i];
+        CHECK_FALSE(s.has_signature);
+        CHECK(s.signature_commands == 0);
+        CHECK(s.ncmds == o.ncmds - 1);
+        CHECK(s.sizeofcmds == o.sizeofcmds - 16);
+        CHECK(s.walked_commands == s.ncmds);
+        CHECK(s.size == o.dataoff); // cut where the data began
+        CHECK(s.linkedit_fileoff == o.linkedit_fileoff);
+        CHECK(s.linkedit_fileoff + s.linkedit_filesize == s.size);
+        CHECK(s.linkedit_vmsize >= s.linkedit_filesize);
+        const Bytes expected = ExpectedStrippedSlice(signed_file, o);
+        mr::SliceReport at_zero = s;
+        at_zero.offset = 0;
+        CHECK(SameExceptLinkeditSizes(expected, 0, LinkeditSizeFields(expected, at_zero), stripped, s.offset,
+                                      LinkeditSizeFields(stripped, s), s.size));
+    }
+}
+
+struct Round
+{
+    std::uint32_t capacity;
+    const char *identity;
+};
+
+} // namespace
+
+TEST_CASE("MachOSigner signing ten times with changing capacities keeps one command and no empty entry",
+          "[MachOSigner]")
+{
+    const Round rounds[] = {{64, "test-identity"}, {200, "test-identity"}, {200, "other.identity"},
+                            {8, "test-identity"},  {64, "a"},              {64, "a"},
+                            {0, "test-identity"},  {1000, "test-identity"}, {33, "other.identity"},
+                            {64, "test-identity"}};
+    for(const std::string &name : ms::SignableSamples())
+    {
+        INFO(name);
+        seedtest::ScratchDir scratch;
+        const std::string path = ms::CopyFixture(scratch, name);
+        const Bytes original = ms::ReadAll(path);
+        std::vector<std::uint64_t> first_ncmds;
+        std::vector<std::uint64_t> previous_slice_sizes;
+        std::size_t previous_length = 0;
+        std::uint32_t previous_capacity = 0;
+        int number = 0;
+        for(const Round &round : rounds)
+        {
+            INFO("signing " << number << " capacity " << round.capacity << " identity " << round.identity);
+            const Bytes before_prepare = ms::ReadAll(path);
+            const auto prepared = MachOSigner::PrepareSignature(path, round.identity, round.capacity);
+            CHECK(ms::ReadAll(path) == before_prepare); // prepare does not write
+            const auto cms = ms::CountingCms(prepared.slices.size(), round.capacity);
+            MachOSigner::CompleteSignature(path, prepared, cms);
+            const Bytes finished = ms::ReadAll(path);
+
+            // The same layout as signing the unsigned sample once.
+            ms::ExpectFinished(original, finished, prepared, cms);
+            ExpectOneCommandNoZeroEntry(finished, mr::CheckFile(finished));
+            const std::string fresh_path = ms::CopyFixture(scratch, name, "fresh-" + std::to_string(number));
+            const auto fresh = MachOSigner::PrepareSignature(fresh_path, round.identity, round.capacity);
+            MachOSigner::CompleteSignature(fresh_path, fresh, cms);
+            const Bytes fresh_bytes = ms::ReadAll(fresh_path);
+            CHECK(finished.size() <= fresh_bytes.size());
+            CHECK(finished == fresh_bytes);
+
+            const mr::FileReport report = mr::CheckFile(finished);
+            std::vector<std::uint64_t> slice_sizes;
+            for(std::size_t i = 0; i < report.slices.size(); ++i)
+            {
+                slice_sizes.push_back(report.slices[i].size);
+                if(number == 0)
+                {
+                    first_ncmds.push_back(report.slices[i].ncmds);
+                }
+                REQUIRE(i < first_ncmds.size());
+                CHECK(report.slices[i].ncmds == first_ncmds[i]);
+            }
+            if(number > 0)
+            {
+                if(round.capacity == previous_capacity)
+                {
+                    CHECK(finished.size() == previous_length);
+                }
+                else if(round.capacity < previous_capacity)
+                {
+                    CHECK(finished.size() <= previous_length);
+                }
+                else
+                {
+                    CHECK(finished.size() >= previous_length);
+                }
+                for(std::size_t i = 0; i < slice_sizes.size(); ++i)
+                {
+                    if(round.capacity == previous_capacity)
+                    {
+                        CHECK(slice_sizes[i] == previous_slice_sizes[i]);
+                    }
+                    else if(previous_capacity > round.capacity + 15)
+                    {
+                        CHECK(slice_sizes[i] < previous_slice_sizes[i]);
+                    }
+                    else if(round.capacity > previous_capacity + 15)
+                    {
+                        CHECK(slice_sizes[i] > previous_slice_sizes[i]);
+                    }
+                }
+            }
+            previous_slice_sizes = slice_sizes;
+            previous_length = finished.size();
+            previous_capacity = round.capacity;
+            ++number;
+        }
+    }
+}
+
+TEST_CASE("MachOSigner a program signed by another tool is re-signed with a larger signature", "[MachOSigner]")
+{
+    for(const char *name : {"tiny-macho-arm64-adhoc", "tiny-macho-x86_64-adhoc", "tiny-macho-universal-adhoc"})
+    {
+        INFO(name);
+        seedtest::ScratchDir scratch;
+        const std::string path = ms::CopyFixture(scratch, name);
+        const Bytes old = ms::ReadAll(path);
+
+        const auto prepared = MachOSigner::PrepareSignature(path, "test-identity", 4096);
+        CHECK(ms::ReadAll(path) == old); // prepare does not write
+        const auto cms = ms::CountingCms(prepared.slices.size(), 4096);
+        MachOSigner::CompleteSignature(path, prepared, cms);
+        const Bytes finished = ms::ReadAll(path);
+        ExpectResigned(old, finished, prepared, cms);
+        CHECK(finished.size() > old.size());
+        CHECK(MachOSigner::HasEmbeddedSignature(path));
+        const auto parts = MachOSigner::ExtractSignatures(path);
+        REQUIRE(parts.size() == prepared.slices.size());
+        for(std::size_t i = 0; i < parts.size(); ++i)
+        {
+            REQUIRE(parts[i].has_value());
+            CHECK(*parts[i] == MachOSigner::BuildSuperBlob(prepared.slices[i].code_directory, cms[i]));
+        }
+    }
+}
+
+TEST_CASE("MachOSigner a program signed by another tool is re-signed with a smaller signature", "[MachOSigner]")
+{
+    for(const char *name : {"tiny-macho-arm64-adhoc", "tiny-macho-x86_64-adhoc", "tiny-macho-universal-adhoc"})
+    {
+        INFO(name);
+        // Directly with no room for a CMS, and after a larger one.
+        for(const bool via_larger : {false, true})
+        {
+            INFO("via a larger signature first: " << via_larger);
+            seedtest::ScratchDir scratch;
+            const std::string path = ms::CopyFixture(scratch, name);
+            if(via_larger)
+            {
+                const auto big = MachOSigner::PrepareSignature(path, "test-identity", 4096);
+                MachOSigner::CompleteSignature(path, big, ms::CountingCms(big.slices.size(), 4096));
+            }
+            const Bytes old = ms::ReadAll(path);
+            const auto prepared = MachOSigner::PrepareSignature(path, "test-identity", 0);
+            const auto cms = ms::CountingCms(prepared.slices.size(), 0);
+            MachOSigner::CompleteSignature(path, prepared, cms);
+            const Bytes finished = ms::ReadAll(path);
+            if(via_larger)
+            {
+                // The old signature here is ours, so the shape is judged, and
+                // that the file became smaller.
+                CHECK(finished.size() < old.size());
+                const mr::FileReport report = mr::CheckFile(finished);
+                const mr::FileReport previous = mr::CheckFile(old);
+                INFO("problems: " << ms::JoinProblems(report));
+                CHECK(report.Ok());
+                REQUIRE(report.slices.size() == previous.slices.size());
+                ExpectOneCommandNoZeroEntry(finished, report);
+                for(std::size_t i = 0; i < report.slices.size(); ++i)
+                {
+                    const mr::SliceReport &s = report.slices[i];
+                    CHECK(s.size < previous.slices[i].size);
+                    CHECK(s.datasize < previous.slices[i].datasize);
+                    CHECK(s.code_limit == s.dataoff);
+                    CHECK(s.dataoff + s.datasize == s.size);
+                    for(std::size_t page = 0; page < s.page_ok.size(); ++page)
+                    {
+                        CHECK(s.page_ok[page]);
+                    }
+                }
+            }
+            else
+            {
+                ExpectResigned(old, finished, prepared, cms);
+            }
+        }
+    }
+}
+
+TEST_CASE("MachOSigner the second signing of a program signed by another tool equals the first", "[MachOSigner]")
+{
+    for(const char *name : {"tiny-macho-arm64-adhoc", "tiny-macho-x86_64-adhoc", "tiny-macho-universal-adhoc"})
+    {
+        INFO(name);
+        seedtest::ScratchDir scratch;
+        const std::string path = ms::CopyFixture(scratch, name);
+        ms::SignWithKnownInputs(path);
+        const Bytes once = ms::ReadAll(path);
+        ms::SignWithKnownInputs(path);
+        CHECK(ms::ReadAll(path) == once);
+    }
+}
+
+TEST_CASE("MachOSigner a signature followed by other data is refused and the file stays as it was",
+          "[MachOSigner]")
+{
+    seedtest::ScratchDir scratch;
+    const std::string path = ms::CopyFixture(scratch, "tiny-macho-x86_64-data-after-sig");
+    const Bytes before = ms::ReadAll(path);
+
+    const std::string message = ms::ErrorOf([&] { (void)MachOSigner::PrepareSignature(path, "test-identity", 64); });
+    CHECK(message.rfind(path + ": ", 0) == 0);
+    CHECK(Contains(message, "the signature data is not at the end of the program (16 bytes follow it); "
+                            "signing would have to move them"));
+    CHECK(ms::ReadAll(path) == before);
+
+    // A prepared signature of the same program without the extra bytes does not
+    // get the file signed either.
+    const std::string clean = ms::CopyFixture(scratch, "tiny-macho-x86_64-adhoc");
+    const auto prepared = MachOSigner::PrepareSignature(clean, "test-identity", 64);
+    CHECK_FALSE(ms::ErrorOf([&] { MachOSigner::CompleteSignature(path, prepared, ms::CountingCms(1)); }).empty());
+    CHECK(ms::ReadAll(path) == before);
+}
+
+TEST_CASE("MachOSigner data after the signature of one slice refuses the whole universal file", "[MachOSigner]")
+{
+    seedtest::ScratchDir scratch;
+    Bytes file = ms::LoadFixture("tiny-macho-universal-adhoc");
+    const std::vector<TableEntry> table = ReadTable(file);
+    REQUIRE(table.size() == 2);
+    REQUIRE(table[1].offset + table[1].size == file.size());
+    // Sixteen bytes after the signature of the last slice (the table entry
+    // grows with it; the 32-bit table puts the size at entry offset 12).
+    for(std::uint8_t b = 0xA5; b < 0xA5 + 16; ++b)
+    {
+        file.push_back(b);
+    }
+    PutBE(file, 8 + 20 * 1 + 12, table[1].size + 16, 4);
+    const std::string path = ms::WriteScratch(scratch, "data-after-in-slice-1", file);
+    const Bytes before = ms::ReadAll(path);
+
+    const std::string message = ms::ErrorOf([&] { (void)MachOSigner::PrepareSignature(path, "test-identity", 64); });
+    CHECK(message.rfind(path + ": ", 0) == 0);
+    CHECK(Contains(message, "slice 1 ("));
+    CHECK(Contains(message, "the signature data is not at the end of the program (16 bytes follow it)"));
+    CHECK(ms::ReadAll(path) == before);
+}
+
+TEST_CASE("MachOSigner StripSignature removes the signature of every signed sample", "[MachOSigner]")
+{
+    for(const std::string &name : ms::SignableSamples())
+    {
+        INFO(name);
+        seedtest::ScratchDir scratch;
+        const std::string path = ms::CopyFixture(scratch, name);
+        const Bytes original = ms::ReadAll(path);
+        ms::SignWithKnownInputs(path);
+        const Bytes signed_file = ms::ReadAll(path);
+        REQUIRE(MachOSigner::HasEmbeddedSignature(path));
+
+        MachOSigner::StripSignature(path);
+        const Bytes stripped = ms::ReadAll(path);
+        CHECK_FALSE(MachOSigner::HasEmbeddedSignature(path));
+        ExpectStripped(signed_file, stripped);
+
+        // Against the unsigned sample: the same program, with only the sizes
+        // of the link-edit segment (and zero padding at the end) different.
+        const mr::FileReport before = mr::CheckFile(original);
+        const mr::FileReport after = mr::CheckFile(stripped);
+        REQUIRE(after.slices.size() == before.slices.size());
+        for(std::size_t i = 0; i < after.slices.size(); ++i)
+        {
+            INFO("slice " << i);
+            const mr::SliceReport &o = before.slices[i];
+            const mr::SliceReport &s = after.slices[i];
+            CHECK(s.ncmds == o.ncmds);
+            CHECK(s.sizeofcmds == o.sizeofcmds);
+            CHECK(s.size >= o.size);
+            CHECK(s.size <= ms::Align16(o.size));
+            CHECK(SameExceptLinkeditSizes(original, o.offset, LinkeditSizeFields(original, o), stripped, s.offset,
+                                          LinkeditSizeFields(stripped, s), o.size));
+            for(std::uint64_t k = o.size; k < s.size; ++k)
+            {
+                REQUIRE(stripped[s.offset + k] == 0);
+            }
+        }
+        if(after.form == 0)
+        {
+            CHECK(stripped.size() == after.slices[0].size);
+        }
+    }
+}
+
+TEST_CASE("MachOSigner StripSignature on an unsigned program changes nothing", "[MachOSigner]")
+{
+    for(const std::string &name : ms::SignableSamples())
+    {
+        INFO(name);
+        seedtest::ScratchDir scratch;
+        const std::string path = ms::CopyFixture(scratch, name);
+        const Bytes original = ms::ReadAll(path);
+        MachOSigner::StripSignature(path);
+        CHECK(ms::ReadAll(path) == original);
+        MachOSigner::StripSignature(path);
+        CHECK(ms::ReadAll(path) == original);
+    }
+}
+
+TEST_CASE("MachOSigner signing after a strip gives the file signed once", "[MachOSigner]")
+{
+    for(const std::string &name : ms::SignableSamples())
+    {
+        INFO(name);
+        seedtest::ScratchDir scratch;
+        const std::string path = ms::CopyFixture(scratch, name);
+        ms::SignWithKnownInputs(path);
+        const Bytes once = ms::ReadAll(path);
+
+        // strip then sign equals sign of the unsigned original
+        MachOSigner::StripSignature(path);
+        ms::SignWithKnownInputs(path);
+        CHECK(ms::ReadAll(path) == once);
+
+        // and again, with a different capacity in the middle
+        MachOSigner::StripSignature(path);
+        const auto prepared = MachOSigner::PrepareSignature(path, "test-identity", 4000);
+        MachOSigner::CompleteSignature(path, prepared, ms::CountingCms(prepared.slices.size(), 4000));
+        MachOSigner::StripSignature(path);
+        ms::SignWithKnownInputs(path);
+        CHECK(ms::ReadAll(path) == once);
+    }
+}
+
+TEST_CASE("MachOSigner StripSignature removes a signature made by another tool", "[MachOSigner]")
+{
+    for(const char *name : {"tiny-macho-arm64-adhoc", "tiny-macho-x86_64-adhoc", "tiny-macho-universal-adhoc"})
+    {
+        INFO(name);
+        seedtest::ScratchDir scratch;
+        const std::string path = ms::CopyFixture(scratch, name);
+        const Bytes foreign = ms::ReadAll(path);
+        REQUIRE(MachOSigner::HasEmbeddedSignature(path));
+
+        MachOSigner::StripSignature(path);
+        const Bytes stripped = ms::ReadAll(path);
+        CHECK_FALSE(MachOSigner::HasEmbeddedSignature(path));
+        CHECK_FALSE(MachOSigner::ExtractSignature(path).has_value());
+        ExpectStripped(foreign, stripped);
+
+        // The result is an unsigned program that can be signed like any other.
+        const auto prepared = MachOSigner::PrepareSignature(path, "test-identity", 64);
+        const auto cms = ms::CountingCms(prepared.slices.size());
+        MachOSigner::CompleteSignature(path, prepared, cms);
+        ms::ExpectFinished(stripped, ms::ReadAll(path), prepared, cms);
+    }
+}
+
+TEST_CASE("MachOSigner StripSignature on a missing file names it", "[MachOSigner]")
+{
+    seedtest::ScratchDir scratch;
+    const std::string missing = scratch.File("absent");
+    const std::string message = ms::ErrorOf([&] { MachOSigner::StripSignature(missing); });
+    CHECK(NamesTheFile(message, missing));
+    CHECK_FALSE(std::filesystem::exists(missing));
 }

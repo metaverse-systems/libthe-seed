@@ -22,6 +22,11 @@
  * The reserved region is part of the file: the SuperBlob follows the data
  * offset and zero bytes fill the rest up to the end of the reserved size.
  *
+ * Signing a program that already carries a signature replaces it in place:
+ * the one signature command is updated, never duplicated or left with size
+ * zero, and the old data is cut off. A signature followed by other data is
+ * refused. StripSignature removes a signature.
+ *
  * Only 64-bit little-endian arm64 and x86-64 programs, alone or in a universal
  * file, are supported. Error text begins with the path or with "Mach-O".
  */
@@ -114,6 +119,19 @@ public:
         const PreparedSignature &prepared,
         const std::vector<std::vector<std::uint8_t>> &cms_signatures
     );
+
+    /**
+     * Remove the code signature of a program (every slice of a universal
+     * file). The signature command leaves the load command table (later
+     * commands move up, the freed bytes are zero), ncmds and sizeofcmds are
+     * lowered, the file is cut where the signature data began and __LINKEDIT
+     * ends at the cut. A program without a signature is left as it is and the
+     * file is not written.
+     * @throws std::runtime_error if the file is not a supported program, or if
+     *         data follows the signature (as for signing); the file is then
+     *         unchanged
+     */
+    static void StripSignature(const std::string &file_path);
 
     /**
      * Build a complete CS_SuperBlob containing CodeDirectory,

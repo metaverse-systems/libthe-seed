@@ -197,6 +197,28 @@ void RequireSupported(const std::string &path, const MachOContainer &container)
     }
 }
 
+// The point where the old signature data begins, after checking that it is the
+// last thing in the program: it ends where the program ends. Anything else would
+// have to be moved to make the new signature fit, which is refused.
+template <typename RefuseFn>
+std::uint64_t RequireSignatureAtEnd(const RefuseFn &refuse, const SliceLayout &layout)
+{
+    const seed::internal::CodeSignatureLayout &sig = *layout.codesig;
+    if(sig.dataoff == 0 && sig.datasize == 0)
+    {
+        return layout.size; // a command that points at nothing
+    }
+    const std::uint64_t end = static_cast<std::uint64_t>(sig.dataoff) + sig.datasize;
+    if(end != layout.size)
+    {
+        const std::uint64_t follow = end < layout.size ? layout.size - end : 0;
+        refuse("the signature data is not at the end of the program (" + std::to_string(follow) +
+               " bytes follow it); signing would have to move them. Re-link or strip the signature "
+               "with another tool first.");
+    }
+    return sig.dataoff;
+}
+
 // One program as it will be after signing: the bytes with the signature region
 // reserved (zero), and the CodeDirectory computed over the bytes before it.
 struct SlicePlan
@@ -225,16 +247,20 @@ SlicePlan PlanSlice(const std::string &path, bool universal, std::size_t index, 
         RefuseSlice(path, universal, index, entry.cputype, reason);
     };
 
-    if(layout.codesig.has_value())
+    // An existing signature is replaced in place: its command stays where it is
+    // and the old data is cut off. That is only possible when nothing follows it.
+    const bool resign = layout.codesig.has_value();
+    std::uint64_t kept = layout.size; // bytes of the program that stay
+    if(resign)
     {
-        refuse("the program already carries a signature; replacing it is not supported by this call");
+        kept = RequireSignatureAtEnd(refuse, layout);
     }
-    if(!layout.linkedit.has_value() ||
+    if(!layout.linkedit.has_value() || layout.linkedit->fileoff > kept ||
        layout.linkedit->fileoff + layout.linkedit->filesize != layout.size)
     {
         refuse("the program has no __LINKEDIT segment at its end; it cannot be signed");
     }
-    if(layout.FreeHeaderSpace() < kSignatureCommandSize)
+    if(!resign && layout.FreeHeaderSpace() < kSignatureCommandSize)
     {
         refuse("no room for the code signature command: 16 bytes needed, " +
                std::to_string(layout.FreeHeaderSpace()) + " available between the end of the load commands (offset " +
@@ -242,7 +268,7 @@ SlicePlan PlanSlice(const std::string &path, bool universal, std::size_t index, 
                std::to_string(layout.first_content) +
                "); relink with extra header space (for example -headerpad 0x20)");
     }
-    if(layout.ncmds == UINT32_MAX)
+    if(!resign && layout.ncmds == UINT32_MAX)
     {
         refuse("the program has too many load commands to add one");
     }
@@ -252,7 +278,7 @@ SlicePlan PlanSlice(const std::string &path, bool universal, std::size_t index, 
     }
 
     // Sizes first: none of them depends on a hash.
-    const std::uint64_t dataoff = Align16(layout.size);
+    const std::uint64_t dataoff = Align16(kept);
     const std::uint64_t n_code_slots = (dataoff + CS_PAGE_SIZE - 1) / CS_PAGE_SIZE;
     const std::uint64_t ident_size = identity.size() + 1;
     const std::uint64_t hash_offset = kCodeDirectoryFixedSize + ident_size;
@@ -270,17 +296,21 @@ SlicePlan PlanSlice(const std::string &path, bool universal, std::size_t index, 
     plan.dataoff = dataoff;
     plan.datasize = datasize;
     std::vector<std::uint8_t> &out = plan.bytes;
-    out.assign(file.Data() + entry.offset, file.Data() + entry.offset + layout.size);
+    out.assign(file.Data() + entry.offset, file.Data() + entry.offset + kept);
     out.resize(static_cast<std::size_t>(dataoff + datasize), 0);
 
     // The signature command after the last one, and the counts that cover it.
-    const std::size_t command_at = static_cast<std::size_t>(layout.header_end);
+    const std::size_t command_at = static_cast<std::size_t>(resign ? layout.codesig->command_offset
+                                                                    : layout.header_end);
     WriteLE32(out, command_at, LC_CODE_SIGNATURE_CMD);
     WriteLE32(out, command_at + 4, static_cast<std::uint32_t>(kSignatureCommandSize));
     WriteLE32(out, command_at + 8, static_cast<std::uint32_t>(dataoff));
     WriteLE32(out, command_at + 12, static_cast<std::uint32_t>(datasize));
-    WriteLE32(out, 16, layout.ncmds + 1);
-    WriteLE32(out, 20, static_cast<std::uint32_t>(layout.sizeofcmds + kSignatureCommandSize));
+    if(!resign)
+    {
+        WriteLE32(out, 16, layout.ncmds + 1);
+        WriteLE32(out, 20, static_cast<std::uint32_t>(layout.sizeofcmds + kSignatureCommandSize));
+    }
 
     // __LINKEDIT ends where the signature region ends.
     const std::uint64_t page = entry.cputype == CPU_TYPE_ARM64 ? 16384 : 4096;
@@ -520,6 +550,98 @@ void MachOSigner::CompleteSignature(const std::string &file_path, const Prepared
         else
         {
             WriteFileBytes(file_path, AssembleUniversal(file_path, file, container, finished));
+        }
+    });
+}
+
+namespace {
+
+// One slice without its signature: the command removed from the table (later
+// commands move up, the freed bytes are zero), the counts lowered, the data cut
+// off and __LINKEDIT ended at the cut.
+std::vector<std::uint8_t> StripSlice(const std::string &path, bool universal, std::size_t index,
+                                     const ByteSpan &file, const ContainerEntry &entry)
+{
+    const SliceLayout &layout = entry.slice;
+    const auto refuse = [&](const std::string &reason) {
+        RefuseSlice(path, universal, index, entry.cputype, reason);
+    };
+    const std::uint64_t cut = RequireSignatureAtEnd(refuse, layout);
+    if(!layout.linkedit.has_value() || layout.linkedit->fileoff > cut)
+    {
+        refuse("the program has no __LINKEDIT segment at its end; it cannot be signed");
+    }
+    std::uint64_t cmdsize = kSignatureCommandSize;
+    for(const auto &command : layout.commands)
+    {
+        if(command.offset == layout.codesig->command_offset)
+        {
+            cmdsize = command.cmdsize;
+        }
+    }
+    std::vector<std::uint8_t> out(file.Data() + entry.offset, file.Data() + entry.offset + cut);
+    const std::size_t at = static_cast<std::size_t>(layout.codesig->command_offset);
+    const std::size_t table_end = static_cast<std::size_t>(layout.header_end);
+    std::copy(out.begin() + static_cast<std::ptrdiff_t>(at + cmdsize),
+              out.begin() + static_cast<std::ptrdiff_t>(table_end), out.begin() + static_cast<std::ptrdiff_t>(at));
+    std::fill(out.begin() + static_cast<std::ptrdiff_t>(table_end - cmdsize),
+              out.begin() + static_cast<std::ptrdiff_t>(table_end), static_cast<std::uint8_t>(0));
+    WriteLE32(out, 16, layout.ncmds - 1);
+    WriteLE32(out, 20, static_cast<std::uint32_t>(layout.sizeofcmds - cmdsize));
+
+    // The command that held the link-edit segment may have moved up.
+    std::uint64_t segment_at = layout.linkedit->command_offset;
+    if(segment_at > layout.codesig->command_offset)
+    {
+        segment_at -= cmdsize;
+    }
+    const std::uint64_t filesize = cut - layout.linkedit->fileoff;
+    const std::uint64_t page = entry.cputype == CPU_TYPE_ARM64 ? 16384 : 4096;
+    WriteLE64(out, static_cast<std::size_t>(segment_at + kSegmentFilesizeField), filesize);
+    if(layout.linkedit->vmsize < filesize)
+    {
+        WriteLE64(out, static_cast<std::size_t>(segment_at + kSegmentVmsizeField), AlignUp(filesize, page));
+    }
+    return out;
+}
+
+} // anonymous namespace
+
+void MachOSigner::StripSignature(const std::string &file_path)
+{
+    GuardEntryPoint(kProgramFormat, [&]() {
+        const auto bytes = ReadInput(file_path);
+        const ByteSpan file(bytes, kProgramFormat);
+        const MachOContainer container = ParseInput(bytes);
+        RequireSupported(file_path, container);
+        const bool universal = container.form != ContainerForm::Thin;
+
+        bool any = false;
+        std::vector<std::vector<std::uint8_t>> slices;
+        for(std::size_t i = 0; i < container.entries.size(); ++i)
+        {
+            const ContainerEntry &entry = container.entries[i];
+            if(entry.slice.codesig.has_value())
+            {
+                any = true;
+                slices.push_back(StripSlice(file_path, universal, i, file, entry));
+            }
+            else
+            {
+                slices.emplace_back(file.Data() + entry.offset, file.Data() + entry.offset + entry.slice.size);
+            }
+        }
+        if(!any)
+        {
+            return; // nothing to remove: the file is not written
+        }
+        if(!universal)
+        {
+            WriteFileBytes(file_path, slices[0]);
+        }
+        else
+        {
+            WriteFileBytes(file_path, AssembleUniversal(file_path, file, container, slices));
         }
     });
 }
