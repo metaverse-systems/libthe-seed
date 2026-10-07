@@ -28,7 +28,8 @@ enum class NodeFormat
     None,
     Elf,
     Pe,
-    // Recognised only so that it can be declined; never parsed.
+    // Names with a separator or an @-prefix are listed as recorded and never
+    // resolved; bare file names resolve by exact match like ELF.
     MachO
 };
 

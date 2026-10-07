@@ -73,11 +73,20 @@ struct DependencyResult
 /**
  * @brief Analyzes binaries to build a reverse dependency map of shared libraries.
  *
- * Parses ELF and PE binary formats directly (no external library dependencies).
+ * Parses ELF, PE and Mach-O binary formats directly (no external library dependencies).
  * Supports cross-platform analysis: ELF binaries can be parsed on Windows and
  * PE binaries can be parsed on Linux. PE delay-loaded libraries are listed
- * with the start-up imports. Mach-O files are declined with an error naming
- * the format (to be revisited); other formats are reported as unsupported.
+ * with the start-up imports. Mach-O files, thin or universal, are listed
+ * through MachOParser::ListDependencies; every slice of a universal file counts and
+ * each name is listed once. Other formats are reported as unsupported.
+ *
+ * Mach-O decision: Mach-O is listed because the reader is now correct on genuine
+ * programs. A bare file name is matched exactly, letter case included, in the search
+ * paths like an ELF name (build machines are usually case-sensitive, so exact matching
+ * is the conservative choice). A name with a separator or an "@rpath/",
+ * "@loader_path/" or "@executable_path/" prefix, which includes absolute install
+ * names, is listed under its recorded name and never resolved, because resolving
+ * it needs the runtime search rules of the loader.
  *
  * Usage:
  * @code
@@ -104,8 +113,8 @@ class DependencyLister
      *
      * The result maps each discovered library's canonical absolute path
      * (or recorded name if unresolvable) to the sorted list of input binaries
-     * that depend on it. Only the search paths are used, in order; ELF names
-     * match exactly and PE names match without regard to letter case (an
+     * that depend on it. Only the search paths are used, in order; ELF and Mach-O
+     * names match exactly and PE names match without regard to letter case (an
      * exact match wins, otherwise the smallest name in byte order). A name
      * with a folder separator, "..", a drive prefix or a NUL is never joined
      * to a search path; it is listed under its recorded name.
@@ -115,12 +124,12 @@ class DependencyLister
      * read or is malformed appears in the error map with a message naming the
      * format and the structure at fault; it is never reported as having no
      * dependencies. A library that was found but cannot be read or is
-     * malformed is reported in `libraryErrors`, not in `errors`. A Mach-O input
-     * appears in `errors` as "<path>: Mach-O files are not supported for
-     * dependency listing"; a Mach-O library gets the same text, prefixed with
-     * its path, as the reason in `libraryErrors`.
+     * malformed is reported in `libraryErrors`, not in `errors`. A Mach-O
+     * shape that is declined (big-endian or 32-bit) is reported with the parser's
+     * text, in `errors` for a named input and in `libraryErrors` for a library;
+     * other inputs are unaffected.
      *
-     * @param binary_paths List of file paths to compiled binaries (ELF or PE).
+     * @param binary_paths List of file paths to compiled binaries (ELF, PE or Mach-O).
      * @param search_paths Ordered list of directories to search when resolving
      *        library names to filesystem paths. No platform defaults are used.
      * @return DependencyResult containing the dependency map and error map.

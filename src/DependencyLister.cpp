@@ -1,4 +1,5 @@
 #include <libthe-seed/DependencyLister.hpp>
+#include <libthe-seed/MachOParser.hpp>
 
 #include "ElfParser.hpp"
 #include "PeParser.hpp"
@@ -34,8 +35,6 @@ std::string LowerAscii(std::string text)
     }
     return text;
 }
-
-const char *const kMachODeclined = ": Mach-O files are not supported for dependency listing";
 
 // True when the bytes start with one of the six Mach-O magics. A fat header
 // shares its magic with Java class files, so it counts only when the
@@ -186,9 +185,14 @@ NodeId FileNode(DependencyGraph &graph, const std::string &path, const std::stri
         const std::vector<std::uint8_t> bytes = ReadFileBytes(key);
         if(IsMachO(bytes))
         {
-            // Declined without parsing; kept as a node so its credits stay.
+            // The parser reads the file itself and lists the names of every
+            // slice of a universal file once each. A shape it declines throws
+            // with its own text, which becomes the node's reason.
             graph.nodes[id].format = NodeFormat::MachO;
-            graph.nodes[id].reason = key + kMachODeclined;
+            std::vector<std::string> refs = MachOParser::ListDependencies(key);
+            DependencyNode &node = graph.nodes[id];
+            node.refs = std::move(refs);
+            node.status = NodeStatus::Parsed;
             return id;
         }
         NodeFormat format = NodeFormat::None;
@@ -380,9 +384,7 @@ DependencyResult DependencyLister::ListDependencies(
         input.node = FileNode(graph, input.spelling, input.canonical.empty() ? nullptr : &input.canonical);
         if(graph.nodes[input.node].status == NodeStatus::Unreadable)
         {
-            result.errors[input.spelling] = graph.nodes[input.node].format == NodeFormat::MachO
-                                                ? input.spelling + kMachODeclined
-                                                : graph.nodes[input.node].reason;
+            result.errors[input.spelling] = graph.nodes[input.node].reason;
         }
     }
 

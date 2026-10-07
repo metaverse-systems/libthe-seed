@@ -1,5 +1,6 @@
 #include "TestPaths.hpp"
 #include "DepFixtures.hpp"
+#include "MachOReference.hpp"
 
 #include <libthe-seed/DependencyLister.hpp>
 
@@ -583,129 +584,144 @@ TEST_CASE("The delay-load list ends at the end of the directory the header decla
 }
 
 // ---------------------------------------------------------------------------
-// Mac programs are declined, not reported as having no dependencies
+// Mac programs are listed; shapes the reader declines are errors
 // ---------------------------------------------------------------------------
 
 namespace {
 
-const char kMacDeclined[] = "Mach-O files are not supported for dependency listing";
+namespace mr = machoref;
 
-std::string DeclinedFor(const std::string &path)
+const char kSupportedClause[] =
+    "Mac programs are not supported (supported: 64-bit little-endian arm64 and x86-64, "
+    "alone or in a universal file)";
+
+const char kLibSystem[] = "/usr/lib/libSystem.B.dylib";
+
+// The text the reader gives for a thin file it declines.
+std::string DeclineText(const std::string &path, const std::string &kind)
 {
-    return path + ": " + kMacDeclined;
+    return path + ": " + kind + " " + kSupportedClause;
 }
 
-struct MagicCase
+// The text for a declined slice of a universal file ("cpu 0x12" is how an
+// architecture the reader does not know is named).
+std::string SliceDeclineText(const std::string &path, std::size_t index, const std::string &arch,
+                             const std::string &kind)
+{
+    return path + ": slice " + std::to_string(index) + " (" + arch + "): " + kind + " " + kSupportedClause;
+}
+
+struct DeclinedShape
 {
     const char *label;
-    std::vector<std::uint8_t> magic;
-    bool fat;
+    dep::Bytes bytes;
+    const char *kind;
 };
 
-// The six leading words of a Mach-O file, as the bytes appear in the file.
-const MagicCase kMagics[] = {
-    {"32-bit, big-endian fields", {0xFE, 0xED, 0xFA, 0xCE}, false},
-    {"32-bit, little-endian fields", {0xCE, 0xFA, 0xED, 0xFE}, false},
-    {"64-bit, big-endian fields", {0xFE, 0xED, 0xFA, 0xCF}, false},
-    {"64-bit, little-endian fields", {0xCF, 0xFA, 0xED, 0xFE}, false},
-    {"universal, big-endian count", {0xCA, 0xFE, 0xBA, 0xBE}, true},
-    {"universal, little-endian count", {0xBE, 0xBA, 0xFE, 0xCA}, true},
-};
-
-// A short file that starts with the magic. A universal file gets an
-// architecture count of two in the byte order its magic implies; the rest is
-// zero. Detection must not depend on anything past those bytes.
-dep::Bytes MacBytes(const MagicCase &entry, std::uint32_t count = 2)
+std::vector<DeclinedShape> DeclinedShapes()
 {
-    dep::Bytes bytes(64, 0);
-    std::copy(entry.magic.begin(), entry.magic.end(), bytes.begin());
-    if(entry.fat)
-    {
-        const bool big = entry.magic[0] == 0xCA;
-        for(std::size_t index = 0; index < 4; ++index)
-        {
-            bytes[4 + (big ? 3 - index : index)] = static_cast<std::uint8_t>(count >> (8 * index));
-        }
-    }
-    return bytes;
+    return {
+        {"big-endian 64-bit", mr::BigEndian64(), "big-endian"},
+        {"big-endian 32-bit", mr::BigEndian32(), "32-bit big-endian"},
+        {"little-endian 32-bit", mr::Little32(), "32-bit"},
+    };
 }
 
-void RequireDeclined(const DependencyResult &result, const std::string &path)
+// A 64-bit little-endian Mach-O program with the given library references, as
+// a linker writes the byte order.
+dep::Bytes Mac(const std::vector<dep::MachOReference> &references)
 {
+    return dep::MachOReferencing(references, dep::MachOFields::LittleAfterMagic);
+}
+
+dep::Bytes MacNeeding(const Names &names)
+{
+    std::vector<dep::MachOReference> references;
+    for(const std::string &name : names)
+    {
+        references.push_back({dep::kLoadDylib, name});
+    }
+    return Mac(references);
+}
+
+std::string WriteMac(Site &site, const std::string &name, const Names &needed)
+{
+    return dep::WriteFile(site.folder, name, MacNeeding(needed)).string();
+}
+
+void RequireDeclined(const DependencyResult &result, const std::string &path, const std::string &text)
+{
+    REQUIRE(result.errors.size() == 1);
     REQUIRE(result.errors.count(path) == 1);
-    CHECK(result.errors.at(path) == DeclinedFor(path));
+    CHECK(result.errors.at(path) == text);
     CHECK(result.dependencies.empty());
     CHECK(result.libraryErrors.empty());
 }
 } // namespace
 
-TEST_CASE("A Mach-O file of each of the six magics given alone is declined", "[DependencyReporting][US5]")
-{
-    for(const MagicCase &entry : kMagics)
-    {
-        SECTION(entry.label)
-        {
-            Site site;
-            const std::string mac = dep::WriteFile(site.folder, "mac.bin", MacBytes(entry)).string();
-            DependencyLister lister;
-
-            const DependencyResult result = lister.ListDependencies({mac}, site.Search());
-
-            REQUIRE(result.errors.size() == 1);
-            RequireDeclined(result, mac);
-        }
-    }
-}
-
-TEST_CASE("The committed Mach-O samples are declined", "[DependencyReporting][US5]")
-{
-    for(const char *sample : {"tiny-macho-x86_64", "tiny-macho-arm64", "tiny-macho-universal"})
-    {
-        SECTION(sample)
-        {
-            Site site;
-            const std::string mac = dep::CopyFixture(site.folder, sample).string();
-            DependencyLister lister;
-
-            const DependencyResult result = lister.ListDependencies({mac}, site.Search());
-
-            REQUIRE(result.errors.size() == 1);
-            RequireDeclined(result, mac);
-        }
-    }
-}
-
-TEST_CASE("A Mach-O file with library references is declined, not listed", "[DependencyReporting][US5]")
+TEST_CASE("A Mach-O program given alone is listed under its recorded names", "[DependencyReporting][US5]")
 {
     Site site;
-    const std::string mac = dep::WriteFile(site.folder, "mac.bin",
-        dep::MachOReferencing({{dep::kLoadDylib, "/usr/lib/libone.dylib"}, {dep::kLoadWeakDylib, "libtwo.dylib"}})).string();
+    const std::string mac = WriteMac(site, "mac.bin", {kLibSystem, "@rpath/libtwo.dylib"});
     DependencyLister lister;
 
     const DependencyResult result = lister.ListDependencies({mac}, site.Search());
 
-    REQUIRE(result.errors.size() == 1);
-    RequireDeclined(result, mac);
+    CHECK(result.errors.empty());
+    CHECK(result.libraryErrors.empty());
+    CHECK(Keys(result) == NameSet{kLibSystem, "@rpath/libtwo.dylib"});
+    CHECK(result.dependencies.at(kLibSystem) == Names{mac});
+    CHECK(result.dependencies.at("@rpath/libtwo.dylib") == Names{mac});
 }
 
-TEST_CASE("A Mach-O input among other inputs leaves the others listed fully", "[DependencyReporting][US5]")
+TEST_CASE("A Mach-O file of a declined shape given alone is an error with the reader's text", "[DependencyReporting][US5]")
 {
-    for(const MagicCase &entry : kMagics)
+    for(const DeclinedShape &shape : DeclinedShapes())
     {
-        SECTION(entry.label)
+        SECTION(shape.label)
+        {
+            Site site;
+            const std::string mac = dep::WriteFile(site.folder, "mac.bin", shape.bytes).string();
+            DependencyLister lister;
+
+            const DependencyResult result = lister.ListDependencies({mac}, site.Search());
+
+            RequireDeclined(result, mac, DeclineText(mac, shape.kind));
+        }
+    }
+}
+
+TEST_CASE("A declined slice of a universal file makes the input an error naming the slice", "[DependencyReporting][US5]")
+{
+    Site site;
+    const dep::Bytes good = MacNeeding({kLibSystem});
+    const std::string mac =
+        dep::WriteFile(site.folder, "mac.bin", mr::Universal({good, mr::BigEndian32()}, false, 14)).string();
+    DependencyLister lister;
+
+    const DependencyResult result = lister.ListDependencies({mac}, site.Search());
+
+    RequireDeclined(result, mac, SliceDeclineText(mac, 1, "cpu 0x12", "32-bit big-endian"));
+}
+
+TEST_CASE("A declined Mach-O input among other inputs leaves the others listed fully", "[DependencyReporting][US5]")
+{
+    for(const DeclinedShape &shape : DeclinedShapes())
+    {
+        SECTION(shape.label)
         {
             Site site;
             site.Library("libgood.so", {"libdeep.so"});
             site.Library("libdeep.so", {});
             const std::string first = site.Program("first", {"libgood.so", "libabsent.so"});
             const std::string second = site.Program("second", {"libdeep.so"});
-            const std::string mac = dep::WriteFile(site.folder, "mac.bin", MacBytes(entry)).string();
+            const std::string mac = dep::WriteFile(site.folder, "mac.bin", shape.bytes).string();
             DependencyLister lister;
 
             const DependencyResult result = lister.ListDependencies({first, mac, second}, site.Search());
 
             REQUIRE(result.errors.size() == 1);
-            CHECK(result.errors.at(mac) == DeclinedFor(mac));
+            CHECK(result.errors.at(mac) == DeclineText(mac, shape.kind));
             CHECK(result.libraryErrors.empty());
             CHECK(Keys(result) == NameSet{site.Key("libgood.so"), site.Key("libdeep.so"), "libabsent.so"});
             CHECK(result.dependencies.at(site.Key("libgood.so")) == Names{first});
@@ -717,18 +733,35 @@ TEST_CASE("A Mach-O input among other inputs leaves the others listed fully", "[
     }
 }
 
-TEST_CASE("A Mach-O file found as a library is listed and reported through libraryErrors", "[DependencyReporting][US5]")
+TEST_CASE("A Mach-O input among other inputs is listed with the others", "[DependencyReporting][US5]")
 {
-    for(const MagicCase &entry : kMagics)
+    Site site;
+    site.Library("libgood.so", {});
+    const std::string first = site.Program("first", {"libgood.so"});
+    const std::string mac = WriteMac(site, "mac.bin", {kLibSystem});
+    DependencyLister lister;
+
+    const DependencyResult result = lister.ListDependencies({mac, first}, site.Search());
+
+    CHECK(result.errors.empty());
+    CHECK(result.libraryErrors.empty());
+    CHECK(Keys(result) == NameSet{site.Key("libgood.so"), kLibSystem});
+    CHECK(Slice(result, first) == NameSet{site.Key("libgood.so")});
+    CHECK(Slice(result, mac) == NameSet{kLibSystem});
+}
+
+TEST_CASE("A declined Mach-O file found as a library is listed and reported through libraryErrors", "[DependencyReporting][US5]")
+{
+    for(const DeclinedShape &shape : DeclinedShapes())
     {
-        SECTION(entry.label)
+        SECTION(shape.label)
         {
             Site site;
-            dep::WriteFile(site.folder, "libmac.so", MacBytes(entry));
+            dep::WriteFile(site.folder, "libmac.dylib", shape.bytes);
             site.Library("libgood.so", {});
-            const std::string first = site.Program("first", {"libmac.so", "libgood.so"});
-            const std::string second = site.Program("second", {"libmac.so"});
-            const std::string key = Canon(site.folder / "libmac.so");
+            const std::string first = site.Program("first", {"libmac.dylib", "libgood.so"});
+            const std::string second = site.Program("second", {"libmac.dylib"});
+            const std::string key = Canon(site.folder / "libmac.dylib");
             DependencyLister lister;
 
             const DependencyResult result = lister.ListDependencies({second, first}, site.Search());
@@ -739,13 +772,194 @@ TEST_CASE("A Mach-O file found as a library is listed and reported through libra
             CHECK(result.dependencies.at(Canon(site.folder / "libgood.so")) == Names{first});
             REQUIRE(result.libraryErrors.size() == 1);
             REQUIRE(result.libraryErrors.count(key) == 1);
-            CHECK(result.libraryErrors.at(key).reason == DeclinedFor(key));
+            CHECK(result.libraryErrors.at(key).reason == DeclineText(key, shape.kind));
             CHECK(result.libraryErrors.at(key).inputs == Names{first, second});
         }
     }
 }
 
-TEST_CASE("A Java class file is still an unsupported format, not a Mac file", "[DependencyReporting][US5]")
+TEST_CASE("A declined slice in a Mach-O library is reported through libraryErrors naming the slice", "[DependencyReporting][US5]")
+{
+    Site site;
+    dep::WriteFile(site.folder, "libmac.dylib",
+                   mr::Universal({mr::Little32(), MacNeeding({kLibSystem})}, false, 14));
+    const std::string app = WriteMac(site, "app", {"libmac.dylib"});
+    const std::string key = Canon(site.folder / "libmac.dylib");
+    DependencyLister lister;
+
+    const DependencyResult result = lister.ListDependencies({app}, site.Search());
+
+    CHECK(result.errors.empty());
+    CHECK(Keys(result) == NameSet{key});
+    REQUIRE(result.libraryErrors.count(key) == 1);
+    CHECK(result.libraryErrors.at(key).reason == SliceDeclineText(key, 0, "cpu 0x7", "32-bit"));
+    CHECK(result.libraryErrors.at(key).inputs == Names{app});
+}
+
+TEST_CASE("A bare name in a Mach-O program is resolved by exact match in the search folders", "[DependencyReporting][US5]")
+{
+    Site site;
+    WriteMac(site, "libone.dylib", {});
+    WriteMac(site, "libCase.dylib", {});
+    const std::string app = WriteMac(site, "app", {"libone.dylib", "libcase.dylib", "libabsent.dylib"});
+    DependencyLister lister;
+
+    const DependencyResult result = lister.ListDependencies({app}, site.Search());
+
+    CHECK(result.errors.empty());
+    CHECK(result.libraryErrors.empty());
+    CHECK(Keys(result) == NameSet{Canon(site.folder / "libone.dylib"), "libcase.dylib", "libabsent.dylib"});
+    CHECK(result.dependencies.at(Canon(site.folder / "libone.dylib")) == Names{app});
+    CHECK(result.dependencies.at("libcase.dylib") == Names{app});
+    CHECK(result.dependencies.at("libabsent.dylib") == Names{app});
+}
+
+TEST_CASE("A Mach-O program needing a library that is not in the folder lists it under its recorded name", "[DependencyReporting][US5]")
+{
+    Site site;
+    const std::string app = WriteMac(site, "app", {"libmissing.dylib", kLibSystem});
+    DependencyLister lister;
+
+    const DependencyResult result = lister.ListDependencies({app}, site.Search());
+
+    CHECK(result.errors.empty());
+    CHECK(result.libraryErrors.empty());
+    CHECK(Keys(result) == NameSet{"libmissing.dylib", kLibSystem});
+    CHECK(result.dependencies.at("libmissing.dylib") == Names{app});
+}
+
+TEST_CASE("Names with a separator or a loader prefix are listed as recorded and never resolved", "[DependencyReporting][US5]")
+{
+    Site site;
+    WriteMac(site, "libx.dylib", {});
+    fs::create_directories(site.folder / "sub");
+    WriteMac(site, "sub/libx.dylib", {});
+    const Names recorded = {
+        "@rpath/libx.dylib",
+        "@loader_path/libx.dylib",
+        "@executable_path/libx.dylib",
+        "sub/libx.dylib",
+        (site.folder / "libx.dylib").string(),
+        kLibSystem,
+    };
+    const std::string app = WriteMac(site, "app", recorded);
+    DependencyLister lister;
+
+    const DependencyResult result = lister.ListDependencies({app}, site.Search());
+
+    CHECK(result.errors.empty());
+    CHECK(result.libraryErrors.empty());
+    CHECK(Keys(result) == NameSet(recorded.begin(), recorded.end()));
+    for(const std::string &name : recorded)
+    {
+        INFO(name);
+        CHECK(result.dependencies.at(name) == Names{app});
+    }
+}
+
+TEST_CASE("A Mach-O library in the folder is expanded and its chain is credited to the program", "[DependencyReporting][US5]")
+{
+    Site site;
+    WriteMac(site, "libtop.dylib", {"libmid.dylib", "@rpath/libext.dylib", kLibSystem});
+    WriteMac(site, "libmid.dylib", {"libbottom.dylib"});
+    WriteMac(site, "libbottom.dylib", {});
+    const std::string app = WriteMac(site, "app", {"libtop.dylib"});
+    const std::string top = Canon(site.folder / "libtop.dylib");
+    const std::string mid = Canon(site.folder / "libmid.dylib");
+    const std::string bottom = Canon(site.folder / "libbottom.dylib");
+    DependencyLister lister;
+
+    const DependencyResult result = lister.ListDependencies({app}, site.Search());
+
+    CHECK(result.errors.empty());
+    CHECK(result.libraryErrors.empty());
+    CHECK(Keys(result) == NameSet{top, mid, bottom, "@rpath/libext.dylib", kLibSystem});
+    CHECK(Slice(result, app) == Keys(result));
+}
+
+TEST_CASE("A shared Mach-O library chain is credited to every program that reaches it", "[DependencyReporting][US5]")
+{
+    Site site;
+    WriteMac(site, "libshared.dylib", {"libdeep.dylib", kLibSystem});
+    WriteMac(site, "libdeep.dylib", {});
+    WriteMac(site, "libown.dylib", {});
+    const std::string first = WriteMac(site, "first", {"libshared.dylib", "libown.dylib"});
+    const std::string second = WriteMac(site, "second", {"libshared.dylib"});
+    const std::string shared = Canon(site.folder / "libshared.dylib");
+    const std::string deep = Canon(site.folder / "libdeep.dylib");
+    const std::string own = Canon(site.folder / "libown.dylib");
+    DependencyLister lister;
+
+    const DependencyResult result = lister.ListDependencies({second, first}, site.Search());
+
+    CHECK(result.errors.empty());
+    CHECK(result.libraryErrors.empty());
+    CHECK(Keys(result) == NameSet{shared, deep, own, kLibSystem});
+    CHECK(result.dependencies.at(shared) == Names{first, second});
+    CHECK(result.dependencies.at(deep) == Names{first, second});
+    CHECK(result.dependencies.at(kLibSystem) == Names{first, second});
+    CHECK(result.dependencies.at(own) == Names{first});
+}
+
+TEST_CASE("Mach-O libraries that need each other end the walk and are each listed once", "[DependencyReporting][US5]")
+{
+    Site site;
+    WriteMac(site, "liba.dylib", {"libb.dylib"});
+    WriteMac(site, "libb.dylib", {"liba.dylib", kLibSystem});
+    const std::string app = WriteMac(site, "app", {"liba.dylib"});
+    const std::string a = Canon(site.folder / "liba.dylib");
+    const std::string b = Canon(site.folder / "libb.dylib");
+    DependencyLister lister;
+
+    const DependencyResult result = lister.ListDependencies({app}, site.Search());
+
+    CHECK(result.errors.empty());
+    CHECK(result.libraryErrors.empty());
+    CHECK(Keys(result) == NameSet{a, b, kLibSystem});
+    CHECK(result.dependencies.at(a) == Names{app});
+    CHECK(result.dependencies.at(b) == Names{app});
+    CHECK(result.dependencies.at(kLibSystem) == Names{app});
+}
+
+TEST_CASE("A universal file lists the union over its slices without duplicates", "[DependencyReporting][US5]")
+{
+    Site site;
+    const dep::Bytes first = MacNeeding({"libcommon.dylib", "/lib/first"});
+    const dep::Bytes second = MacNeeding({"libcommon.dylib", "/lib/second", kLibSystem});
+    WriteMac(site, "libcommon.dylib", {});
+    const std::string mac =
+        dep::WriteFile(site.folder, "mac.bin", mr::Universal({first, second}, false, 14)).string();
+    DependencyLister lister;
+
+    const DependencyResult result = lister.ListDependencies({mac}, site.Search());
+
+    CHECK(result.errors.empty());
+    CHECK(result.libraryErrors.empty());
+    CHECK(Keys(result) == NameSet{Canon(site.folder / "libcommon.dylib"), "/lib/first", "/lib/second", kLibSystem});
+    for(const auto &entry : result.dependencies)
+    {
+        INFO(entry.first);
+        CHECK(entry.second == Names{mac});
+    }
+}
+
+TEST_CASE("A Mach-O file found as a library may be named by an ELF program", "[DependencyReporting][US5]")
+{
+    Site site;
+    WriteMac(site, "libmac.so", {kLibSystem});
+    const std::string app = site.Program("app", {"libmac.so"});
+    const std::string key = Canon(site.folder / "libmac.so");
+    DependencyLister lister;
+
+    const DependencyResult result = lister.ListDependencies({app}, site.Search());
+
+    CHECK(result.errors.empty());
+    CHECK(result.libraryErrors.empty());
+    CHECK(Keys(result) == NameSet{key, kLibSystem});
+    CHECK(result.dependencies.at(kLibSystem) == Names{app});
+}
+
+TEST_CASE("A Java class file is still an unsupported format and not a Mac file", "[DependencyReporting][US5]")
 {
     Site site;
     // CA FE BA BE, minor 0, major 52: read as an architecture count it is 52,
@@ -768,30 +982,47 @@ TEST_CASE("A Java class file is still an unsupported format, not a Mac file", "[
     CHECK(result.libraryErrors.empty());
 }
 
-TEST_CASE("A universal file is declined up to 30 architectures and not beyond", "[DependencyReporting][US5]")
+namespace {
+
+// A short file that starts with a universal magic and an architecture count in
+// the byte order the magic implies; the rest is zero.
+dep::Bytes FatHeaderWithCount(bool big_endian, std::uint32_t count)
 {
-    for(const MagicCase &entry : kMagics)
+    dep::Bytes bytes(64, 0);
+    const std::uint8_t big[4] = {0xCA, 0xFE, 0xBA, 0xBE};
+    const std::uint8_t little[4] = {0xBE, 0xBA, 0xFE, 0xCA};
+    std::copy(big_endian ? big : little, (big_endian ? big : little) + 4, bytes.begin());
+    for(std::size_t index = 0; index < 4; ++index)
     {
-        if(!entry.fat)
-        {
-            continue;
-        }
-        SECTION(entry.label)
+        bytes[4 + (big_endian ? 3 - index : index)] = static_cast<std::uint8_t>(count >> (8 * index));
+    }
+    return bytes;
+}
+} // namespace
+
+TEST_CASE("A universal header is read as a Mac file up to 30 architectures and not beyond", "[DependencyReporting][US5]")
+{
+    for(const bool big_endian : {true, false})
+    {
+        SECTION(big_endian ? "big-endian count" : "little-endian count")
         {
             Site site;
             DependencyLister lister;
             for(const std::uint32_t count : {1u, 2u, 30u})
             {
                 INFO("count " << count);
-                const std::string mac = dep::WriteFile(site.folder, "mac" + std::to_string(count), MacBytes(entry, count)).string();
+                const std::string mac = dep::WriteFile(site.folder, "mac" + std::to_string(count),
+                                                       FatHeaderWithCount(big_endian, count)).string();
                 const DependencyResult result = lister.ListDependencies({mac}, site.Search());
                 REQUIRE(result.errors.count(mac) == 1);
-                CHECK(result.errors.at(mac) == DeclinedFor(mac));
+                CHECK_FALSE(Contains(result.errors.at(mac), "Unsupported binary format"));
+                CHECK(result.dependencies.empty());
             }
             for(const std::uint32_t count : {31u, 52u, 0x1000u})
             {
                 INFO("count " << count);
-                const std::string other = dep::WriteFile(site.folder, "other" + std::to_string(count), MacBytes(entry, count)).string();
+                const std::string other = dep::WriteFile(site.folder, "other" + std::to_string(count),
+                                                         FatHeaderWithCount(big_endian, count)).string();
                 const DependencyResult result = lister.ListDependencies({other}, site.Search());
                 REQUIRE(result.errors.count(other) == 1);
                 CHECK(Contains(result.errors.at(other), "Unsupported binary format"));
