@@ -17,6 +17,7 @@ noinst_HEADERS = \
 	PeParser.hpp \
 	ByteSwap.hpp \
 	internal/BoundedBytes.hpp \
+	internal/DependencyGraph.hpp \
 	internal/PeCertificate.hpp \
 	NameParser.hpp \
 	internal/FileIO.hpp \

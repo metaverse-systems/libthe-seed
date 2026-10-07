@@ -1,4 +1,5 @@
 #include "TestPaths.hpp"
+#include "DepFixtures.hpp"
 
 #include <libthe-seed/DependencyLister.hpp>
 
@@ -12,18 +13,6 @@
 #include <vector>
 
 namespace {
-std::vector<std::string> DefaultSearchPaths()
-{
-    return {
-        "/usr/lib/x86_64-linux-gnu",
-        "/lib/x86_64-linux-gnu",
-        "/usr/lib64",
-        "/lib64",
-        "/usr/lib",
-        "/lib",
-    };
-}
-
 std::filesystem::path WriteTempFile(const seedtest::ScratchDir &scratch, const std::string &name, const std::vector<std::uint8_t> &content)
 {
     const auto path = scratch.Path() / name;
@@ -101,24 +90,49 @@ bool HasDll(const std::map<std::string, std::vector<std::string>> &dependencies,
                        [&](const auto &entry) { return Lower(entry.first) == dll; });
 }
 
-bool ContainsKeyFragment(const std::map<std::string, std::vector<std::string>> &dependencies, const std::string &needle)
+// The canonical form of a file in the scratch folder, which is how the lister
+// names a library it found.
+std::string Canon(const std::filesystem::path &path)
 {
-    return std::any_of(
-        dependencies.begin(),
-        dependencies.end(),
-        [&](const auto &entry) { return entry.first.find(needle) != std::string::npos; }
-    );
+    return std::filesystem::canonical(path).string();
 }
+
+// The scratch folder of a test, with the ELF chain copied into a folder of its
+// own so the search folder holds nothing else.
+struct ElfChain
+{
+    seedtest::ScratchDir scratch;
+    std::filesystem::path folder;
+    std::string app_a;
+    std::string app_b;
+    std::string libfoo;
+    std::string libbar;
+    std::string libbaz;
+
+    ElfChain() : folder(this->scratch.Path() / "chain")
+    {
+        seedtest::dep::CopyElfChain(this->folder);
+        this->app_a = (this->folder / "appA").string();
+        this->app_b = (this->folder / "appB").string();
+        this->libfoo = Canon(this->folder / "libfoo.so");
+        this->libbar = Canon(this->folder / "libbar.so");
+        this->libbaz = Canon(this->folder / "libbaz.so");
+    }
+
+    std::vector<std::string> Search() const { return {this->folder.string()}; }
+};
 } // namespace
 
 TEST_CASE("DependencyLister extracts direct dependencies from ELF", "[DependencyLister][US1]")
 {
+    ElfChain chain;
     DependencyLister lister;
 
-    const auto result = lister.ListDependencies({seedtest::LibraryPath()}, DefaultSearchPaths());
+    const auto result = lister.ListDependencies({chain.app_a}, chain.Search());
 
     REQUIRE(result.errors.empty());
-    REQUIRE_FALSE(result.dependencies.empty());
+    REQUIRE(result.dependencies.count(chain.libfoo) == 1);
+    REQUIRE(result.dependencies.at(chain.libfoo) == std::vector<std::string>{chain.app_a});
 }
 
 TEST_CASE("DependencyLister reports missing file errors", "[DependencyLister][US1]")
@@ -127,7 +141,7 @@ TEST_CASE("DependencyLister reports missing file errors", "[DependencyLister][US
     const std::string missing = scratch.File("file-that-does-not-exist");
     DependencyLister lister;
 
-    const auto result = lister.ListDependencies({missing}, DefaultSearchPaths());
+    const auto result = lister.ListDependencies({missing}, {scratch.Path().string()});
 
     REQUIRE(result.dependencies.empty());
     REQUIRE(result.errors.count(missing) == 1);
@@ -143,29 +157,23 @@ TEST_CASE("DependencyLister reports non-binary file errors", "[DependencyLister]
     }
 
     DependencyLister lister;
-    const auto result = lister.ListDependencies({text_file.string()}, DefaultSearchPaths());
+    const auto result = lister.ListDependencies({text_file.string()}, {scratch.Path().string()});
 
     REQUIRE(result.dependencies.empty());
     REQUIRE(result.errors.count(text_file.string()) == 1);
-
 }
 
 TEST_CASE("DependencyLister continues processing after per-file errors", "[DependencyLister][US1]")
 {
-    seedtest::ScratchDir scratch;
-    const std::string missing = scratch.File("missing-binary-for-dependency-lister");
+    ElfChain chain;
+    const std::string missing = chain.scratch.File("missing-binary-for-dependency-lister");
     DependencyLister lister;
 
-    const auto result = lister.ListDependencies(
-        {
-            missing,
-            seedtest::LibraryPath(),
-        },
-        DefaultSearchPaths()
-    );
+    const auto result = lister.ListDependencies({missing, chain.app_a}, chain.Search());
 
     REQUIRE(result.errors.count(missing) == 1);
-    REQUIRE_FALSE(result.dependencies.empty());
+    REQUIRE(result.errors.size() == 1);
+    REQUIRE(result.dependencies.count(chain.libfoo) == 1);
 }
 
 TEST_CASE("ELF file without PT_DYNAMIC produces empty dependencies", "[DependencyLister][US1]")
@@ -174,79 +182,112 @@ TEST_CASE("ELF file without PT_DYNAMIC produces empty dependencies", "[Dependenc
     const auto static_like_elf = WriteStaticLikeElf(scratch, "dependency_lister_static_like.elf");
 
     DependencyLister lister;
-    const auto result = lister.ListDependencies({static_like_elf.string()}, DefaultSearchPaths());
+    const auto result = lister.ListDependencies({static_like_elf.string()}, {scratch.Path().string()});
 
     REQUIRE(result.errors.empty());
     REQUIRE(result.dependencies.empty());
-
 }
 
 TEST_CASE("DependencyLister resolves transitive dependencies", "[DependencyLister][US2]")
 {
+    ElfChain chain;
     DependencyLister lister;
 
-    const auto result = lister.ListDependencies({seedtest::LibraryPath()}, DefaultSearchPaths());
+    const auto result = lister.ListDependencies({chain.app_a}, chain.Search());
 
     REQUIRE(result.errors.empty());
-    REQUIRE(ContainsKeyFragment(result.dependencies, "libc.so"));
+    REQUIRE(result.dependencies.count(chain.libfoo) == 1);
+    REQUIRE(result.dependencies.count(chain.libbar) == 1);
+    REQUIRE(result.dependencies.count(chain.libbaz) == 1);
 }
 
 TEST_CASE("DependencyLister uses canonical absolute keys when resolvable", "[DependencyLister][US2]")
 {
+    ElfChain chain;
+    // Reach the folder through a spelling with a dot segment: the key is
+    // still the canonical path of the file.
+    const std::string indirect = (chain.folder / ".").string();
     DependencyLister lister;
 
-    const auto result = lister.ListDependencies({seedtest::LibraryPath()}, DefaultSearchPaths());
+    const auto result = lister.ListDependencies({chain.app_a}, {indirect});
 
     REQUIRE(result.errors.empty());
-
-    bool found_absolute = false;
+    REQUIRE(result.dependencies.count(chain.libfoo) == 1);
+    REQUIRE(result.dependencies.count(chain.libbar) == 1);
     for(const auto &entry : result.dependencies)
     {
-        if(!entry.first.empty() && entry.first.front() == '/')
+        if(entry.first.front() == '/')
         {
-            found_absolute = true;
             REQUIRE(std::filesystem::path(entry.first).is_absolute());
+            REQUIRE(entry.first == Canon(entry.first));
         }
     }
-
-    REQUIRE(found_absolute);
 }
 
 TEST_CASE("DependencyLister aggregates shared dependencies", "[DependencyLister][US2]")
 {
+    ElfChain chain;
     DependencyLister lister;
 
-    const auto result = lister.ListDependencies({"/bin/ls", "/bin/cat"}, DefaultSearchPaths());
+    const auto result = lister.ListDependencies({chain.app_a, chain.app_b}, chain.Search());
 
     REQUIRE(result.errors.empty());
-
-    bool found_shared = false;
-    for(const auto &entry : result.dependencies)
-    {
-        if(entry.first.find("libc.so") != std::string::npos)
-        {
-            const auto &dependents = entry.second;
-            const bool has_ls = std::find(dependents.begin(), dependents.end(), "/bin/ls") != dependents.end();
-            const bool has_cat = std::find(dependents.begin(), dependents.end(), "/bin/cat") != dependents.end();
-            if(has_ls && has_cat)
-            {
-                found_shared = true;
-                break;
-            }
-        }
-    }
-
-    REQUIRE(found_shared);
+    REQUIRE(result.dependencies.count(chain.libfoo) == 1);
+    REQUIRE(result.dependencies.at(chain.libfoo) == std::vector<std::string>{chain.app_a, chain.app_b});
 }
 
 TEST_CASE("DependencyLister uses recorded name when unresolved", "[DependencyLister][US2]")
 {
+    ElfChain chain;
     DependencyLister lister;
 
-    const auto result = lister.ListDependencies({"/bin/ls"}, {});
+    const auto result = lister.ListDependencies({chain.app_a}, {});
 
     REQUIRE(result.errors.empty());
-    REQUIRE(ContainsKeyFragment(result.dependencies, "lib"));
+    REQUIRE(result.dependencies.count("libfoo.so") == 1);
+    REQUIRE(result.dependencies.at("libfoo.so") == std::vector<std::string>{chain.app_a});
+    // Nothing is found, so nothing beyond the program's own references.
+    REQUIRE(result.dependencies.count("libbar.so") == 0);
+}
+
+TEST_CASE("DependencyLister searches only the given folders", "[DependencyLister][US1]")
+{
+    ElfChain chain;
+    // A decoy folder with a copy of the whole chain, not named in the request,
+    // and an empty folder that is: every library found must come from the
+    // named folder, and no system folder may be added.
+    seedtest::dep::CopyElfChain(chain.scratch.Path() / "decoy");
+    const std::string empty = (chain.scratch.Path() / "empty").string();
+    std::filesystem::create_directories(empty);
+    DependencyLister lister;
+
+    const auto result = lister.ListDependencies({chain.app_a}, {empty, chain.folder.string()});
+
+    REQUIRE(result.errors.empty());
+    const std::string decoy_root = Canon(chain.scratch.Path() / "decoy");
+    const std::string chain_root = Canon(chain.folder);
+    for(const auto &entry : result.dependencies)
+    {
+        INFO("key " << entry.first);
+        REQUIRE(entry.first.find(decoy_root) == std::string::npos);
+        if(entry.first.front() == '/')
+        {
+            REQUIRE(entry.first.compare(0, chain_root.size(), chain_root) == 0);
+        }
+        else
+        {
+            // Not found anywhere named: the recorded name, never a system path.
+            REQUIRE(entry.first.find('/') == std::string::npos);
+        }
+    }
+    REQUIRE(result.dependencies.count(chain.libfoo) == 1);
+
+    // With only the empty folder, nothing is found at all.
+    const auto none = lister.ListDependencies({chain.app_a}, {empty});
+    for(const auto &entry : none.dependencies)
+    {
+        REQUIRE(entry.first.front() != '/');
+    }
 }
 
 TEST_CASE("PeParser reads DLL dependencies from fixture", "[DependencyLister][US3]")
@@ -268,6 +309,22 @@ TEST_CASE("DependencyLister auto-detects PE format", "[DependencyLister][US3]")
     REQUIRE(HasDll(result.dependencies, "msvcrt.dll"));
 }
 
+TEST_CASE("DependencyLister resolves the PE fixture chain", "[DependencyLister][US3]")
+{
+    seedtest::ScratchDir scratch;
+    const auto folder = seedtest::dep::CopyPeChain(scratch.Path() / "pe");
+    const std::string app = (folder / "appA.exe").string();
+    DependencyLister lister;
+
+    const auto result = lister.ListDependencies({app}, {folder.string()});
+
+    REQUIRE(result.errors.empty());
+    REQUIRE(result.dependencies.count(Canon(folder / "libfoo.dll")) == 1);
+    REQUIRE(result.dependencies.count(Canon(folder / "libbar.dll")) == 1);
+    REQUIRE(result.dependencies.count(Canon(folder / "libbaz.dll")) == 1);
+    REQUIRE(result.dependencies.at(Canon(folder / "libbaz.dll")) == std::vector<std::string>{app});
+}
+
 TEST_CASE("DependencyLister reports errors for truncated PE files", "[DependencyLister][US3]")
 {
     seedtest::ScratchDir scratch;
@@ -278,5 +335,4 @@ TEST_CASE("DependencyLister reports errors for truncated PE files", "[Dependency
 
     REQUIRE(result.dependencies.empty());
     REQUIRE(result.errors.count(corrupt_file.string()) == 1);
-
 }
