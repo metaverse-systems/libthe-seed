@@ -1368,7 +1368,7 @@ void MsiSigner::EmbedSignature(
         // Update FAT in file
         doc.WriteFat();
 
-        // Atomic write
+        // Replace the file as one step
         WriteFileBytes(file_path, doc.bytes);
     });
 }

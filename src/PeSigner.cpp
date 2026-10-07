@@ -385,7 +385,7 @@ void PeSigner::EmbedSignature(
         // Recalculate PE checksum
         RecalcChecksum(bytes, static_cast<std::size_t>(layout.checksum_offset));
 
-        // Atomic write
+        // Replace the file as one step
         WriteFileBytes(file_path, bytes);
     });
 }
