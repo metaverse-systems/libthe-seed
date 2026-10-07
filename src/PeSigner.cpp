@@ -214,6 +214,21 @@ PeSigner::DigestResult PeSigner::ComputeAuthenticodeDigest(const std::string &fi
         // Hash remaining data up to hash_end
         hash_range(pos, hash_end);
 
+        // An unsigned file that is not a multiple of 8 bytes gets zero padding
+        // when a signature is embedded, so the certificate table starts on an
+        // 8-byte boundary. A verifier hashes that padding, so the fingerprint
+        // of the unsigned file includes it. Signed and aligned files hash
+        // exactly the bytes they hold.
+        if(!table.present)
+        {
+            const std::size_t pad = (8 - file.Size() % 8) % 8;
+            if(pad != 0)
+            {
+                static const std::uint8_t zeros[8] = {};
+                hasher.process(zeros, zeros + pad);
+            }
+        }
+
         hasher.finish();
 
         DigestResult result;

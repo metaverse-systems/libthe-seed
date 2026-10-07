@@ -54,10 +54,11 @@ const std::vector<std::uint8_t> kFakeSignature = [] {
 }();
 
 // Digests of the samples with the checksum field and certificate directory
-// entry excluded, as recorded from the unfixed library.
+// entry excluded; the unsigned-file value for the unaligned sample includes the
+// zero padding that embedding adds (independently derived, see the fixtures).
 const char *const kTinyDigest = "947e0a67a3a548c7bade62813f78c32740bda430684e59941f86dd1caa0066cb";
 const char *const kTinyPlus3Digest =
-    "e99d1f620053fe88324fb52c2b9ac5aeff10e053b4bc5d9e26938cacdec66ddf";
+    "5669311c5c8b5f2276ace53deb5841587949370093f1c7d3dbfd2326df0f44af";
 const char *const kTestDllDigest =
     "dc6cedf1a1df1ac30d44d44f71142132b6bfcbc324e360428c78228ccce66d05";
 
@@ -267,7 +268,7 @@ TEST_CASE("ok: PE with 3 bytes appended", "[MalformedPe][ok]")
 {
     seedtest::ScratchDir scratch("malformed-pe-ok");
     Bytes bytes = Sample("tiny.exe");
-    bytes.insert(bytes.end(), {1, 2, 3});
+    bytes.insert(bytes.end(), {0xa5, 0xa6, 0xa7}); // the bytes of the recorded reference
     const std::string path = seedtest::malformed::WriteScratch(scratch, "plus3.exe", bytes);
 
     DependencyLister lister;
