@@ -314,7 +314,7 @@ TEST_CASE("A library that cannot be opened is still credited to every program", 
 {
     if(dep::RunningAsRoot())
     {
-        dep::Skip("the permission case needs a non-administrator user (mode 000 does not stop root)");
+        dep::Skip("the permission case needs a non-administrator user on a system where mode 000 stops reading (it does not stop root or Windows)");
         return;
     }
     ElfChain chain;

@@ -173,12 +173,14 @@ inline bool MakeHardLink(const std::filesystem::path &existing, const std::files
     return true;
 }
 
-// True when the process runs with the rights of the administrator account, so
-// that permission-denied cases cannot fail and must be skipped.
+// True when mode bits cannot make a file unreadable: the process runs with the
+// rights of the administrator account, or the platform (Windows, also under
+// wine) does not turn the mode bits into read access. Permission-denied cases
+// must be skipped then.
 inline bool RunningAsRoot()
 {
 #if defined(_WIN32)
-    return false;
+    return true;
 #else
     return ::geteuid() == 0;
 #endif

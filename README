@@ -67,6 +67,17 @@ The sample executables, DLL, installer and Mach-O files in `tests/fixtures/` are
 
 The workflow in `.github/workflows/ci.yaml` runs `make check` for the plain and the address+undefined variants on every pull request and on pushes to `master`. It builds libecs-cpp from commit `bd84b5a5bee05bed2006fc9ef9dbbfe3e58f9f7e` (version 2.1.0). Update `LIBECS_CPP_REF` in the workflow when the required libecs-cpp changes.
 
+## Dependency listing
+
+`DependencyLister::ListDependencies` builds a reverse map from each library to the input programs that need it, directly or through other libraries.
+
+* Every input is credited with everything it needs, whatever the order of the inputs. Each file is read once. The lists are sorted.
+* Keys are the canonical path of the file found in the search folders (links resolve to the real file), or the recorded name when the library is not found. A library that is not found is listed and is not an error.
+* Delay-loaded Windows libraries are listed with the others. PE names match regardless of letter case; ELF names match exactly.
+* `errors` holds the named inputs that could not be read. `libraryErrors` is an additive field that holds libraries that were found but could not be read; they stay in `dependencies`, and the entry gives the reason and the inputs that need the library.
+* Mach-O inputs are declined with an error (`<path>: Mach-O files are not supported for dependency listing`). This will be revisited after roadmap task 5.
+* Release note: packaging output for existing projects can grow because more libraries are now attributed to the programs that need them (including libraries that were previously missing from every program but the first, and delay-loaded Windows libraries). This is the intended correction; check bundle contents and sizes after upgrading. Hard links are not merged: each name keeps its own canonical path.
+
 ## Replacing files
 
 `PeSigner`, `MachOSigner` and `MsiSigner` write their result by replacing the file at the given path.

@@ -37,11 +37,13 @@ struct DependencyResult
     /**
      * @brief Reverse dependency map.
      *
-     * Key: Resolved absolute filesystem path of a discovered library,
-     *      or the recorded name (as found in the binary) if the library
-     *      could not be located on the filesystem.
-     * Value: List of input binary paths that need this library, directly or
-     *        through other libraries.
+     * Key: Canonical absolute path of a discovered library (links resolve
+     *      to the real file), or the recorded name (as found in the binary)
+     *      if the library could not be located in the search paths. A library
+     *      that is not found is listed and is not an error.
+     * Value: Sorted list of input binary paths that need this library,
+     *        directly or through other libraries. Every input that needs a
+     *        library is listed, whatever the order of the inputs.
      */
     std::map<std::string, std::vector<std::string>> dependencies;
 
@@ -73,8 +75,9 @@ struct DependencyResult
  *
  * Parses ELF and PE binary formats directly (no external library dependencies).
  * Supports cross-platform analysis: ELF binaries can be parsed on Windows and
- * PE binaries can be parsed on Linux. Other formats, including Mach-O, are
- * reported as unsupported inputs.
+ * PE binaries can be parsed on Linux. PE delay-loaded libraries are listed
+ * with the start-up imports. Mach-O files are declined with an error naming
+ * the format (to be revisited); other formats are reported as unsupported.
  *
  * Usage:
  * @code
@@ -99,16 +102,23 @@ class DependencyLister
      * resolves them, and the libraries they need in turn, using the provided
      * search paths.
      *
-     * The result maps each discovered library's resolved absolute path
-     * (or recorded name if unresolvable) to the list of input binaries
-     * that depend on it.
+     * The result maps each discovered library's canonical absolute path
+     * (or recorded name if unresolvable) to the sorted list of input binaries
+     * that depend on it. Only the search paths are used, in order; ELF names
+     * match exactly and PE names match without regard to letter case (an
+     * exact match wins, otherwise the smallest name in byte order). A name
+     * with a folder separator, "..", a drive prefix or a NUL is never joined
+     * to a search path; it is listed under its recorded name.
      *
      * Errors for individual binaries are collected in the error map without
      * aborting processing of remaining binaries. A named binary that cannot be
      * read or is malformed appears in the error map with a message naming the
      * format and the structure at fault; it is never reported as having no
      * dependencies. A library that was found but cannot be read or is
-     * malformed is reported in `libraryErrors`, not in `errors`.
+     * malformed is reported in `libraryErrors`, not in `errors`. A Mach-O input
+     * appears in `errors` as "<path>: Mach-O files are not supported for
+     * dependency listing"; a Mach-O library gets the same text, prefixed with
+     * its path, as the reason in `libraryErrors`.
      *
      * @param binary_paths List of file paths to compiled binaries (ELF or PE).
      * @param search_paths Ordered list of directories to search when resolving

@@ -267,15 +267,24 @@ NodeId ResolveName(
             }
 
             fs::path candidate = fs::path(folder) / name;
-            if(!EntryExists(candidate))
+            if(ignore_case)
             {
-                const std::vector<std::string> *matches =
-                    ignore_case ? FolderMatches(graph, folder, name) : nullptr;
-                if(matches == nullptr)
+                // Take the spelling the folder holds, so that a file system
+                // that ignores letter case still gives one key per file.
+                const std::vector<std::string> *matches = FolderMatches(graph, folder, name);
+                if(matches != nullptr)
+                {
+                    const auto exact = std::find(matches->begin(), matches->end(), name);
+                    candidate = fs::path(folder) / (exact != matches->end() ? *exact : matches->front());
+                }
+                else if(!EntryExists(candidate))
                 {
                     continue;
                 }
-                candidate = fs::path(folder) / matches->front();
+            }
+            else if(!EntryExists(candidate))
+            {
+                continue;
             }
 
             result = FileNode(graph, candidate.string());
