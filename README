@@ -67,6 +67,18 @@ The sample executables, DLL, installer and Mach-O files in `tests/fixtures/` are
 
 The workflow in `.github/workflows/ci.yaml` runs `make check` for the plain and the address+undefined variants on every pull request and on pushes to `master`. It builds libecs-cpp from commit `bd84b5a5bee05bed2006fc9ef9dbbfe3e58f9f7e` (version 2.1.0). Update `LIBECS_CPP_REF` in the workflow when the required libecs-cpp changes.
 
+## Replacing files
+
+`PeSigner`, `MachOSigner` and `MsiSigner` write their result by replacing the file at the given path.
+
+* The file is replaced as one step: after a failure or a crash or kill of the process it holds the complete old or the complete new content, and no working file remains when the call returns, whether it succeeded or failed.
+* Permissions are preserved: Linux mode bits (and owner and group where the account may), Windows file attributes. Extended attributes, ACLs and hard-link identity are not preserved.
+* Data is flushed to storage before the replacement and the folder is flushed after it, where the platform supports it. This is a request: it protects against loss of power only on storage that honours it (best effort on network shares and some removable media), and is not a guarantee.
+* A process killed during the replacement can leave a working file named `.<name>.seedtmp.<pid>.<hex>` in the same folder. It is never reused and can be deleted.
+* A link is followed: the file it points to is replaced and the link is kept. Read-only files are refused.
+* `PeSigner`: the fingerprint of an unsigned program includes the zero padding that embedding adds, so it is the same before and after embedding. Stripping removes up to seven trailing zero bytes of padding, never below the end of the last section, so a program whose last byte is not zero is restored to its original length and content, except that the CheckSum field holds the calculated checksum (embedding and stripping both recalculate it); one that ends in zeros may lose up to seven when its length was a multiple of eight.
+* The tests of the replacement run the PE and MSI signers. The Mach-O embedding cases in `test_SignersUseReplace` are skipped for now because embedding into the sample Mach-O files stops with a known gap (see "Known gaps").
+
 ## Usage
 
 All loaders are instance-based classes. Each instance owns its own search paths and caches, and is safe for concurrent use from multiple threads.

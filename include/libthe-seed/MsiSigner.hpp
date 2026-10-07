@@ -46,8 +46,19 @@ public:
      * Writes the blob to the \x05DigitalSignature stream inside the
      * compound document. Creates the stream if it does not exist;
      * replaces it if it does.
-     * Uses atomic write: writes to temp file, then renames.
-     * @param file_path Path to MSI file (modified in-place via atomic swap)
+     * The file is replaced as one step: after a failure or a crash of the
+     * process it holds the complete old or the complete new content, and no
+     * temporary file remains when the call returns. Permissions are preserved
+     * (Linux mode bits, and owner and group where the account may; Windows file
+     * attributes), extended attributes and ACLs are not. Data is flushed to
+     * storage before the replacement and the folder after it where the platform
+     * supports it; this protects against loss of power only on storage that
+     * honours those requests and is not a guarantee. A process killed during
+     * the replacement can leave a working file named
+     * `.<name>.seedtmp.<pid>.<hex>` in the same folder; it is never reused and
+     * can be deleted. A link is followed: the file it points to is replaced and
+     * the link is kept. Read-only files are refused.
+     * @param file_path Path to MSI file (replaced in place)
      * @param pkcs7_der DER-encoded PKCS#7 SignedData blob
      * @throws std::runtime_error if file is not a valid CFBF, is malformed or read-only;
      *         a rejected call leaves the file unchanged

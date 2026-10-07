@@ -1,0 +1,36 @@
+# Program fingerprints (Authenticode SHA-256) for the Windows samples.
+# Tool: osslsigncode 2.14
+# Date: 2026-10-07
+# Method: each sample with n fixed bytes appended is signed by osslsigncode
+# and the digest it calculates for the signed file is recorded. The appended
+# bytes are a5 a6 a7 a8 a9 aa ab (the first n of them). Signing throw-away
+# certificate: openssl req -x509 -newkey rsa:2048 -nodes -subj /CN=sample-check
+# Commands, per row:
+#   cat <fixture> <n appended bytes> > in.exe
+#   osslsigncode sign -h sha256 -certs c.pem -key k.pem -in in.exe -out signed.exe
+#   osslsigncode verify -in signed.exe   (line: Calculated message digest)
+# Input SHA-256 of the unmodified samples:
+#   tiny.exe 0aa6005dbe3224a903c346a4fe71e0cedde26699843f0dbcb56d89c7f8f81ca9
+#   test.dll 08e2cd430f42fd8be59f86f489ce51cce3d335ee2235177ae9b5f98e897e5bec
+# The row tiny-signed.exe is tiny.exe signed once by osslsigncode (the
+# already signed case); it is not stored, because it would put the samples
+# over the size budget of check-fixtures.sh. Its digest equals the one for
+# tiny.exe with 0 bytes appended; its length varies with the signature.
+# Columns: fixture appended-byte-count total-length sha256
+tiny.exe 0 13824 947e0a67a3a548c7bade62813f78c32740bda430684e59941f86dd1caa0066cb
+tiny.exe 1 13825 4f926cb646b20002de37ba9ac254b9e72445f3516a74402e2ffd40d43a41ad2b
+tiny.exe 2 13826 b2e673642f075429e45c4f25b1fe99f19259e3b8b613aaffc977b2f096de9817
+tiny.exe 3 13827 5669311c5c8b5f2276ace53deb5841587949370093f1c7d3dbfd2326df0f44af
+tiny.exe 4 13828 d7ecf1adf3a028166ab9faf606ee5ab2a54c9d513d0f9221c606daa0bed9bc0d
+tiny.exe 5 13829 2910f1ae0d55621559ec93710dafb3ea7148f4cdb54c9d429135cbfec081f85f
+tiny.exe 6 13830 ea498897c43c6251dcddbe7959f3d4bda71d557eb691ccc0306b6761c64e3feb
+tiny.exe 7 13831 e74139cc736b6ac607ef9f36eb2a54e06d95f1b31906d5274f19d830f5b32076
+test.dll 0 11264 dc6cedf1a1df1ac30d44d44f71142132b6bfcbc324e360428c78228ccce66d05
+test.dll 1 11265 54a947ece3138ace85751a5cb69c7dfdc9835070e0c0ccc86c618320693b8be0
+test.dll 2 11266 ca149e2419ef41c33451cdef8d2641c23d3a2c37ac5ca262805e4c7715385121
+test.dll 3 11267 07da45c193ec8715558bc2b3fe2007035d714846c1b1a8b59497f7bd953edc31
+test.dll 4 11268 06f7eb3f6bf41dcf93108db74d9ca1dac7d85dfde2391a2d8a9e637ce516844b
+test.dll 5 11269 07a4525b08845ed6939e659b88b30f2d467115f2ec7238798d6119e9e46f5055
+test.dll 6 11270 4d076fadd535ddfde5f6d83f2f78a31048d9a22f8e039facd45af9cd3c14b7d4
+test.dll 7 11271 972a70a278bfbea54f9e285c3283c2190f3585cac9538250a891d980d56a9224
+tiny-signed.exe 0 15280 947e0a67a3a548c7bade62813f78c32740bda430684e59941f86dd1caa0066cb
