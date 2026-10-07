@@ -1,0 +1,148 @@
+# Known answers for the Mach-O samples.
+# Tools: LLVM 21.1.8, Python 3.14.8
+# Date: 2026-10-07
+# Method: check_pages.py --pages FILE (Python hashlib over the file as stored)
+# and llvm-lipo -archs FILE. Page hashes are of the 4096-byte pages of each
+# slice up to codeLimit. Input SHA-256 of every sample follows.
+# sample tiny-macho-x86_64 6bd337c24619398dcb5f423fb0618444a8fba2fbc98fdd392f36f7bbf77f1929
+# sample tiny-macho-arm64 38b903d98a75ec65a3b0918ac29bf9fedb8263715e62439d023f6e5fb17f2a9c
+# sample tiny-macho-universal cb8ee911be4afa0306932fd17c30a158db637fc1ecdc328aa30f12d05a125651
+# sample tiny-macho-arm64-adhoc cea933550c3e33e1ad699905e2852d8d01749267b2e776e5c25af6c975357a3c
+# sample tiny-macho-x86_64-adhoc 85972bee45f12308d38e47ea61b3c826573d11f3308205b880aee5334ee1a153
+# sample tiny-macho-universal-adhoc a401268d22e325244565aa4dc82e05228f2129b7e5837f8696db4041f4d1a376
+# sample tiny-macho-x86_64-nospace fdb73e077dc3a3efa2e6d3b883847a2d8c75c68cc4f7da7924640d8c48fd1d92
+# sample tiny-macho-x86_64-exactfit be615e75d8a0c008ee5c312866fb95bff49732598d543d50ecb47306ebb4defb
+# sample tiny-macho-universal64 34252fb92f361d43e16a0a603fa74ac86687877e30ad6bac491ccf7274a3342c
+# sample tiny-macho-dylib-arm64 30f424a90deac3397edcd0849e8f10806e315651efdc1056e02008de13350335
+# sample tiny-macho-x86_64-data-after-sig b6cf227abc8610ac56af87b9ec6c1259b6fddcbaef319c3fb83a0efff1253c3e
+== tiny-macho-x86_64
+archs x86_64
+file tiny-macho-x86_64 form=thin slices=1 length=4248
+slice 0 cputype=0x1000007 cpusubtype=0x80000003 offset=0 size=4248 align=0
+  header cputype=0x1000007 cpusubtype=0x80000003 filetype=2 ncmds=13 sizeofcmds=648 flags=0x200085 header_end=680
+  free_header_space=32 first_content=712
+  linkedit fileoff=4096 filesize=152 vmsize=152
+  signature none
+result ok
+== tiny-macho-arm64
+archs arm64
+file tiny-macho-arm64 form=thin slices=1 length=16536
+slice 0 cputype=0x100000c cpusubtype=0x0 offset=0 size=16536 align=0
+  header cputype=0x100000c cpusubtype=0x0 filetype=2 ncmds=13 sizeofcmds=648 flags=0x200085 header_end=680
+  free_header_space=32 first_content=712
+  linkedit fileoff=16384 filesize=152 vmsize=152
+  signature none
+result ok
+== tiny-macho-universal
+archs x86_64 arm64
+file tiny-macho-universal form=fat32 slices=2 length=32920
+slice 0 cputype=0x1000007 cpusubtype=0x80000003 offset=4096 size=4248 align=12
+  header cputype=0x1000007 cpusubtype=0x80000003 filetype=2 ncmds=13 sizeofcmds=648 flags=0x200085 header_end=680
+  free_header_space=32 first_content=712
+  linkedit fileoff=4096 filesize=152 vmsize=152
+  signature none
+slice 1 cputype=0x100000c cpusubtype=0x0 offset=16384 size=16536 align=14
+  header cputype=0x100000c cpusubtype=0x0 filetype=2 ncmds=13 sizeofcmds=648 flags=0x200085 header_end=680
+  free_header_space=32 first_content=712
+  linkedit fileoff=16384 filesize=152 vmsize=152
+  signature none
+result ok
+== tiny-macho-arm64-adhoc
+archs arm64
+file tiny-macho-arm64-adhoc form=thin slices=1 length=16848
+slice 0 cputype=0x100000c cpusubtype=0x0 offset=0 size=16848 align=0
+  header cputype=0x100000c cpusubtype=0x0 filetype=2 ncmds=14 sizeofcmds=664 flags=0x200085 header_end=696
+  free_header_space=32 first_content=728
+  linkedit fileoff=16384 filesize=464 vmsize=464
+  codesig dataoff=16544 datasize=304 aligned16=yes
+  superblob length=304 count=1
+  codedirectory version=0x20400 flags=0x20002 length=280 nSpecialSlots=0 nCodeSlots=5 codeLimit=16544 pageSize=4096 hashSize=32 hashType=2 identifier=tiny-macho-arm64-adhoc
+  page 0 59d1be5be5cbe9711609bd4996902684f6b2dbc90b03460c68139491125c69ff
+  page 1 ad7facb2586fc6e966c004d7d1d16b024f5805ff7cb47c7a85dabd8b48892ca7
+  page 2 ad7facb2586fc6e966c004d7d1d16b024f5805ff7cb47c7a85dabd8b48892ca7
+  page 3 ad7facb2586fc6e966c004d7d1d16b024f5805ff7cb47c7a85dabd8b48892ca7
+  page 4 d58927d9f2220ed67b4f5f230c9df46bc34863b633b2bd625ba1cd2b9553a915
+  pages checked=5 mismatched=0
+result ok
+== tiny-macho-x86_64-adhoc
+archs x86_64
+file tiny-macho-x86_64-adhoc form=thin slices=1 length=4464
+slice 0 cputype=0x1000007 cpusubtype=0x80000003 offset=0 size=4464 align=0
+  header cputype=0x1000007 cpusubtype=0x80000003 filetype=2 ncmds=14 sizeofcmds=664 flags=0x200085 header_end=696
+  free_header_space=32 first_content=728
+  linkedit fileoff=4096 filesize=368 vmsize=368
+  codesig dataoff=4256 datasize=208 aligned16=yes
+  superblob length=208 count=1
+  codedirectory version=0x20400 flags=0x20002 length=184 nSpecialSlots=0 nCodeSlots=2 codeLimit=4256 pageSize=4096 hashSize=32 hashType=2 identifier=tiny-macho-x86_64-adhoc
+  page 0 ac2d77b9d777aefc98f789ab72870c060b9c5ae7b87f87b237adea42820b0dc6
+  page 1 d58927d9f2220ed67b4f5f230c9df46bc34863b633b2bd625ba1cd2b9553a915
+  pages checked=2 mismatched=0
+result ok
+== tiny-macho-universal-adhoc
+archs x86_64 arm64
+file tiny-macho-universal-adhoc form=fat32 slices=2 length=33232
+slice 0 cputype=0x1000007 cpusubtype=0x80000003 offset=4096 size=4464 align=12
+  header cputype=0x1000007 cpusubtype=0x80000003 filetype=2 ncmds=14 sizeofcmds=664 flags=0x200085 header_end=696
+  free_header_space=32 first_content=728
+  linkedit fileoff=4096 filesize=368 vmsize=368
+  codesig dataoff=4256 datasize=208 aligned16=yes
+  superblob length=208 count=1
+  codedirectory version=0x20400 flags=0x20002 length=184 nSpecialSlots=0 nCodeSlots=2 codeLimit=4256 pageSize=4096 hashSize=32 hashType=2 identifier=tiny-macho-x86_64-adhoc
+  page 0 ac2d77b9d777aefc98f789ab72870c060b9c5ae7b87f87b237adea42820b0dc6
+  page 1 d58927d9f2220ed67b4f5f230c9df46bc34863b633b2bd625ba1cd2b9553a915
+  pages checked=2 mismatched=0
+slice 1 cputype=0x100000c cpusubtype=0x0 offset=16384 size=16848 align=14
+  header cputype=0x100000c cpusubtype=0x0 filetype=2 ncmds=14 sizeofcmds=664 flags=0x200085 header_end=696
+  free_header_space=32 first_content=728
+  linkedit fileoff=16384 filesize=464 vmsize=464
+  codesig dataoff=16544 datasize=304 aligned16=yes
+  superblob length=304 count=1
+  codedirectory version=0x20400 flags=0x20002 length=280 nSpecialSlots=0 nCodeSlots=5 codeLimit=16544 pageSize=4096 hashSize=32 hashType=2 identifier=tiny-macho-arm64-adhoc
+  page 0 59d1be5be5cbe9711609bd4996902684f6b2dbc90b03460c68139491125c69ff
+  page 1 ad7facb2586fc6e966c004d7d1d16b024f5805ff7cb47c7a85dabd8b48892ca7
+  page 2 ad7facb2586fc6e966c004d7d1d16b024f5805ff7cb47c7a85dabd8b48892ca7
+  page 3 ad7facb2586fc6e966c004d7d1d16b024f5805ff7cb47c7a85dabd8b48892ca7
+  page 4 d58927d9f2220ed67b4f5f230c9df46bc34863b633b2bd625ba1cd2b9553a915
+  pages checked=5 mismatched=0
+result ok
+== tiny-macho-x86_64-nospace
+archs x86_64
+file tiny-macho-x86_64-nospace form=thin slices=1 length=4248
+slice 0 cputype=0x1000007 cpusubtype=0x80000003 offset=0 size=4248 align=0
+  header cputype=0x1000007 cpusubtype=0x80000003 filetype=2 ncmds=13 sizeofcmds=648 flags=0x200085 header_end=680
+  free_header_space=0 first_content=680
+  linkedit fileoff=4096 filesize=152 vmsize=152
+  signature none
+result ok
+== tiny-macho-x86_64-exactfit
+archs x86_64
+file tiny-macho-x86_64-exactfit form=thin slices=1 length=4248
+slice 0 cputype=0x1000007 cpusubtype=0x80000003 offset=0 size=4248 align=0
+  header cputype=0x1000007 cpusubtype=0x80000003 filetype=2 ncmds=13 sizeofcmds=648 flags=0x200085 header_end=680
+  free_header_space=16 first_content=696
+  linkedit fileoff=4096 filesize=152 vmsize=152
+  signature none
+result ok
+== tiny-macho-universal64
+archs x86_64 arm64
+file tiny-macho-universal64 form=fat64 slices=2 length=32920
+slice 0 cputype=0x1000007 cpusubtype=0x80000003 offset=4096 size=4248 align=12
+  header cputype=0x1000007 cpusubtype=0x80000003 filetype=2 ncmds=13 sizeofcmds=648 flags=0x200085 header_end=680
+  free_header_space=32 first_content=712
+  linkedit fileoff=4096 filesize=152 vmsize=152
+  signature none
+slice 1 cputype=0x100000c cpusubtype=0x0 offset=16384 size=16536 align=14
+  header cputype=0x100000c cpusubtype=0x0 filetype=2 ncmds=13 sizeofcmds=648 flags=0x200085 header_end=680
+  free_header_space=32 first_content=712
+  linkedit fileoff=16384 filesize=152 vmsize=152
+  signature none
+result ok
+== tiny-macho-dylib-arm64
+archs arm64
+file tiny-macho-dylib-arm64 form=thin slices=1 length=16472
+slice 0 cputype=0x100000c cpusubtype=0x0 offset=0 size=16472 align=0
+  header cputype=0x100000c cpusubtype=0x0 filetype=6 ncmds=11 sizeofcmds=632 flags=0x100085 header_end=664
+  free_header_space=32 first_content=696
+  linkedit fileoff=16384 filesize=88 vmsize=88
+  signature none
+result ok
