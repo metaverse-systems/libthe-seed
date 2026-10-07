@@ -23,7 +23,8 @@ seed_test_programs = test_NameParser test_LibraryLoader test_DependencyLister \
                  test_PeSigner test_MachOParser test_MachOSigner test_MsiSigner test_ResourcePak \
                  test_ComponentLoader test_SystemLoader test_PakLoader \
                  test_LoaderConcurrency test_JSONLoader test_BoundedBytes test_MalformedPe test_PeDigestReference test_MalformedElf test_MalformedMachO \
-                 test_MalformedMsi test_TruncatedSamples test_FuzzCorpus
+                 test_MalformedMsi test_TruncatedSamples test_FuzzCorpus \
+                 test_FileReplace test_FileReplaceKill test_SignersUseReplace
 
 check_PROGRAMS = $(seed_test_programs)
 
@@ -101,6 +102,16 @@ test_FuzzCorpus_SOURCES = test_FuzzCorpus.cpp fuzz/FuzzTargets.cpp
 test_FuzzCorpus_CPPFLAGS = $(AM_CPPFLAGS) -DFUZZ_CORPUS_DIR=\"$(abs_srcdir)/fuzz/corpus\"
 test_FuzzCorpus_LDADD = libcatch.la ../src/libthe-seed.la ${LIBECS_LIBS}
 
+test_FileReplace_SOURCES = test_FileReplace.cpp
+test_FileReplace_LDADD = libcatch.la ../src/libthe-seed.la ${LIBECS_LIBS}
+test_FileReplace_LDFLAGS = $(AM_LDFLAGS) -pthread
+
+test_FileReplaceKill_SOURCES = test_FileReplaceKill.cpp
+test_FileReplaceKill_LDADD = libcatch.la ../src/libthe-seed.la ${LIBECS_LIBS}
+
+test_SignersUseReplace_SOURCES = test_SignersUseReplace.cpp
+test_SignersUseReplace_LDADD = libcatch.la ../src/libthe-seed.la ${LIBECS_LIBS}
+
 libtestmodule_la_SOURCES = TestModule.cpp
 libtestmodule_la_CXXFLAGS = -std=c++20 ${LIBECS_CFLAGS} $(SANITIZER_CXXFLAGS)
 libtestmodule_la_LDFLAGS = -no-undefined -rpath /nowhere -version-info 0:0:0 $(SANITIZER_LDFLAGS)
@@ -110,7 +121,7 @@ test_JSONLoader_SOURCES = test_JSONLoader.cpp
 test_JSONLoader_LDADD = libcatch.la ../src/libthe-seed.la ${LIBECS_LIBS}
 test_JSONLoader_LDFLAGS = $(AM_LDFLAGS) -pthread
 
-EXTRA_DIST = TestPaths.hpp HeapCounter.hpp MalformedInput.hpp \
+EXTRA_DIST = TestPaths.hpp HeapCounter.hpp MalformedInput.hpp ReplaceTestSupport.hpp \
              reference/reference-dump.cpp reference/compare-reference.sh \
              reference/make-generated-references.sh run-test.sh run-test-selftest.sh check-fixtures.sh \
              fuzz/FuzzTargets.hpp fuzz/FuzzTargets.cpp fuzz/fuzz_entry.cpp \
