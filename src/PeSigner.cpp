@@ -96,6 +96,43 @@ PeLayout ParsePeLayout(const ByteSpan &file)
     return layout;
 }
 
+// The lowest file offset that stripping may cut back to: the larger of the end
+// of the last section's raw data and SizeOfHeaders. A section table that does
+// not fit in the file contributes nothing.
+std::uint64_t StripFloor(const ByteSpan &file, const PeLayout &layout)
+{
+    std::uint64_t floor = 0;
+    const std::uint64_t size = file.Size();
+
+    const std::uint64_t opt = layout.optional_header_offset;
+    if(opt + 4 > size || layout.pe_header_offset + 24 > size || opt + 64 > size)
+    {
+        return floor;
+    }
+    floor = file.Read<std::uint32_t>(opt + 60, ByteOrder::Little, "SizeOfHeaders");
+
+    const auto section_count = file.Read<std::uint16_t>(layout.pe_header_offset + 6, ByteOrder::Little,
+                                                        "NumberOfSections");
+    const auto opt_size = file.Read<std::uint16_t>(layout.pe_header_offset + 20, ByteOrder::Little,
+                                                   "SizeOfOptionalHeader");
+    const std::uint64_t table_start = opt + opt_size;
+    for(std::uint64_t i = 0; i < section_count; ++i)
+    {
+        const std::uint64_t entry = table_start + i * 40;
+        if(entry + 40 > size)
+        {
+            break;
+        }
+        const std::uint64_t raw_size = file.Read<std::uint32_t>(entry + 16, ByteOrder::Little, "SizeOfRawData");
+        const std::uint64_t raw_ptr = file.Read<std::uint32_t>(entry + 20, ByteOrder::Little, "PointerToRawData");
+        if(raw_size != 0 && raw_ptr + raw_size > floor)
+        {
+            floor = raw_ptr + raw_size;
+        }
+    }
+    return floor;
+}
+
 // The certificate table named by the certificate directory entry.
 struct CertificateTable
 {
@@ -390,10 +427,12 @@ void PeSigner::StripSignature(const std::string &file_path)
 
         PeLayout layout;
         CertificateTable table;
+        std::uint64_t floor = 0;
         {
             const ByteSpan file(bytes, kFormat);
             layout = ParsePeLayout(file);
             table = ValidateCertificateTable(file, layout);
+            floor = StripFloor(file, layout);
         }
 
         if(!table.present)
@@ -401,8 +440,17 @@ void PeSigner::StripSignature(const std::string &file_path)
             return; // No signature to strip
         }
 
-        // Truncate the certificate data
-        bytes.resize(static_cast<std::size_t>(table.address));
+        // Truncate the certificate data, then the alignment padding that
+        // embedding added: up to 7 zero bytes right before the certificate
+        // address, never below the end of the last section's raw data or the
+        // headers.
+        std::uint64_t new_size = table.address;
+        for(int removed = 0; removed < 7 && new_size > floor && bytes[static_cast<std::size_t>(new_size) - 1] == 0;
+            ++removed)
+        {
+            --new_size;
+        }
+        bytes.resize(static_cast<std::size_t>(new_size));
 
         // Zero the DD entry 4
         const MutableByteSpan out(bytes, kFormat);
