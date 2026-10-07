@@ -64,8 +64,9 @@ for target in elf pe macho superblob msi; do
         cp "$top/tests/fixtures/tiny.exe" "$top/tests/fixtures/test.dll" "$corpus/"
         ;;
     macho)
-        cp "$top/tests/fixtures/tiny-macho-x86_64" "$top/tests/fixtures/tiny-macho-arm64" \
-            "$top/tests/fixtures/tiny-macho-universal" "$corpus/"
+        # Every genuine Mac sample: unsigned, signed by another tool, no room,
+        # exactly enough room, 64-bit table, library, data after the signature.
+        cp "$top"/tests/fixtures/tiny-macho-* "$corpus/"
         ;;
     msi)
         cp "$top/tests/fixtures/tiny.msi" "$corpus/"

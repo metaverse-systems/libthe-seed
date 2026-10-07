@@ -43,7 +43,7 @@ rm -f "$probe" "$out/probe" "$out/probe.log"
 flags="-std=c++20 -g -O1 -fsanitize=fuzzer,address,undefined -fno-sanitize-recover=undefined"
 includes="-I$top/include -I$top/src -I$top/tests -I$here"
 
-sources="ElfParser.cpp PeParser.cpp PeSigner.cpp MachOParser.cpp MachOSigner.cpp MsiSigner.cpp DependencyLister.cpp internal/FileIO.cpp"
+sources="ElfParser.cpp PeParser.cpp PeSigner.cpp MachOParser.cpp MachOSigner.cpp MsiSigner.cpp DependencyLister.cpp internal/FileIO.cpp internal/MachOLayout.cpp"
 
 objects=
 for source in $sources; do
