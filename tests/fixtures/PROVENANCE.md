@@ -26,6 +26,17 @@ Apple, so redistribution is permitted.
 | tiny-macho-universal | llvm-lipo | 21.1.8 | `llvm-lipo -create tiny-macho-x86_64 tiny-macho-arm64 -output tiny-macho-universal` | the two thin files above | MIT (project) | 32920 | ok: `file` reports a universal binary with 2 architectures; `llvm-otool -f` lists 2 slices |
 | plain.txt | hand-written | n/a | none (typed by hand) | none | MIT (project) | 64 | ok: `file` reports ASCII text; deliberately not a binary format |
 
+`pe-reference-digests.txt` is not a sample. It records, for `tiny.exe` and
+`test.dll` with 0 to 7 fixed bytes appended, the Authenticode SHA-256 that
+osslsigncode 2.14 calculates for the signed file, so tests can compare the
+library with an independent tool without it being installed. It is written by
+`regenerate.sh --reference pe-reference-digests.txt` (tool, commands, date and
+input hashes are in its header) and recomputed and compared by
+`regenerate.sh --verify`. A program signed by osslsigncode is not stored (it
+would take the samples over the size budget); tests derive an already signed
+program with the library and compare it with the recorded `tiny-signed.exe`
+fingerprint.
+
 Total size of the samples: 89096 bytes (budget 102400).
 
 The Mach-O files are unsigned (`-no_adhoc_codesign`), so signer tests start

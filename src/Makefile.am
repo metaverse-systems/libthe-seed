@@ -20,6 +20,7 @@ noinst_HEADERS = \
 	internal/PeCertificate.hpp \
 	NameParser.hpp \
 	internal/FileIO.hpp \
+	internal/FileReplaceHooks.hpp \
 	internal/MachODefs.hpp \
 	internal/MachOSuperBlob.hpp \
 	internal/MsiSignatureSize.hpp
