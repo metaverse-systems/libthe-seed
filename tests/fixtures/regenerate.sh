@@ -7,10 +7,18 @@
 #                                       rewrite SHA256SUMS from the files present
 #        regenerate.sh --verify         check the samples with independent tools,
 #                                       and the recorded program fingerprints
-#        regenerate.sh --reference FILE write the recorded program fingerprints
+#        regenerate.sh --reference FILE [SIGNED_FOLDER]
+#                                       write the recorded program fingerprints
 #                                       (pe-reference-digests.txt) to FILE, or,
 #                                       when FILE is named macho-reference.txt,
-#                                       the recorded Mach-O known answers
+#                                       the recorded Mach-O known answers; with
+#                                       SIGNED_FOLDER (the folder that
+#                                       test_MachOReference fills when
+#                                       SEED_MACHO_WRITE_SIGNED names it) the
+#                                       answers for the programs signed by the
+#                                       library are added, as "== signed <sample>"
+#                                       blocks. --verify uses the same folder when
+#                                       SEED_MACHO_SIGNED_DIR names it
 #
 # Tools: gcc, x86_64-w64-mingw32-gcc, wixl, clang, ld64.lld, llvm-lipo for the
 # rebuild; osslsigncode, openssl, llvm-objdump, llvm-otool, file for --verify;
@@ -189,11 +197,14 @@ derive_reference() { # output-file
 # Writes the Mach-O known answers: for every sample the tool facts (llvm-lipo
 # architectures) and, for every sample that carries a signature written by
 # another tool, the structure facts and every page SHA-256 as recomputed by
-# check_pages.py (Python hashlib, no library code). Signed outputs of the library
-# itself are added by the tests, which compare them with the same checker.
-derive_macho_reference() { # output-file
-    need llvm-lipo llvm-otool python3
+# check_pages.py (Python hashlib, no library code). With a folder of programs
+# signed by the library (signed-<sample>, written by test_MachOReference) the
+# same facts, the SHA-256 of the whole file and every page hash are added for
+# each of them as "== signed <sample>"; the checker must accept each one.
+derive_macho_reference() { # output-file [signed-folder]
+    need llvm-lipo llvm-otool python3 sha256sum
     mr_out=$1
+    mr_signed=${2:-}
     {
         echo "# Known answers for the Mach-O samples."
         echo "# Tools: $("$T_llvm_lipo" --version 2>&1 | sed -n 's/.*LLVM version \(.*\)/LLVM \1/p' | head -n 1), Python $(python3 -c 'import sys; print("%d.%d.%d" % sys.version_info[:3])')"
@@ -216,6 +227,19 @@ derive_macho_reference() { # output-file
             esac
             python3 "$here/check_pages.py" --pages "$here/$f" | sed "s|$here/||"
         done
+        if [ -n "$mr_signed" ]; then
+            echo "# Signed by the library: identity test-identity, CMS bytes 00 01 ... 3F (64 bytes), capacity 64."
+            echo "# The test writes signed-<sample>; check_pages.py accepts each (exit status 0) and"
+            echo "# its output follows, then the SHA-256 of the whole file."
+            for f in $macho_samples; do
+                [ -f "$mr_signed/signed-$f" ] || continue
+                echo "== signed $f"
+                python3 "$here/check_pages.py" --pages "$mr_signed/signed-$f" >"$scratch/signed-pages.txt" ||
+                    { echo "regenerate.sh: check_pages.py rejects the library-signed $f" >&2; exit 1; }
+                sed "s|$mr_signed/||" "$scratch/signed-pages.txt"
+                echo "sha256 $(sha256sum "$mr_signed/signed-$f" | cut -d' ' -f1)"
+            done
+        fi
     } >"$mr_out"
 }
 
@@ -365,8 +389,15 @@ if [ "${1:-}" = "--verify" ]; then
     done
 
     if [ -f "$here/macho-reference.txt" ]; then
-        derive_macho_reference "$scratch/macho-reference.txt"
-        if [ "$(grep -v '^# \(Tools\|Date\)' "$here/macho-reference.txt")" = "$(grep -v '^# \(Tools\|Date\)' "$scratch/macho-reference.txt")" ]; then
+        derive_macho_reference "$scratch/macho-reference.txt" "${SEED_MACHO_SIGNED_DIR:-}"
+        # Without a folder of library-signed programs only the blocks that do not
+        # depend on the library are compared.
+        macho_norm() {
+            grep -v '^# \(Tools\|Date\)' "$1" |
+                if [ -n "${SEED_MACHO_SIGNED_DIR:-}" ]; then cat; else
+                    awk '/^# Signed by the library/ { skip = 1 } !skip { print }'; fi
+        }
+        if [ "$(macho_norm "$here/macho-reference.txt")" = "$(macho_norm "$scratch/macho-reference.txt")" ]; then
             report macho-reference.txt ok "check_pages.py and llvm-lipo reproduce every recorded answer"
         else
             diff "$here/macho-reference.txt" "$scratch/macho-reference.txt" || true
@@ -395,9 +426,9 @@ if [ "${1:-}" = "--verify" ]; then
     exit "$status"
 fi
 
-if [ "${1:-}" = "--reference" ] && [ $# -eq 2 ]; then
+if [ "${1:-}" = "--reference" ] && { [ $# -eq 2 ] || [ $# -eq 3 ]; }; then
     case $2 in
-        */macho-reference.txt|macho-reference.txt) derive_macho_reference "$2" ;;
+        */macho-reference.txt|macho-reference.txt) derive_macho_reference "$2" "${3:-}" ;;
         *) derive_reference "$2" ;;
     esac
     echo "regenerate.sh: wrote $2"
@@ -413,7 +444,7 @@ if [ "${1:-}" = "--macho" ] && [ $# -eq 1 ]; then
 fi
 
 if [ $# -ne 0 ]; then
-    echo "usage: regenerate.sh [--macho | --verify | --reference FILE]" >&2
+    echo "usage: regenerate.sh [--macho | --verify | --reference FILE [SIGNED_FOLDER]]" >&2
     exit 2
 fi
 

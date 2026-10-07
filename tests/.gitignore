@@ -7,6 +7,7 @@ test_PeSigner
 test_ResourcePak
 test_JSONLoader
 test_MachOParser
+test_MachOReference
 test_ComponentLoader
 test_SystemLoader
 test_PakLoader

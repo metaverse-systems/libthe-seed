@@ -271,17 +271,22 @@ void FuzzMachO(const std::uint8_t *data, std::size_t size)
     Call("MachOParser::GetArchSlices", size, 0, [&] { (void)MachOParser::GetArchSlices(path); });
     Call("MachOParser::ListDependencies", size, 0,
          [&] { (void)MachOParser::ListDependencies(path); });
-    Call("MachOSigner::ComputeCodeDirectory", size, 0,
-         [&] { (void)MachOSigner::ComputeCodeDirectory(path, "fuzz"); });
+    Call("MachOSigner::PrepareSignature", size, 0,
+         [&] { (void)MachOSigner::PrepareSignature(path, "fuzz", 64); });
     Call("MachOSigner::HasEmbeddedSignature", size, 0,
          [&] { (void)MachOSigner::HasEmbeddedSignature(path); });
     Call("MachOSigner::ExtractSignature", size, 0,
          [&] { (void)MachOSigner::ExtractSignature(path); });
+    Call("MachOSigner::ExtractSignatures", size, 0,
+         [&] { (void)MachOSigner::ExtractSignatures(path); });
 
     static const std::vector<std::uint8_t> blob = SuperBlobSeed();
     WriteFile(work, data, size);
-    Call("MachOSigner::EmbedSignature", size, blob.size(),
-         [&] { MachOSigner::EmbedSignature(work, blob); });
+    Call("MachOSigner::CompleteSignature", size, blob.size(), [&] {
+        const auto prepared = MachOSigner::PrepareSignature(work, "fuzz", static_cast<std::uint32_t>(blob.size()));
+        MachOSigner::CompleteSignature(
+            work, prepared, std::vector<std::vector<std::uint8_t>>(prepared.slices.size(), blob));
+    });
 }
 
 void FuzzSuperBlob(const std::uint8_t *data, std::size_t size)

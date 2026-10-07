@@ -297,11 +297,14 @@ std::vector<ReadOperation> MachOReads()
              return result;
          },
          true},
-        {"MachOSigner::ComputeCodeDirectory", "Mach-O",
+        {"MachOSigner::PrepareSignature", "Mach-O",
          [](const std::string &path) {
-             const auto answer = MachOSigner::ComputeCodeDirectory(path, "sweep");
-             Result result = answer.code_directory;
-             result.insert(result.end(), answer.cd_hash.begin(), answer.cd_hash.end());
+             Result result;
+             for(const auto &slice : MachOSigner::PrepareSignature(path, "sweep", 64).slices)
+             {
+                 result.insert(result.end(), slice.code_directory.begin(), slice.code_directory.end());
+                 result.insert(result.end(), slice.cd_hash.begin(), slice.cd_hash.end());
+             }
              return result;
          },
          false},
@@ -319,8 +322,14 @@ std::vector<ReadOperation> MachOReads()
 std::vector<ChangeOperation> MachOChanges()
 {
     return {
-        {"MachOSigner::EmbedSignature", "Mach-O",
-         [](const std::string &path) { MachOSigner::EmbedSignature(path, seedfuzz::SuperBlobSeed()); }},
+        {"MachOSigner::CompleteSignature", "Mach-O",
+         [](const std::string &path) {
+             const auto blob = seedfuzz::SuperBlobSeed();
+             const auto prepared =
+                 MachOSigner::PrepareSignature(path, "sweep", static_cast<std::uint32_t>(blob.size()));
+             MachOSigner::CompleteSignature(
+                 path, prepared, std::vector<std::vector<std::uint8_t>>(prepared.slices.size(), blob));
+         }},
     };
 }
 

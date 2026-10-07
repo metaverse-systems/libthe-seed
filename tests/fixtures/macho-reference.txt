@@ -146,3 +146,130 @@ slice 0 cputype=0x100000c cpusubtype=0x0 offset=0 size=16472 align=0
   linkedit fileoff=16384 filesize=88 vmsize=88
   signature none
 result ok
+# Signed by the library: identity test-identity, CMS bytes 00 01 ... 3F (64 bytes), capacity 64.
+# The test writes signed-<sample>; check_pages.py accepts each (exit status 0) and
+# its output follows, then the SHA-256 of the whole file.
+== signed tiny-macho-x86_64
+file signed-tiny-macho-x86_64 form=thin slices=1 length=4608
+slice 0 cputype=0x1000007 cpusubtype=0x80000003 offset=0 size=4608 align=0
+  header cputype=0x1000007 cpusubtype=0x80000003 filetype=2 ncmds=14 sizeofcmds=664 flags=0x200085 header_end=696
+  free_header_space=16 first_content=712
+  linkedit fileoff=4096 filesize=512 vmsize=4096
+  codesig dataoff=4256 datasize=352 aligned16=yes
+  superblob length=350 count=3
+  codedirectory version=0x20400 flags=0x0 length=230 nSpecialSlots=2 nCodeSlots=2 codeLimit=4256 pageSize=4096 hashSize=32 hashType=2 identifier=test-identity
+  page 0 e63d6e43594a8298cf894c3fa5ea4d1773c7b2565648c9f2e889ac6c8889114c
+  page 1 61d4a06f0529c76638aff5f9559e12c7bc558203a5e2ca0776fb8b85e163b165
+  special -2 ok
+  pages checked=2 mismatched=0
+result ok
+sha256 4715fc374978723d9dd3228f4972607f17c3ef7b69b13a4f5817e6166330ad3a
+== signed tiny-macho-arm64
+file signed-tiny-macho-arm64 form=thin slices=1 length=16992
+slice 0 cputype=0x100000c cpusubtype=0x0 offset=0 size=16992 align=0
+  header cputype=0x100000c cpusubtype=0x0 filetype=2 ncmds=14 sizeofcmds=664 flags=0x200085 header_end=696
+  free_header_space=16 first_content=712
+  linkedit fileoff=16384 filesize=608 vmsize=16384
+  codesig dataoff=16544 datasize=448 aligned16=yes
+  superblob length=446 count=3
+  codedirectory version=0x20400 flags=0x0 length=326 nSpecialSlots=2 nCodeSlots=5 codeLimit=16544 pageSize=4096 hashSize=32 hashType=2 identifier=test-identity
+  page 0 2fa55f3c00f7b01487c489cba49222df3554f7808f3157a45cf79c6099a95c70
+  page 1 ad7facb2586fc6e966c004d7d1d16b024f5805ff7cb47c7a85dabd8b48892ca7
+  page 2 ad7facb2586fc6e966c004d7d1d16b024f5805ff7cb47c7a85dabd8b48892ca7
+  page 3 ad7facb2586fc6e966c004d7d1d16b024f5805ff7cb47c7a85dabd8b48892ca7
+  page 4 61d4a06f0529c76638aff5f9559e12c7bc558203a5e2ca0776fb8b85e163b165
+  special -2 ok
+  pages checked=5 mismatched=0
+result ok
+sha256 7250b30657acd929c85420e88a207a4b77dabec854a2a1c3d2aa03bd76353785
+== signed tiny-macho-universal
+file signed-tiny-macho-universal form=fat32 slices=2 length=33376
+slice 0 cputype=0x1000007 cpusubtype=0x80000003 offset=4096 size=4608 align=12
+  header cputype=0x1000007 cpusubtype=0x80000003 filetype=2 ncmds=14 sizeofcmds=664 flags=0x200085 header_end=696
+  free_header_space=16 first_content=712
+  linkedit fileoff=4096 filesize=512 vmsize=4096
+  codesig dataoff=4256 datasize=352 aligned16=yes
+  superblob length=350 count=3
+  codedirectory version=0x20400 flags=0x0 length=230 nSpecialSlots=2 nCodeSlots=2 codeLimit=4256 pageSize=4096 hashSize=32 hashType=2 identifier=test-identity
+  page 0 e63d6e43594a8298cf894c3fa5ea4d1773c7b2565648c9f2e889ac6c8889114c
+  page 1 61d4a06f0529c76638aff5f9559e12c7bc558203a5e2ca0776fb8b85e163b165
+  special -2 ok
+  pages checked=2 mismatched=0
+slice 1 cputype=0x100000c cpusubtype=0x0 offset=16384 size=16992 align=14
+  header cputype=0x100000c cpusubtype=0x0 filetype=2 ncmds=14 sizeofcmds=664 flags=0x200085 header_end=696
+  free_header_space=16 first_content=712
+  linkedit fileoff=16384 filesize=608 vmsize=16384
+  codesig dataoff=16544 datasize=448 aligned16=yes
+  superblob length=446 count=3
+  codedirectory version=0x20400 flags=0x0 length=326 nSpecialSlots=2 nCodeSlots=5 codeLimit=16544 pageSize=4096 hashSize=32 hashType=2 identifier=test-identity
+  page 0 2fa55f3c00f7b01487c489cba49222df3554f7808f3157a45cf79c6099a95c70
+  page 1 ad7facb2586fc6e966c004d7d1d16b024f5805ff7cb47c7a85dabd8b48892ca7
+  page 2 ad7facb2586fc6e966c004d7d1d16b024f5805ff7cb47c7a85dabd8b48892ca7
+  page 3 ad7facb2586fc6e966c004d7d1d16b024f5805ff7cb47c7a85dabd8b48892ca7
+  page 4 61d4a06f0529c76638aff5f9559e12c7bc558203a5e2ca0776fb8b85e163b165
+  special -2 ok
+  pages checked=5 mismatched=0
+result ok
+sha256 c7d13258550e38d290ce8f83db170f06a086b89160c15592dc7392a91274efc7
+== signed tiny-macho-x86_64-exactfit
+file signed-tiny-macho-x86_64-exactfit form=thin slices=1 length=4608
+slice 0 cputype=0x1000007 cpusubtype=0x80000003 offset=0 size=4608 align=0
+  header cputype=0x1000007 cpusubtype=0x80000003 filetype=2 ncmds=14 sizeofcmds=664 flags=0x200085 header_end=696
+  free_header_space=0 first_content=696
+  linkedit fileoff=4096 filesize=512 vmsize=4096
+  codesig dataoff=4256 datasize=352 aligned16=yes
+  superblob length=350 count=3
+  codedirectory version=0x20400 flags=0x0 length=230 nSpecialSlots=2 nCodeSlots=2 codeLimit=4256 pageSize=4096 hashSize=32 hashType=2 identifier=test-identity
+  page 0 5239e7824559e6579e09d3bb64636d948313a5b32fa9a614ac28183427eff064
+  page 1 261f98563571ec996b1af40c5ba274634f114621a4e732328a35a45715a66fad
+  special -2 ok
+  pages checked=2 mismatched=0
+result ok
+sha256 f7f95e1bb9f7d2983b0d89dc909f85ab36ad6aaf5ab2e00181796fa82e2bab16
+== signed tiny-macho-universal64
+file signed-tiny-macho-universal64 form=fat64 slices=2 length=33376
+slice 0 cputype=0x1000007 cpusubtype=0x80000003 offset=4096 size=4608 align=12
+  header cputype=0x1000007 cpusubtype=0x80000003 filetype=2 ncmds=14 sizeofcmds=664 flags=0x200085 header_end=696
+  free_header_space=16 first_content=712
+  linkedit fileoff=4096 filesize=512 vmsize=4096
+  codesig dataoff=4256 datasize=352 aligned16=yes
+  superblob length=350 count=3
+  codedirectory version=0x20400 flags=0x0 length=230 nSpecialSlots=2 nCodeSlots=2 codeLimit=4256 pageSize=4096 hashSize=32 hashType=2 identifier=test-identity
+  page 0 e63d6e43594a8298cf894c3fa5ea4d1773c7b2565648c9f2e889ac6c8889114c
+  page 1 61d4a06f0529c76638aff5f9559e12c7bc558203a5e2ca0776fb8b85e163b165
+  special -2 ok
+  pages checked=2 mismatched=0
+slice 1 cputype=0x100000c cpusubtype=0x0 offset=16384 size=16992 align=14
+  header cputype=0x100000c cpusubtype=0x0 filetype=2 ncmds=14 sizeofcmds=664 flags=0x200085 header_end=696
+  free_header_space=16 first_content=712
+  linkedit fileoff=16384 filesize=608 vmsize=16384
+  codesig dataoff=16544 datasize=448 aligned16=yes
+  superblob length=446 count=3
+  codedirectory version=0x20400 flags=0x0 length=326 nSpecialSlots=2 nCodeSlots=5 codeLimit=16544 pageSize=4096 hashSize=32 hashType=2 identifier=test-identity
+  page 0 2fa55f3c00f7b01487c489cba49222df3554f7808f3157a45cf79c6099a95c70
+  page 1 ad7facb2586fc6e966c004d7d1d16b024f5805ff7cb47c7a85dabd8b48892ca7
+  page 2 ad7facb2586fc6e966c004d7d1d16b024f5805ff7cb47c7a85dabd8b48892ca7
+  page 3 ad7facb2586fc6e966c004d7d1d16b024f5805ff7cb47c7a85dabd8b48892ca7
+  page 4 61d4a06f0529c76638aff5f9559e12c7bc558203a5e2ca0776fb8b85e163b165
+  special -2 ok
+  pages checked=5 mismatched=0
+result ok
+sha256 6ef539b454dd708ef92501953dfa353696ad3a8c2b42ef0566f5e41b5366af27
+== signed tiny-macho-dylib-arm64
+file signed-tiny-macho-dylib-arm64 form=thin slices=1 length=16928
+slice 0 cputype=0x100000c cpusubtype=0x0 offset=0 size=16928 align=0
+  header cputype=0x100000c cpusubtype=0x0 filetype=6 ncmds=12 sizeofcmds=648 flags=0x100085 header_end=680
+  free_header_space=16 first_content=696
+  linkedit fileoff=16384 filesize=544 vmsize=16384
+  codesig dataoff=16480 datasize=448 aligned16=yes
+  superblob length=446 count=3
+  codedirectory version=0x20400 flags=0x0 length=326 nSpecialSlots=2 nCodeSlots=5 codeLimit=16480 pageSize=4096 hashSize=32 hashType=2 identifier=test-identity
+  page 0 a05e29554b8e17ed18b0db1ad5cd94c0a1e2ba8c93eaa52eede98a4d8079bc6a
+  page 1 ad7facb2586fc6e966c004d7d1d16b024f5805ff7cb47c7a85dabd8b48892ca7
+  page 2 ad7facb2586fc6e966c004d7d1d16b024f5805ff7cb47c7a85dabd8b48892ca7
+  page 3 ad7facb2586fc6e966c004d7d1d16b024f5805ff7cb47c7a85dabd8b48892ca7
+  page 4 80fa68985446cb3d77a7de458c42f439e227be6fd8dbaff486518c588d1fa18d
+  special -2 ok
+  pages checked=5 mismatched=0
+result ok
+sha256 913853a84139c6136df4e315f4dad813d539f853e4273afa3a9b5a8b2907dc8a

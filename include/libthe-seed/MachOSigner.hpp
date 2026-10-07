@@ -7,48 +7,79 @@
 
 /**
  * Mach-O binary code signature operations.
- * All methods are static — no instance state required.
+ * All methods are static: no instance state required.
  * Works cross-platform (no macOS API dependency).
+ *
+ * Signing is two calls, PrepareSignature and then CompleteSignature, and no
+ * other order exists. The CodeDirectory fingerprints every 4096-byte page of
+ * the file up to the start of the signature data, so it can only be computed
+ * after the file has its final layout: the new load command, the new header
+ * counts, the extended __LINKEDIT segment and the region reserved for the
+ * signature. PrepareSignature builds that layout in memory, never writes, and
+ * returns the CodeDirectory of each slice; the caller signs it (the CMS is
+ * produced outside this library); CompleteSignature builds the layout again,
+ * requires the CodeDirectories to be the prepared ones, and replaces the file.
+ * The reserved region is part of the file: the SuperBlob follows the data
+ * offset and zero bytes fill the rest up to the end of the reserved size.
+ *
+ * Only 64-bit little-endian arm64 and x86-64 programs, alone or in a universal
+ * file, are supported. Error text begins with the path or with "Mach-O".
  */
 class MachOSigner
 {
 public:
-    /** Result of computing a CodeDirectory. */
-    struct CodeDirectoryResult
+    /** The CodeDirectory of one program (one slice of a universal file). */
+    struct PreparedSlice
     {
-        std::vector<std::uint8_t> code_directory;  // Serialized CodeDirectory blob
-        std::vector<std::uint8_t> cd_hash;         // SHA-256 hash of the CodeDirectory
+        std::uint32_t cpu_type;                     // CPU type of the slice
+        std::uint32_t cpu_subtype;                  // CPU subtype of the slice
+        std::vector<std::uint8_t> code_directory;   // computed over the finished layout
+        std::vector<std::uint8_t> cd_hash;          // SHA-256 of code_directory
     };
 
     /**
-     * Compute the CodeDirectory blob for a Mach-O binary.
-     * Performs page-based SHA-256 hashing (4096-byte pages).
-     * Includes special slot for empty requirements hash.
-     * @param file_path Path to the Mach-O binary
-     * @param identity Code signing identity string (e.g., CN from cert)
-     * @throws std::runtime_error if file is not a valid Mach-O or is malformed
+     * What PrepareSignature returns and CompleteSignature checks. It holds no
+     * reference to the file: a copy with the same bytes can be completed
+     * elsewhere, in another process.
      */
-    [[nodiscard]] static CodeDirectoryResult ComputeCodeDirectory(
+    struct PreparedSignature
+    {
+        std::string identity;                       // identifier written into every CodeDirectory
+        std::uint32_t cms_capacity;                 // bytes reserved per slice for the DER CMS
+        std::vector<PreparedSlice> slices;          // table order; one for a thin file
+    };
+
+    /**
+     * Compute the CodeDirectory of every slice for the file as it will be
+     * after signing. The file is not changed, whether the call succeeds or
+     * throws.
+     *
+     * Each CodeDirectory has version 0x20400, SHA-256 fingerprints over
+     * 4096-byte pages, two special slots (requirements, Info.plist absent) and
+     * covers exactly the bytes before the signature data (codeLimit equals the
+     * data offset). It contains no time and no random value: equal inputs
+     * (file bytes, identity, capacity) give an identical CodeDirectory. Each
+     * slice of a universal file is its own program and gets its own.
+     *
+     * @param file_path Path to the Mach-O program (thin or universal), unsigned
+     * @param identity Code signing identifier written into the CodeDirectory
+     * @param cms_capacity Upper bound in bytes of the DER CMS the caller will
+     *        supply for any one slice; 0 is allowed; above 2^31 is refused
+     * @throws std::runtime_error if the file is not a supported Mach-O program,
+     *         has no room for the signature command or no link-edit segment at
+     *         its end, is already signed, or a slice is refused (the message
+     *         names the slice of a universal file)
+     */
+    [[nodiscard]] static PreparedSignature PrepareSignature(
         const std::string &file_path,
-        const std::string &identity
+        const std::string &identity,
+        std::uint32_t cms_capacity
     );
 
     /**
-     * Build a complete CS_SuperBlob containing CodeDirectory,
-     * empty Requirements, and a CMS signature wrapper.
-     * @param code_directory The CodeDirectory blob
-     * @param cms_signature DER-encoded CMS SignedData blob
-     * @returns Serialized SuperBlob ready for embedding
-     */
-    [[nodiscard]] static std::vector<std::uint8_t> BuildSuperBlob(
-        const std::vector<std::uint8_t> &code_directory,
-        const std::vector<std::uint8_t> &cms_signature
-    );
-
-    /**
-     * Embed a code signature SuperBlob into a Mach-O binary.
-     * Adds/updates LC_CODE_SIGNATURE load command and appends
-     * signature data to __LINKEDIT segment.
+     * Write the signature into the file: the layout is built again, the
+     * CodeDirectories recomputed from the file must equal `prepared` byte for
+     * byte, and the finished file replaces the old one in a single step.
      * The file is replaced as one step: after a failure or a crash of the
      * process it holds the complete old or the complete new content, and no
      * temporary file remains when the call returns. Permissions are preserved
@@ -61,18 +92,50 @@ public:
      * `.<name>.seedtmp.<pid>.<hex>` in the same folder; it is never reused and
      * can be deleted. A link is followed: the file it points to is replaced and
      * the link is kept. Read-only files are refused.
-     * @throws std::runtime_error if file is not a valid Mach-O, is malformed or read-only,
-     *         or the SuperBlob cannot be described by the format's size fields;
-     *         a rejected call leaves the file unchanged
+     *
+     * The command is added after the last load command (the header counts grow
+     * by one and 16), the signature data starts at the 16-byte aligned end of
+     * the program, and __LINKEDIT ends where the signature region ends (its
+     * memory size is rounded to 16384 bytes for arm64 and 4096 for x86-64).
+     * A universal file keeps its table form (32 or 64 bit), the
+     * order and alignment of its slices, with offsets and lengths rewritten.
+     * Signing is all slices or none.
+     *
+     * @param cms_signatures One DER CMS per slice, in the order of `prepared.slices`
+     * @throws std::runtime_error if the program, the identity or the capacity
+     *         changed since PrepareSignature; if the number of signatures is
+     *         not the number of slices; if a signature is larger than the
+     *         reserved capacity ("prepare again with a larger capacity"); or
+     *         if the file is not a supported program or is read-only. A
+     *         refused call leaves the whole file unchanged.
      */
-    static void EmbedSignature(
+    static void CompleteSignature(
         const std::string &file_path,
-        const std::vector<std::uint8_t> &super_blob
+        const PreparedSignature &prepared,
+        const std::vector<std::vector<std::uint8_t>> &cms_signatures
     );
 
     /**
-     * Extract the embedded code signature (SuperBlob) from a Mach-O binary.
-     * @returns SuperBlob bytes, or nullopt if no signature present
+     * Build a complete CS_SuperBlob containing CodeDirectory,
+     * empty Requirements, and a CMS signature wrapper.
+     * This only formats bytes: it reads no file and is not a signing step.
+     * @param code_directory The CodeDirectory blob
+     * @param cms_signature DER-encoded CMS SignedData blob
+     * @returns Serialized SuperBlob
+     */
+    [[nodiscard]] static std::vector<std::uint8_t> BuildSuperBlob(
+        const std::vector<std::uint8_t> &code_directory,
+        const std::vector<std::uint8_t> &cms_signature
+    );
+
+    /**
+     * Extract the embedded code signature from a Mach-O binary.
+     * Returns the SuperBlob (its own length) when the signature region starts
+     * with the embedded-signature magic and the length fits the region, so the
+     * zero bytes that follow it are not part of the answer; otherwise the whole
+     * region. For a universal file the answer is that of the first slice that is
+     * a supported program.
+     * @returns signature bytes, or nullopt if no signature present
      * @throws std::runtime_error if file is not a valid Mach-O or the signature
      *         data lies outside the file
      */
@@ -81,7 +144,17 @@ public:
     );
 
     /**
-     * Check if a Mach-O binary has an embedded code signature.
+     * Extract the signature of every slice, in table order (one entry for a
+     * thin file); a slice without a signature gives nullopt.
+     * @throws std::runtime_error as ExtractSignature does
+     */
+    static std::vector<std::optional<std::vector<std::uint8_t>>> ExtractSignatures(
+        const std::string &file_path
+    );
+
+    /**
+     * Check if a Mach-O binary has an embedded code signature. For a universal
+     * file this is true only when every slice is signed.
      * @throws std::runtime_error if file is not a valid Mach-O or the signature
      *         area is malformed
      */
