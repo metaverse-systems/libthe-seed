@@ -49,7 +49,18 @@ public:
      * Embed a code signature SuperBlob into a Mach-O binary.
      * Adds/updates LC_CODE_SIGNATURE load command and appends
      * signature data to __LINKEDIT segment.
-     * Uses atomic write for crash safety.
+     * The file is replaced as one step: after a failure or a crash of the
+     * process it holds the complete old or the complete new content, and no
+     * temporary file remains when the call returns. Permissions are preserved
+     * (Linux mode bits, and owner and group where the account may; Windows file
+     * attributes), extended attributes and ACLs are not. Data is flushed to
+     * storage before the replacement and the folder after it where the platform
+     * supports it; this protects against loss of power only on storage that
+     * honours those requests and is not a guarantee. A process killed during
+     * the replacement can leave a working file named
+     * `.<name>.seedtmp.<pid>.<hex>` in the same folder; it is never reused and
+     * can be deleted. A link is followed: the file it points to is replaced and
+     * the link is kept. Read-only files are refused.
      * @throws std::runtime_error if file is not a valid Mach-O, is malformed or read-only,
      *         or the SuperBlob cannot be described by the format's size fields;
      *         a rejected call leaves the file unchanged
