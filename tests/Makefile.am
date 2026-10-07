@@ -22,7 +22,7 @@ AM_TESTS_ENVIRONMENT = \
 seed_test_programs = test_NameParser test_LibraryLoader test_DependencyLister test_DependencyAttribution test_DependencyReporting \
                  test_PeSigner test_MachOParser test_MachOSigner test_MsiSigner test_ResourcePak \
                  test_ComponentLoader test_SystemLoader test_PakLoader \
-                 test_LoaderConcurrency test_JSONLoader test_BoundedBytes test_MalformedPe test_PeDigestReference test_PeRoundTrip test_MalformedElf test_MalformedMachO test_MachOLayout test_MachOReference \
+                 test_LoaderConcurrency test_JSONLoader test_BoundedBytes test_MalformedPe test_PeDigestReference test_PeRoundTrip test_MalformedElf test_MalformedMachO test_MachONoRoom test_MachOLayout test_MachOReference \
                  test_MalformedMsi test_TruncatedSamples test_FuzzCorpus \
                  test_FileReplace test_FileReplaceKill test_SignersUseReplace
 
@@ -100,6 +100,9 @@ test_MalformedElf_LDADD = libcatch.la ../src/libthe-seed.la ${LIBECS_LIBS}
 
 test_MalformedMachO_SOURCES = test_MalformedMachO.cpp
 test_MalformedMachO_LDADD = libcatch.la ../src/libthe-seed.la ${LIBECS_LIBS}
+
+test_MachONoRoom_SOURCES = test_MachONoRoom.cpp
+test_MachONoRoom_LDADD = libcatch.la ../src/libthe-seed.la ${LIBECS_LIBS}
 
 test_MachOLayout_SOURCES = test_MachOLayout.cpp
 test_MachOLayout_LDADD = libcatch.la ../src/libthe-seed.la ${LIBECS_LIBS}
