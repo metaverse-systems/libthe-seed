@@ -63,10 +63,12 @@
 // offset is faulty.
 
 #include "MalformedInput.hpp"
+#include "DepFixtures.hpp"
 
 #include <libthe-seed/MachOParser.hpp>
 #include <libthe-seed/MachOSigner.hpp>
 
+#include <algorithm>
 #include <cstdint>
 #include <filesystem>
 #include <functional>
@@ -1402,4 +1404,122 @@ TEST_CASE("edge: Mach-O oversized SuperBlob size check", "[MalformedMachO][edge]
     seedtest::malformed::RequireRejected(
         [&] { seed::internal::CheckMachOSuperBlobSize(std::numeric_limits<std::uint64_t>::max()); },
         kProgramFormat, "SuperBlob");
+}
+
+// ===========================================================================
+// Library reference commands of every kind: an unterminated name
+// ===========================================================================
+
+namespace {
+
+namespace dep = seedtest::dep;
+
+struct ReferenceKind
+{
+    std::uint32_t kind;
+    const char *command;
+};
+
+// Each kind with the name the message gives its command.
+const std::vector<ReferenceKind> &ReferenceKinds()
+{
+    static const std::vector<ReferenceKind> kinds = {
+        {dep::kLoadDylib, "LC_LOAD_DYLIB"},
+        {dep::kLoadWeakDylib, "LC_LOAD_WEAK_DYLIB"},
+        {dep::kReexportDylib, "LC_REEXPORT_DYLIB"},
+        {dep::kLazyLoadDylib, "LC_LAZY_LOAD_DYLIB"},
+        {dep::kLoadUpwardDylib, "LC_LOAD_UPWARD_DYLIB"},
+    };
+    return kinds;
+}
+
+// A seven-character name fills a 32-byte command exactly with its NUL, so
+// replacing that NUL leaves a name that runs to the end of its command.
+constexpr std::uint64_t kReferenceCommandSize = 32;
+constexpr std::uint64_t kReferenceFirstCommand = 32;
+constexpr const char *kSevenCharacters = "/lib/ab";
+
+Bytes UnterminatedAt(const std::vector<dep::MachOReference> &references, std::size_t index)
+{
+    Bytes image = dep::MachOReferencing(references);
+    const std::uint64_t last_byte =
+        kReferenceFirstCommand + (index + 1) * kReferenceCommandSize - 1;
+    REQUIRE(image.at(last_byte) == 0);
+    image.at(last_byte) = 'A';
+    return image;
+}
+
+}
+
+TEST_CASE("f18: a library name not ended inside its command is rejected for every kind",
+          "[MalformedMachO][f18]")
+{
+    seedtest::ScratchDir scratch("malformed-macho");
+    for(const ReferenceKind &kind : ReferenceKinds())
+    {
+        DYNAMIC_SECTION(kind.command << " as the only command")
+        {
+            const Bytes image = UnterminatedAt({{kind.kind, kSevenCharacters}}, 0);
+            const std::string path = WriteScratch(scratch, "input.bin", image);
+            RequireRejected([&] { (void)MachOParser::ListDependencies(path); }, kProgramFormat,
+                            kind.command, image.size());
+            RequireUnchanged(path, image);
+        }
+        DYNAMIC_SECTION(kind.command << " after a well-formed command")
+        {
+            const Bytes image = UnterminatedAt(
+                {{dep::kLoadDylib, "/lib/ok"}, {kind.kind, kSevenCharacters}}, 1);
+            const std::string path = WriteScratch(scratch, "input.bin", image);
+            // The message names the zero-based index of the faulty command.
+            RequireRejected([&] { (void)MachOParser::ListDependencies(path); }, kProgramFormat,
+                            std::string(kind.command) + " command 1", image.size());
+        }
+    }
+}
+
+TEST_CASE("f18: no empty library name is returned", "[MalformedMachO][f18]")
+{
+    seedtest::ScratchDir scratch("malformed-macho");
+
+    SECTION("well-formed references of the five kinds are all non-empty")
+    {
+        std::vector<dep::MachOReference> references;
+        std::size_t number = 0;
+        for(const ReferenceKind &kind : ReferenceKinds())
+        {
+            references.push_back({kind.kind, "/lib/n" + std::to_string(number++)});
+        }
+        const std::string path =
+            WriteScratch(scratch, "input.bin", dep::MachOReferencing(references));
+        const auto names = MachOParser::ListDependencies(path);
+        CHECK(names.size() == 5);
+        for(const std::string &name : names)
+        {
+            CHECK_FALSE(name.empty());
+        }
+    }
+
+    SECTION("a name that is not ended is rejected, never returned as an empty string")
+    {
+        for(const ReferenceKind &kind : ReferenceKinds())
+        {
+            DYNAMIC_SECTION(kind.command)
+            {
+                const Bytes image = UnterminatedAt({{kind.kind, kSevenCharacters}}, 0);
+                const std::string path = WriteScratch(scratch, "input.bin", image);
+                std::vector<std::string> names;
+                bool rejected = false;
+                try
+                {
+                    names = MachOParser::ListDependencies(path);
+                }
+                catch(const std::runtime_error &)
+                {
+                    rejected = true;
+                }
+                CHECK(rejected);
+                CHECK(std::count(names.begin(), names.end(), std::string()) == 0);
+            }
+        }
+    }
 }
