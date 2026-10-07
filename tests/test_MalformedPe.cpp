@@ -6,6 +6,7 @@
 // for the review's inputs, and "edge:" for an edge-case family.
 
 #include "MalformedInput.hpp"
+#include "DepFixtures.hpp"
 
 #include <libthe-seed/DependencyLister.hpp>
 #include <libthe-seed/PeSigner.hpp>
@@ -587,4 +588,51 @@ TEST_CASE("edge: PE oversized signature size check", "[MalformedPe][edge]")
     seedtest::malformed::RequireRejected(
         [&] { seed::internal::CheckPeSignatureSize(std::numeric_limits<std::uint32_t>::max()); },
         "PE", "signature");
+}
+
+// A PE file with an empty import table and a delay-load table of one library,
+// "kernel32.dll". PeImporting lays the section out at file offset 0x200: the
+// import terminator (20 bytes), the delay descriptor and its terminator (64
+// bytes), then the name.
+namespace {
+constexpr std::size_t kDelaySection = 0x200;
+constexpr std::size_t kDelayDescriptorAt = kDelaySection + 20;
+constexpr std::size_t kDelayNameAt = kDelayDescriptorAt + 64;
+
+Bytes DelayLoading()
+{
+    return seedtest::dep::PeImporting({}, {"kernel32.dll"});
+}
+
+void RequireDelayRejected(const Bytes &input)
+{
+    seedtest::ScratchDir scratch("malformed-pe-delay");
+    const std::string path = seedtest::malformed::WriteScratch(scratch, "input.bin", input);
+    seedtest::malformed::RequireRejected([&] { ListOrThrow(path); }, "PE", "delay-load", input.size());
+}
+}
+
+TEST_CASE("ok: PE delay-load table that is well formed is accepted", "[MalformedPe][delay]")
+{
+    seedtest::ScratchDir scratch("malformed-pe-delay-ok");
+    const std::string path = seedtest::malformed::WriteScratch(scratch, "input.bin", DelayLoading());
+    CHECK_NOTHROW(ListOrThrow(path));
+}
+
+TEST_CASE("edge: PE delay-load table past the end of the file", "[MalformedPe][delay]")
+{
+    // Only part of the first descriptor is left.
+    RequireDelayRejected(seedtest::malformed::Truncate(DelayLoading(), kDelayDescriptorAt + 12));
+}
+
+TEST_CASE("edge: PE delay-load library name past the end of the file", "[MalformedPe][delay]")
+{
+    // The whole table is present and the file ends where the name starts.
+    RequireDelayRejected(seedtest::malformed::Truncate(DelayLoading(), kDelayNameAt));
+}
+
+TEST_CASE("edge: PE delay-load library name without a terminator", "[MalformedPe][delay]")
+{
+    // Four characters of the name are left and no zero byte follows.
+    RequireDelayRejected(seedtest::malformed::Truncate(DelayLoading(), kDelayNameAt + 4));
 }

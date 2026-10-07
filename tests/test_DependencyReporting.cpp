@@ -412,3 +412,159 @@ TEST_CASE("A program that ignores libraryErrors sees the same keys and errors as
         }
     }
 }
+
+// ---------------------------------------------------------------------------
+// Windows libraries loaded on first use (delay-load table, data directory 13)
+// ---------------------------------------------------------------------------
+
+namespace {
+
+// Where the optional header's count of data directories sits in the files
+// that PeImporting builds.
+constexpr std::size_t kDirectoryCountField = 0x44 + 20 + 108;
+
+const dep::DelayNameForm kDelayForms[] = {dep::DelayNameForm::Rva, dep::DelayNameForm::VirtualAddress};
+
+const char *FormLabel(dep::DelayNameForm form)
+{
+    return form == dep::DelayNameForm::Rva ? "name stored as an RVA" : "name stored as a virtual address";
+}
+
+// A scratch folder holding one Windows program built from bytes.
+struct PeSite
+{
+    seedtest::ScratchDir scratch;
+    fs::path folder;
+
+    PeSite() : folder(this->scratch.Path() / "pe")
+    {
+        fs::create_directories(this->folder);
+        this->folder = fs::canonical(this->folder);
+    }
+
+    std::string Program(const dep::Bytes &bytes) { return dep::WriteFile(this->folder, "app.exe", bytes).string(); }
+};
+
+// The names the request lists, as a sorted set, for a program that depends on
+// libraries that are not found.
+std::set<std::string> ListedNames(const dep::Bytes &program)
+{
+    PeSite site;
+    const std::string app = site.Program(program);
+    DependencyLister lister;
+    const DependencyResult result = lister.ListDependencies({app}, {});
+    REQUIRE(result.errors.empty());
+    REQUIRE(result.libraryErrors.empty());
+    for(const auto &entry : result.dependencies)
+    {
+        REQUIRE(entry.second == Names{app});
+    }
+    return Keys(result);
+}
+
+using NameSet = std::set<std::string>;
+}
+
+TEST_CASE("A program with an import table only is listed as before", "[DependencyReporting][US3]")
+{
+    CHECK(ListedNames(dep::PeImporting({"ext1.dll", "ext2.dll"})) == NameSet{"ext1.dll", "ext2.dll"});
+}
+
+TEST_CASE("A program with a delay-load table only is listed with those libraries", "[DependencyReporting][US3]")
+{
+    for(const dep::DelayNameForm form : kDelayForms)
+    {
+        SECTION(FormLabel(form))
+        {
+            CHECK(ListedNames(dep::PeImporting({}, {"ext1.dll", "ext2.dll"}, form)) ==
+                  NameSet{"ext1.dll", "ext2.dll"});
+        }
+    }
+}
+
+TEST_CASE("A program with both tables is listed with the libraries of both", "[DependencyReporting][US3]")
+{
+    for(const dep::DelayNameForm form : kDelayForms)
+    {
+        SECTION(FormLabel(form))
+        {
+            CHECK(ListedNames(dep::PeImporting({"ext1.dll", "ext2.dll"}, {"ext3.dll"}, form)) ==
+                  NameSet{"ext1.dll", "ext2.dll", "ext3.dll"});
+        }
+    }
+}
+
+TEST_CASE("A library named in both tables is listed once", "[DependencyReporting][US3]")
+{
+    for(const dep::DelayNameForm form : kDelayForms)
+    {
+        SECTION(FormLabel(form))
+        {
+            const NameSet listed = ListedNames(dep::PeImporting({"ext1.dll", "ext2.dll"}, {"ext2.dll", "ext3.dll"}, form));
+            CHECK(listed == NameSet{"ext1.dll", "ext2.dll", "ext3.dll"});
+            // Names are compared without regard to case.
+            CHECK(ListedNames(dep::PeImporting({"ext1.dll"}, {"EXT1.DLL"}, form)).size() == 1);
+        }
+    }
+}
+
+TEST_CASE("A program with neither table has no dependencies and no errors", "[DependencyReporting][US3]")
+{
+    CHECK(ListedNames(dep::PeImporting({})).empty());
+}
+
+TEST_CASE("A file declaring 13 or fewer data directories has no delay-load table", "[DependencyReporting][US3]")
+{
+    for(const std::uint32_t count : {13u, 2u})
+    {
+        SECTION(std::to_string(count) + " directories")
+        {
+            dep::Bytes program = dep::PeImporting({"ext1.dll"}, {"ext2.dll"});
+            program[kDirectoryCountField] = static_cast<std::uint8_t>(count);
+            REQUIRE(program[kDirectoryCountField + 1] == 0);
+            CHECK(ListedNames(program) == NameSet{"ext1.dll"});
+        }
+    }
+}
+
+TEST_CASE("A delay-loaded library found in the search folder has its own dependencies credited to the program", "[DependencyReporting][US3]")
+{
+    for(const dep::DelayNameForm form : kDelayForms)
+    {
+        SECTION(FormLabel(form))
+        {
+            PeSite site;
+            dep::CopyPeChain(site.folder);
+            const std::string app = site.Program(dep::PeImporting({}, {"libfoo.dll"}, form));
+            DependencyLister lister;
+
+            const DependencyResult result = lister.ListDependencies({app}, {site.folder.string()});
+
+            REQUIRE(result.errors.empty());
+            REQUIRE(result.libraryErrors.empty());
+            const NameSet chain{Canon(site.folder / "libfoo.dll"), Canon(site.folder / "libbar.dll"),
+                                Canon(site.folder / "libbaz.dll")};
+            REQUIRE(Keys(result) == chain);
+            for(const std::string &key : chain)
+            {
+                CHECK(result.dependencies.at(key) == Names{app});
+            }
+        }
+    }
+}
+
+TEST_CASE("A delay-loaded library reached from two programs is credited to both", "[DependencyReporting][US3]")
+{
+    PeSite site;
+    dep::CopyPeChain(site.folder);
+    const std::string first = dep::WriteFile(site.folder, "first.exe", dep::PeImporting({}, {"libfoo.dll"})).string();
+    const std::string second = dep::WriteFile(site.folder, "second.exe", dep::PeImporting({"libbar.dll"}, {"ext1.dll"})).string();
+    DependencyLister lister;
+
+    const DependencyResult result = lister.ListDependencies({first, second}, {site.folder.string()});
+
+    REQUIRE(result.errors.empty());
+    CHECK(Slice(result, first) == NameSet{Canon(site.folder / "libfoo.dll"), Canon(site.folder / "libbar.dll"),
+                                          Canon(site.folder / "libbaz.dll")});
+    CHECK(Slice(result, second) == NameSet{Canon(site.folder / "libbar.dll"), Canon(site.folder / "libbaz.dll"), "ext1.dll"});
+}
