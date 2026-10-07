@@ -16,10 +16,13 @@ noinst_HEADERS = \
 	ElfParser.hpp \
 	PeParser.hpp \
 	ByteSwap.hpp \
+	internal/BoundedBytes.hpp \
+	internal/PeCertificate.hpp \
 	NameParser.hpp \
 	internal/FileIO.hpp \
 	internal/MachODefs.hpp \
-	internal/ReadCString.hpp
+	internal/MachOSuperBlob.hpp \
+	internal/MsiSignatureSize.hpp
 
 libthe_seed_la_CXXFLAGS = -std=c++20 -I$(top_srcdir)/include -I$(top_srcdir)/external ${LIBECS_CFLAGS} $(SANITIZER_CXXFLAGS)
 libthe_seed_la_LIBADD = -lpthread ${LIBECS_LIBS}

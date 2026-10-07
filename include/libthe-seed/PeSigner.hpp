@@ -24,7 +24,7 @@ public:
      * Compute the Authenticode digest (SHA-256) for a PE file.
      * Excludes the CheckSum field, Certificate Table DD entry,
      * and any existing certificate data from the hash.
-     * @throws std::runtime_error if file is not a valid PE
+     * @throws std::runtime_error if file is not a valid PE or is malformed
      */
     [[nodiscard]] static DigestResult ComputeAuthenticodeDigest(const std::string &file_path);
 
@@ -35,7 +35,8 @@ public:
      * Uses atomic write: writes to temp file, then renames.
      * @param file_path Path to PE binary (modified in-place via atomic swap)
      * @param pkcs7_der DER-encoded PKCS#7 SignedData blob
-     * @throws std::runtime_error if file is not a valid PE or is read-only
+     * @throws std::runtime_error if file is not a valid PE, is malformed or read-only;
+     *         a rejected call leaves the file unchanged
      */
     static void EmbedSignature(
         const std::string &file_path,
@@ -45,7 +46,7 @@ public:
     /**
      * Extract the embedded Authenticode signature from a PE file.
      * @returns DER-encoded PKCS#7 blob, or nullopt if no signature present
-     * @throws std::runtime_error if file is not a valid PE
+     * @throws std::runtime_error if file is not a valid PE or is malformed
      */
     [[nodiscard]] static std::optional<std::vector<std::uint8_t>> ExtractSignature(
         const std::string &file_path
@@ -53,14 +54,14 @@ public:
 
     /**
      * Check if a PE file has an embedded Authenticode signature.
-     * @throws std::runtime_error if file is not a valid PE
+     * @throws std::runtime_error if file is not a valid PE or is malformed
      */
     static bool HasEmbeddedSignature(const std::string &file_path);
 
     /**
      * Strip any existing embedded signature from a PE file.
      * Zeroes the DD entry 4 and truncates certificate data.
-     * @throws std::runtime_error if file is not a valid PE
+     * @throws std::runtime_error if file is not a valid PE or is malformed
      */
     static void StripSignature(const std::string &file_path);
 

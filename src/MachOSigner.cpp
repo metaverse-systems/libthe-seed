@@ -2,14 +2,18 @@
 #include <libthe-seed/MachOParser.hpp>
 
 #include "ByteSwap.hpp"
+#include "internal/BoundedBytes.hpp"
 #include "internal/FileIO.hpp"
 #include "internal/MachODefs.hpp"
+#include "internal/MachOSuperBlob.hpp"
 
 #include <algorithm>
 #include <cstring>
 #include <filesystem>
 #include <fstream>
 #include <stdexcept>
+#include <string>
+#include <utility>
 
 #include "../external/picosha2.h"
 
@@ -112,14 +116,6 @@ void WriteBE32(std::vector<std::uint8_t> &buf, std::size_t offset, std::uint32_t
     buf[offset + 3] = static_cast<std::uint8_t>(value & 0xFF);
 }
 
-std::uint32_t ReadBE32(const std::vector<std::uint8_t> &buf, std::size_t offset)
-{
-    return (static_cast<std::uint32_t>(buf[offset]) << 24) |
-           (static_cast<std::uint32_t>(buf[offset + 1]) << 16) |
-           (static_cast<std::uint32_t>(buf[offset + 2]) << 8) |
-           static_cast<std::uint32_t>(buf[offset + 3]);
-}
-
 void WriteBE64(std::vector<std::uint8_t> &buf, std::size_t offset, std::uint64_t value)
 {
     for(int i = 7; i >= 0; --i)
@@ -139,25 +135,6 @@ std::vector<std::uint8_t> HashSHA256(const std::uint8_t *data, std::size_t size)
 bool IsBigEndianMachO(std::uint32_t magic)
 {
     return magic == MH_MAGIC || magic == MH_MAGIC_64;
-}
-
-template <typename T>
-T ReadField(const std::vector<std::uint8_t> &bytes, std::size_t offset, bool big_endian)
-{
-    if(offset + sizeof(T) > bytes.size())
-    {
-        throw std::runtime_error("Truncated Mach-O file");
-    }
-    T value;
-    std::memcpy(&value, bytes.data() + offset, sizeof(T));
-    return ByteSwapIfNeeded(value, !big_endian);
-}
-
-template <typename T>
-void WriteField(std::vector<std::uint8_t> &bytes, std::size_t offset, T value, bool big_endian)
-{
-    T stored = ByteSwapIfNeeded(value, !big_endian);
-    std::memcpy(bytes.data() + offset, &stored, sizeof(T));
 }
 
 // Build the empty requirements blob: FADE0C01 0000000C 00000000
@@ -180,6 +157,8 @@ struct MachOLayout
     std::uint32_t sizeofcmds;
     std::size_t linkedit_cmd_offset;  // offset of __LINKEDIT segment command (0 if not found)
     std::size_t codesig_cmd_offset;   // offset of LC_CODE_SIGNATURE (0 if not found)
+    std::uint32_t codesig_dataoff;
+    std::uint32_t codesig_datasize;
     std::uint64_t linkedit_fileoff;
     std::uint64_t linkedit_filesize;
     std::uint64_t linkedit_vmaddr;
@@ -189,11 +168,25 @@ struct MachOLayout
     std::size_t code_limit;           // end of code pages (= file size excluding sig)
 };
 
+using seed::internal::ByteOrder;
+using seed::internal::ByteSpan;
+using seed::internal::GuardEntryPoint;
+using seed::internal::MutableByteSpan;
+using seed::internal::RangeFits;
+using seed::internal::ThrowMalformed;
+
+constexpr const char *kProgramFormat = "Mach-O";
+
+ByteOrder OrderFor(bool big_endian)
+{
+    return big_endian ? ByteOrder::Big : ByteOrder::Little;
+}
+
 MachOLayout ParseMachOLayout(const std::vector<std::uint8_t> &bytes)
 {
     if(bytes.size() < 4)
     {
-        throw std::runtime_error("File too small to be a Mach-O binary");
+        ThrowMalformed(kProgramFormat, "File too small to be a Mach-O binary");
     }
 
     MachOLayout layout{};
@@ -204,47 +197,87 @@ MachOLayout ParseMachOLayout(const std::vector<std::uint8_t> &bytes)
     if(layout.magic != MH_MAGIC && layout.magic != MH_CIGAM &&
        layout.magic != MH_MAGIC_64 && layout.magic != MH_CIGAM_64)
     {
-        throw std::runtime_error("Not a single-arch Mach-O binary");
+        ThrowMalformed(kProgramFormat, "Not a single-arch Mach-O binary");
     }
 
+    const ByteOrder order = OrderFor(layout.big_endian);
+    const ByteSpan file(bytes, kProgramFormat);
+
     layout.header_size = layout.is_64bit ? sizeof(MachHeader64) : 28; // 32-bit header is 28 bytes
-    layout.ncmds = ReadField<std::uint32_t>(bytes, 16, layout.big_endian);
-    layout.sizeofcmds = ReadField<std::uint32_t>(bytes, 20, layout.big_endian);
+    (void)file.Sub(0, layout.header_size, "Mach-O header");
+    layout.ncmds = file.Read<std::uint32_t>(16, order, "load command count");
+    layout.sizeofcmds = file.Read<std::uint32_t>(20, order, "size of load commands");
 
     // Scan load commands
-    std::size_t cmd_offset = layout.header_size;
+    std::uint64_t cmd_offset = layout.header_size;
     for(std::uint32_t i = 0; i < layout.ncmds; ++i)
     {
-        if(cmd_offset + sizeof(LoadCommand) > bytes.size())
+        // A command header that does not fit in the file ends the walk.
+        if(!RangeFits(cmd_offset, sizeof(LoadCommand), file.Size()))
         {
             break;
         }
 
-        const auto cmd = ReadField<std::uint32_t>(bytes, cmd_offset, layout.big_endian);
-        const auto cmdsize = ReadField<std::uint32_t>(bytes, cmd_offset + 4, layout.big_endian);
+        const auto cmd = file.Read<std::uint32_t>(cmd_offset, order, "load command");
+        const auto cmdsize = file.Read<std::uint32_t>(cmd_offset + 4, order, "load command size");
+        const std::string index = std::to_string(i);
+
+        if(cmdsize < sizeof(LoadCommand))
+        {
+            ThrowMalformed(kProgramFormat, "load command " + index + " size " + std::to_string(cmdsize) +
+                                               " is smaller than 8");
+        }
+        if(cmdsize % 4 != 0)
+        {
+            ThrowMalformed(kProgramFormat, "load command " + index + " size " + std::to_string(cmdsize) +
+                                               " is not a multiple of 4");
+        }
 
         if(cmd == LC_SEGMENT_64)
         {
+            const std::string name = "LC_SEGMENT_64 command " + index;
+            if(cmdsize < sizeof(SegmentCommand64))
+            {
+                ThrowMalformed(kProgramFormat, name + " size " + std::to_string(cmdsize) +
+                                                   " is smaller than " +
+                                                   std::to_string(sizeof(SegmentCommand64)));
+            }
+            const ByteSpan segment = file.Sub(cmd_offset, cmdsize, name);
+
             char segname[17] = {};
-            std::memcpy(segname, bytes.data() + cmd_offset + 8, 16);
+            std::memcpy(segname, segment.Data() + 8, 16);
 
             if(std::string(segname) == "__LINKEDIT")
             {
                 layout.linkedit_cmd_offset = cmd_offset;
-                layout.linkedit_vmaddr = ReadField<std::uint64_t>(bytes, cmd_offset + 24, layout.big_endian);
-                layout.linkedit_vmsize = ReadField<std::uint64_t>(bytes, cmd_offset + 32, layout.big_endian);
-                layout.linkedit_fileoff = ReadField<std::uint64_t>(bytes, cmd_offset + 40, layout.big_endian);
-                layout.linkedit_filesize = ReadField<std::uint64_t>(bytes, cmd_offset + 48, layout.big_endian);
+                layout.linkedit_vmaddr = segment.Read<std::uint64_t>(24, order, "segment vmaddr");
+                layout.linkedit_vmsize = segment.Read<std::uint64_t>(32, order, "segment vmsize");
+                layout.linkedit_fileoff = segment.Read<std::uint64_t>(40, order, "segment fileoff");
+                layout.linkedit_filesize = segment.Read<std::uint64_t>(48, order, "segment filesize");
             }
             else if(std::string(segname) == "__TEXT")
             {
-                layout.text_fileoff = ReadField<std::uint64_t>(bytes, cmd_offset + 40, layout.big_endian);
-                layout.text_filesize = ReadField<std::uint64_t>(bytes, cmd_offset + 48, layout.big_endian);
+                layout.text_fileoff = segment.Read<std::uint64_t>(40, order, "segment fileoff");
+                layout.text_filesize = segment.Read<std::uint64_t>(48, order, "segment filesize");
             }
         }
         else if(cmd == LC_CODE_SIGNATURE)
         {
+            const std::string name = "LC_CODE_SIGNATURE command " + index;
+            if(cmdsize < sizeof(LinkeditDataCommand))
+            {
+                ThrowMalformed(kProgramFormat, name + " size " + std::to_string(cmdsize) +
+                                                   " is smaller than " +
+                                                   std::to_string(sizeof(LinkeditDataCommand)));
+            }
+            if(layout.codesig_cmd_offset != 0)
+            {
+                ThrowMalformed(kProgramFormat, name + " is a second LC_CODE_SIGNATURE; at most one is allowed");
+            }
+            const ByteSpan command = file.Sub(cmd_offset, cmdsize, name);
             layout.codesig_cmd_offset = cmd_offset;
+            layout.codesig_dataoff = command.Read<std::uint32_t>(8, order, "signature data offset");
+            layout.codesig_datasize = command.Read<std::uint32_t>(12, order, "signature data size");
         }
 
         cmd_offset += cmdsize;
@@ -253,8 +286,25 @@ MachOLayout ParseMachOLayout(const std::vector<std::uint8_t> &bytes)
     // Determine code limit
     if(layout.codesig_cmd_offset != 0)
     {
+        const std::uint64_t dataoff = layout.codesig_dataoff;
+        if(layout.codesig_datasize != 0)
+        {
+            (void)file.Sub(dataoff, layout.codesig_datasize, "LC_CODE_SIGNATURE data");
+            if(dataoff < cmd_offset)
+            {
+                ThrowMalformed(kProgramFormat, "LC_CODE_SIGNATURE data at offset " + std::to_string(dataoff) +
+                                                   " lies inside the load-command area that ends at " +
+                                                   std::to_string(cmd_offset));
+            }
+        }
+        else if(dataoff > file.Size())
+        {
+            ThrowMalformed(kProgramFormat, "LC_CODE_SIGNATURE data offset " + std::to_string(dataoff) +
+                                               " extends past the end of the file (" +
+                                               std::to_string(file.Size()) + " bytes)");
+        }
         // code limit = offset of signature data
-        layout.code_limit = ReadField<std::uint32_t>(bytes, layout.codesig_cmd_offset + 8, layout.big_endian);
+        layout.code_limit = dataoff;
     }
     else
     {
@@ -270,13 +320,15 @@ MachOSigner::CodeDirectoryResult MachOSigner::ComputeCodeDirectory(
     const std::string &file_path,
     const std::string &identity)
 {
+    return GuardEntryPoint(kProgramFormat, [&]() {
     const auto bytes = ReadFileBytes(file_path);
     const auto layout = ParseMachOLayout(bytes);
 
     if(!layout.is_64bit)
     {
-        throw std::runtime_error("Only 64-bit Mach-O binaries are supported for code signing");
+        ThrowMalformed(kProgramFormat, "Only 64-bit Mach-O binaries are supported for code signing");
     }
+    const ByteSpan file(bytes, kProgramFormat);
 
     const std::size_t code_limit = layout.code_limit;
 
@@ -341,7 +393,8 @@ MachOSigner::CodeDirectoryResult MachOSigner::ComputeCodeDirectory(
     {
         const std::size_t page_start = i * CS_PAGE_SIZE;
         const std::size_t page_end = std::min(page_start + CS_PAGE_SIZE, code_limit);
-        const auto hash = HashSHA256(bytes.data() + page_start, page_end - page_start);
+        const ByteSpan page = file.Sub(page_start, page_end - page_start, "code page");
+        const auto hash = HashSHA256(page.Data(), page.Size());
         std::memcpy(cd.data() + code_hashes_start + i * CS_HASH_SIZE_SHA256,
                      hash.data(), CS_HASH_SIZE_SHA256);
     }
@@ -352,6 +405,7 @@ MachOSigner::CodeDirectoryResult MachOSigner::ComputeCodeDirectory(
     result.cd_hash = HashSHA256(cd.data(), cd.size());
 
     return result;
+    });
 }
 
 std::vector<std::uint8_t> MachOSigner::BuildSuperBlob(
@@ -406,240 +460,270 @@ void MachOSigner::EmbedSignature(
     const std::string &file_path,
     const std::vector<std::uint8_t> &super_blob)
 {
+    GuardEntryPoint(kProgramFormat, [&]() {
     auto bytes = ReadFileBytes(file_path);
-    auto layout = ParseMachOLayout(bytes);
+    const auto layout = ParseMachOLayout(bytes);
+    const ByteOrder order = OrderFor(layout.big_endian);
 
     if(!layout.is_64bit)
     {
-        throw std::runtime_error("Only 64-bit Mach-O binaries are currently supported for signing");
+        ThrowMalformed(kProgramFormat, "Only 64-bit Mach-O binaries are currently supported for signing");
     }
+    seed::internal::CheckMachOSuperBlobSize(super_blob.size());
 
-    // If existing signature, strip it
-    if(layout.codesig_cmd_offset != 0)
+    // An existing signature is replaced: the file is cut back to where its
+    // data start and its command is updated in place.
+    const bool has_signature = layout.codesig_cmd_offset != 0;
+    std::uint64_t base_size = bytes.size();
+    if(has_signature && layout.codesig_datasize != 0)
     {
-        // Truncate to code limit (remove old signature data)
-        const auto old_dataoff = ReadField<std::uint32_t>(bytes, layout.codesig_cmd_offset + 8, layout.big_endian);
-        bytes.resize(old_dataoff);
-
-        // Zero out the old LC_CODE_SIGNATURE load command
-        std::memset(bytes.data() + layout.codesig_cmd_offset, 0,
-                     sizeof(LinkeditDataCommand));
-
-        // Re-parse layout
-        layout = ParseMachOLayout(bytes);
+        base_size = layout.codesig_dataoff;
     }
 
-    // Pad file to 16-byte alignment
-    const std::size_t pad_to_16 = (16 - (bytes.size() % 16)) % 16;
-    bytes.resize(bytes.size() + pad_to_16, 0);
+    // Validate everything before the first change.
+    std::uint64_t new_cmd_offset = 0;
+    if(!has_signature)
+    {
+        // Insert at end of existing load commands. There must be room for it in the
+        // file as it is now, before the signature is appended.
+        new_cmd_offset = seed::internal::CheckedAdd(layout.header_size, layout.sizeofcmds,
+                                                    kProgramFormat, "header size + sizeofcmds");
+        if(layout.ncmds == UINT32_MAX ||
+           !RangeFits(new_cmd_offset, sizeof(LinkeditDataCommand), base_size))
+        {
+            ThrowMalformed(kProgramFormat, "No space for new load command: it would end at offset " +
+                                               std::to_string(new_cmd_offset + sizeof(LinkeditDataCommand)) +
+                                               " in a file of " + std::to_string(base_size) + " bytes");
+        }
+    }
+    if(layout.linkedit_cmd_offset != 0 && layout.linkedit_fileoff > base_size)
+    {
+        ThrowMalformed(kProgramFormat, "__LINKEDIT file offset " + std::to_string(layout.linkedit_fileoff) +
+                                           " is past the end of the file (" + std::to_string(base_size) +
+                                           " bytes)");
+    }
+    const std::uint64_t sig_offset = base_size + (16 - (base_size % 16)) % 16;
+    const std::uint64_t sig_size = super_blob.size();
+    if(sig_offset > UINT32_MAX)
+    {
+        ThrowMalformed(kProgramFormat, "SuperBlob offset " + std::to_string(sig_offset) +
+                                           " does not fit the 32-bit offset field of LC_CODE_SIGNATURE");
+    }
 
-    const std::size_t sig_offset = bytes.size();
-    const std::size_t sig_size = super_blob.size();
-
-    // Append SuperBlob
+    // Truncate to code limit (remove old signature data), pad to 16-byte
+    // alignment and append the SuperBlob.
+    bytes.resize(static_cast<std::size_t>(base_size));
+    bytes.resize(static_cast<std::size_t>(sig_offset), 0);
     bytes.insert(bytes.end(), super_blob.begin(), super_blob.end());
 
+    const MutableByteSpan out(bytes, kProgramFormat);
+
     // Now we need to either add or update LC_CODE_SIGNATURE
-    if(layout.codesig_cmd_offset != 0)
+    if(has_signature)
     {
         // Update existing LC_CODE_SIGNATURE
-        WriteField<std::uint32_t>(bytes, layout.codesig_cmd_offset + 8,
-                                   static_cast<std::uint32_t>(sig_offset), layout.big_endian);
-        WriteField<std::uint32_t>(bytes, layout.codesig_cmd_offset + 12,
-                                   static_cast<std::uint32_t>(sig_size), layout.big_endian);
+        out.Write<std::uint32_t>(layout.codesig_cmd_offset + 8, static_cast<std::uint32_t>(sig_offset),
+                                 order, "signature data offset");
+        out.Write<std::uint32_t>(layout.codesig_cmd_offset + 12, static_cast<std::uint32_t>(sig_size),
+                                 order, "signature data size");
     }
     else
     {
-        // Add new LC_CODE_SIGNATURE load command
-        // Insert at end of existing load commands
-        const std::size_t new_cmd_offset = layout.header_size + layout.sizeofcmds;
-
-        // Verify we have space (there should be padding between load commands and first section)
-        if(new_cmd_offset + sizeof(LinkeditDataCommand) > bytes.size())
-        {
-            throw std::runtime_error("No space for new load command");
-        }
-
         // Write LC_CODE_SIGNATURE
-        WriteField<std::uint32_t>(bytes, new_cmd_offset, LC_CODE_SIGNATURE, layout.big_endian);
-        WriteField<std::uint32_t>(bytes, new_cmd_offset + 4, std::uint32_t{16}, layout.big_endian);
-        WriteField<std::uint32_t>(bytes, new_cmd_offset + 8,
-                                   static_cast<std::uint32_t>(sig_offset), layout.big_endian);
-        WriteField<std::uint32_t>(bytes, new_cmd_offset + 12,
-                                   static_cast<std::uint32_t>(sig_size), layout.big_endian);
+        out.Write<std::uint32_t>(new_cmd_offset, LC_CODE_SIGNATURE, order, "load command");
+        out.Write<std::uint32_t>(new_cmd_offset + 4, std::uint32_t{16}, order, "load command size");
+        out.Write<std::uint32_t>(new_cmd_offset + 8, static_cast<std::uint32_t>(sig_offset), order,
+                                 "signature data offset");
+        out.Write<std::uint32_t>(new_cmd_offset + 12, static_cast<std::uint32_t>(sig_size), order,
+                                 "signature data size");
 
         // Update header: ncmds += 1, sizeofcmds += 16
-        WriteField<std::uint32_t>(bytes, 16, layout.ncmds + 1, layout.big_endian);
-        WriteField<std::uint32_t>(bytes, 20, layout.sizeofcmds + 16, layout.big_endian);
+        out.Write<std::uint32_t>(16, layout.ncmds + 1, order, "load command count");
+        out.Write<std::uint32_t>(20, static_cast<std::uint32_t>(layout.sizeofcmds + 16), order,
+                                 "size of load commands");
     }
 
     // Update __LINKEDIT segment to cover the signature data
     if(layout.linkedit_cmd_offset != 0)
     {
         const std::uint64_t new_filesize = bytes.size() - layout.linkedit_fileoff;
-        WriteField<std::uint64_t>(bytes, layout.linkedit_cmd_offset + 48,
-                                   new_filesize, layout.big_endian);
+        out.Write<std::uint64_t>(layout.linkedit_cmd_offset + 48, new_filesize, order, "segment filesize");
 
         // Update vmsize (page-aligned)
         const std::uint64_t page_size = 16384; // arm64 page size
         const std::uint64_t new_vmsize = ((new_filesize + page_size - 1) / page_size) * page_size;
-        WriteField<std::uint64_t>(bytes, layout.linkedit_cmd_offset + 32,
-                                   new_vmsize, layout.big_endian);
+        out.Write<std::uint64_t>(layout.linkedit_cmd_offset + 32, new_vmsize, order, "segment vmsize");
     }
 
     WriteFileBytes(file_path, bytes);
+    });
 }
 
 std::optional<std::vector<std::uint8_t>> MachOSigner::ExtractSignature(
     const std::string &file_path)
 {
-    const auto bytes = ReadFileBytes(file_path);
-    const auto layout = ParseMachOLayout(bytes);
+    return GuardEntryPoint(kProgramFormat, [&]() -> std::optional<std::vector<std::uint8_t>> {
+        const auto bytes = ReadFileBytes(file_path);
+        const auto layout = ParseMachOLayout(bytes);
 
-    if(layout.codesig_cmd_offset == 0)
-    {
-        return std::nullopt;
-    }
+        if(layout.codesig_cmd_offset == 0)
+        {
+            return std::nullopt;
+        }
 
-    const auto dataoff = ReadField<std::uint32_t>(bytes, layout.codesig_cmd_offset + 8, layout.big_endian);
-    const auto datasize = ReadField<std::uint32_t>(bytes, layout.codesig_cmd_offset + 12, layout.big_endian);
+        if(layout.codesig_dataoff == 0 || layout.codesig_datasize == 0)
+        {
+            return std::nullopt;
+        }
 
-    if(dataoff == 0 || datasize == 0)
-    {
-        return std::nullopt;
-    }
-
-    if(static_cast<std::size_t>(dataoff) + datasize > bytes.size())
-    {
-        throw std::runtime_error("Code signature extends beyond file");
-    }
-
-    return std::vector<std::uint8_t>(
-        bytes.begin() + dataoff,
-        bytes.begin() + dataoff + datasize
-    );
+        const ByteSpan data = ByteSpan(bytes, kProgramFormat)
+                                  .Sub(layout.codesig_dataoff, layout.codesig_datasize,
+                                       "LC_CODE_SIGNATURE data");
+        return std::vector<std::uint8_t>(data.Data(), data.Data() + data.Size());
+    });
 }
 
 bool MachOSigner::HasEmbeddedSignature(const std::string &file_path)
 {
-    const auto bytes = ReadFileBytes(file_path);
-    const auto layout = ParseMachOLayout(bytes);
-    return layout.codesig_cmd_offset != 0;
+    return GuardEntryPoint(kProgramFormat, [&]() {
+        const auto bytes = ReadFileBytes(file_path);
+        const auto layout = ParseMachOLayout(bytes);
+        return layout.codesig_cmd_offset != 0;
+    });
 }
+
+namespace
+{
+
+constexpr const char *kSignatureFormat = "Mach-O code signature";
+
+// Locates the blob in `slot` of a SuperBlob and returns its byte range as
+// (offset, length) within the SuperBlob, or nullopt when the SuperBlob is
+// well formed but has no such slot. Everything else that is wrong with the
+// data is a std::runtime_error.
+std::optional<std::pair<std::uint64_t, std::uint64_t>> FindSuperBlobSlot(
+    const std::vector<std::uint8_t> &super_blob, std::uint32_t slot, std::uint32_t blob_magic,
+    const char *blob_name)
+{
+    using seed::internal::ByteOrder;
+    using seed::internal::ByteSpan;
+    using seed::internal::RangeFits;
+    using seed::internal::ThrowMalformed;
+
+    const ByteSpan data(super_blob, kSignatureFormat, "the SuperBlob");
+    if(data.Size() < 12)
+    {
+        ThrowMalformed(kSignatureFormat, "SuperBlob header needs 12 bytes but only " +
+                                             std::to_string(data.Size()) + " are present");
+    }
+
+    const auto magic = data.Read<std::uint32_t>(0, ByteOrder::Big, "SuperBlob magic");
+    if(magic != CSMAGIC_EMBEDDED_SIGNATURE)
+    {
+        ThrowMalformed(kSignatureFormat, "SuperBlob magic is not the embedded signature magic");
+    }
+
+    const std::uint64_t length = data.Read<std::uint32_t>(4, ByteOrder::Big, "SuperBlob length");
+    if(length < 12 || length > data.Size())
+    {
+        ThrowMalformed(kSignatureFormat, "SuperBlob length " + std::to_string(length) +
+                                             " is smaller than its header or past the " +
+                                             std::to_string(data.Size()) + " bytes present");
+    }
+
+    const std::uint64_t count = data.Read<std::uint32_t>(8, ByteOrder::Big, "SuperBlob count");
+    const std::uint64_t index_end = 12 + count * 8;
+    if(index_end > length)
+    {
+        ThrowMalformed(kSignatureFormat, "SuperBlob blob index of " + std::to_string(count) +
+                                             " entries does not fit in the SuperBlob length " +
+                                             std::to_string(length));
+    }
+
+    // Slots are looked up in the first `length` bytes only.
+    const ByteSpan blob = data.Sub(0, length, "SuperBlob");
+    std::optional<std::uint64_t> wanted_offset;
+    for(std::uint64_t i = 0; i < count; ++i)
+    {
+        const std::uint64_t idx_offset = 12 + i * 8;
+        const auto slot_type = blob.Read<std::uint32_t>(idx_offset, ByteOrder::Big, "blob index slot");
+        const std::uint64_t blob_offset =
+            blob.Read<std::uint32_t>(idx_offset + 4, ByteOrder::Big, "blob index offset");
+        if(blob_offset < index_end)
+        {
+            ThrowMalformed(kSignatureFormat, "blob index " + std::to_string(i) + " offset " +
+                                                 std::to_string(blob_offset) + " is inside the index (" +
+                                                 std::to_string(index_end) + " bytes)");
+        }
+        if(!RangeFits(blob_offset, 8, length))
+        {
+            ThrowMalformed(kSignatureFormat, "blob index " + std::to_string(i) + " offset " +
+                                                 std::to_string(blob_offset) +
+                                                 " is past the end of the SuperBlob (" +
+                                                 std::to_string(length) + " bytes)");
+        }
+        if(slot_type == slot && !wanted_offset.has_value())
+        {
+            wanted_offset = blob_offset;
+        }
+    }
+
+    if(!wanted_offset.has_value())
+    {
+        return std::nullopt;
+    }
+
+    const std::uint64_t blob_offset = *wanted_offset;
+    const auto inner_magic = blob.Read<std::uint32_t>(blob_offset, ByteOrder::Big, "blob magic");
+    if(inner_magic != blob_magic)
+    {
+        ThrowMalformed(kSignatureFormat, std::string("blob magic of the ") + blob_name +
+                                             " is not the expected value");
+    }
+
+    const std::uint64_t inner_length =
+        blob.Read<std::uint32_t>(blob_offset + 4, ByteOrder::Big, "blob length");
+    if(inner_length < 8 || !RangeFits(blob_offset, inner_length, length))
+    {
+        ThrowMalformed(kSignatureFormat, std::string("blob length ") + std::to_string(inner_length) +
+                                             " of the " + blob_name +
+                                             " is below 8 or runs past the SuperBlob");
+    }
+    return std::make_pair(blob_offset, inner_length);
+}
+
+} // anonymous namespace
 
 std::optional<std::vector<std::uint8_t>> MachOSigner::ExtractCmsFromSuperBlob(
     const std::vector<std::uint8_t> &super_blob)
 {
-    if(super_blob.size() < 12)
-    {
-        return std::nullopt;
-    }
-
-    const auto magic = ReadBE32(super_blob, 0);
-    if(magic != CSMAGIC_EMBEDDED_SIGNATURE)
-    {
-        return std::nullopt;
-    }
-
-    const auto count = ReadBE32(super_blob, 8);
-
-    for(std::uint32_t i = 0; i < count; ++i)
-    {
-        const std::size_t idx_offset = 12 + static_cast<std::size_t>(i) * 8;
-        if(idx_offset + 8 > super_blob.size())
-        {
-            break;
-        }
-
-        const auto slot_type = ReadBE32(super_blob, idx_offset);
-        const auto blob_offset = ReadBE32(super_blob, idx_offset + 4);
-
-        if(slot_type == CSSLOT_CMS_SIGNATURE)
-        {
-            if(blob_offset + 8 > super_blob.size())
+    return seed::internal::GuardEntryPoint(
+        kSignatureFormat, [&]() -> std::optional<std::vector<std::uint8_t>> {
+            const auto found =
+                FindSuperBlobSlot(super_blob, CSSLOT_CMS_SIGNATURE, CSMAGIC_BLOBWRAPPER, "CMS blob");
+            if(!found)
             {
                 return std::nullopt;
             }
-
-            const auto blob_magic = ReadBE32(super_blob, blob_offset);
-            const auto blob_length = ReadBE32(super_blob, blob_offset + 4);
-
-            if(blob_magic != CSMAGIC_BLOBWRAPPER)
-            {
-                return std::nullopt;
-            }
-
-            const std::size_t cms_start = blob_offset + 8;
-            const std::size_t cms_size = blob_length - 8;
-
-            if(cms_start + cms_size > super_blob.size())
-            {
-                return std::nullopt;
-            }
-
-            return std::vector<std::uint8_t>(
-                super_blob.begin() + static_cast<std::ptrdiff_t>(cms_start),
-                super_blob.begin() + static_cast<std::ptrdiff_t>(cms_start + cms_size)
-            );
-        }
-    }
-
-    return std::nullopt;
+            const auto first = super_blob.begin() + static_cast<std::ptrdiff_t>(found->first + 8);
+            const auto last = super_blob.begin() + static_cast<std::ptrdiff_t>(found->first + found->second);
+            return std::vector<std::uint8_t>(first, last);
+        });
 }
 
 std::optional<std::vector<std::uint8_t>> MachOSigner::ExtractCodeDirectoryFromSuperBlob(
     const std::vector<std::uint8_t> &super_blob)
 {
-    if(super_blob.size() < 12)
-    {
-        return std::nullopt;
-    }
-
-    const auto magic = ReadBE32(super_blob, 0);
-    if(magic != CSMAGIC_EMBEDDED_SIGNATURE)
-    {
-        return std::nullopt;
-    }
-
-    const auto count = ReadBE32(super_blob, 8);
-
-    for(std::uint32_t i = 0; i < count; ++i)
-    {
-        const std::size_t idx_offset = 12 + static_cast<std::size_t>(i) * 8;
-        if(idx_offset + 8 > super_blob.size())
-        {
-            break;
-        }
-
-        const auto slot_type = ReadBE32(super_blob, idx_offset);
-        const auto blob_offset = ReadBE32(super_blob, idx_offset + 4);
-
-        if(slot_type == CSSLOT_CODEDIRECTORY)
-        {
-            if(blob_offset + 8 > super_blob.size())
+    return seed::internal::GuardEntryPoint(
+        kSignatureFormat, [&]() -> std::optional<std::vector<std::uint8_t>> {
+            const auto found = FindSuperBlobSlot(super_blob, CSSLOT_CODEDIRECTORY,
+                                                 CSMAGIC_CODEDIRECTORY, "code directory");
+            if(!found)
             {
                 return std::nullopt;
             }
-
-            const auto cd_magic = ReadBE32(super_blob, blob_offset);
-            const auto cd_length = ReadBE32(super_blob, blob_offset + 4);
-
-            if(cd_magic != CSMAGIC_CODEDIRECTORY)
-            {
-                return std::nullopt;
-            }
-
-            if(blob_offset + cd_length > super_blob.size())
-            {
-                return std::nullopt;
-            }
-
-            return std::vector<std::uint8_t>(
-                super_blob.begin() + static_cast<std::ptrdiff_t>(blob_offset),
-                super_blob.begin() + static_cast<std::ptrdiff_t>(blob_offset + cd_length)
-            );
-        }
-    }
-
-    return std::nullopt;
+            const auto first = super_blob.begin() + static_cast<std::ptrdiff_t>(found->first);
+            const auto last = super_blob.begin() + static_cast<std::ptrdiff_t>(found->first + found->second);
+            return std::vector<std::uint8_t>(first, last);
+        });
 }

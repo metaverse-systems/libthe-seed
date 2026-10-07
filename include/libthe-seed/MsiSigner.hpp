@@ -27,7 +27,8 @@ public:
     /**
      * Check if a file is an OLE Compound Document (potential MSI).
      * Reads first 8 bytes and checks for CFBF magic: D0 CF 11 E0 A1 B1 1A E1
-     * @returns true if the file has a valid CFBF signature
+     * @returns true if the file has a valid CFBF signature; false for any file
+     *          without it, including a very short one or one that cannot be opened
      */
     static bool IsMsi(const std::string &file_path);
 
@@ -36,7 +37,7 @@ public:
      * The digest covers all stream data in the compound document
      * EXCEPT the \x05DigitalSignature and \x05MsiDigitalSignatureEx
      * streams, enumerated recursively and sorted alphabetically.
-     * @throws std::runtime_error if file is not a valid CFBF
+     * @throws std::runtime_error if file is not a valid CFBF or is malformed
      */
     [[nodiscard]] static DigestResult ComputeAuthenticodeDigest(const std::string &file_path);
 
@@ -48,7 +49,8 @@ public:
      * Uses atomic write: writes to temp file, then renames.
      * @param file_path Path to MSI file (modified in-place via atomic swap)
      * @param pkcs7_der DER-encoded PKCS#7 SignedData blob
-     * @throws std::runtime_error if file is not a valid CFBF or is read-only
+     * @throws std::runtime_error if file is not a valid CFBF, is malformed or read-only;
+     *         a rejected call leaves the file unchanged
      */
     static void EmbedSignature(
         const std::string &file_path,
@@ -59,7 +61,7 @@ public:
      * Extract the embedded Authenticode signature from an MSI file.
      * @returns DER-encoded PKCS#7 blob, or nullopt if \x05DigitalSignature
      *          stream does not exist
-     * @throws std::runtime_error if file is not a valid CFBF
+     * @throws std::runtime_error if file is not a valid CFBF or is malformed
      */
     [[nodiscard]] static std::optional<std::vector<std::uint8_t>> ExtractSignature(
         const std::string &file_path
@@ -68,7 +70,7 @@ public:
     /**
      * Check if an MSI file has an embedded Authenticode signature.
      * @returns true if \x05DigitalSignature stream exists and is non-empty
-     * @throws std::runtime_error if file is not a valid CFBF
+     * @throws std::runtime_error if file is not a valid CFBF or is malformed
      */
     static bool HasEmbeddedSignature(const std::string &file_path);
 
@@ -76,7 +78,7 @@ public:
      * Strip any existing embedded signature from an MSI file.
      * Removes the \x05DigitalSignature and \x05MsiDigitalSignatureEx
      * streams from the compound document.
-     * @throws std::runtime_error if file is not a valid CFBF
+     * @throws std::runtime_error if file is not a valid CFBF or is malformed
      */
     static void StripSignature(const std::string &file_path);
 };

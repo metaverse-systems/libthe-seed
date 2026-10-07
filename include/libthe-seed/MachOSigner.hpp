@@ -26,7 +26,7 @@ public:
      * Includes special slot for empty requirements hash.
      * @param file_path Path to the Mach-O binary
      * @param identity Code signing identity string (e.g., CN from cert)
-     * @throws std::runtime_error if file is not a valid Mach-O
+     * @throws std::runtime_error if file is not a valid Mach-O or is malformed
      */
     [[nodiscard]] static CodeDirectoryResult ComputeCodeDirectory(
         const std::string &file_path,
@@ -50,7 +50,9 @@ public:
      * Adds/updates LC_CODE_SIGNATURE load command and appends
      * signature data to __LINKEDIT segment.
      * Uses atomic write for crash safety.
-     * @throws std::runtime_error if file is not a valid Mach-O or read-only
+     * @throws std::runtime_error if file is not a valid Mach-O, is malformed or read-only,
+     *         or the SuperBlob cannot be described by the format's size fields;
+     *         a rejected call leaves the file unchanged
      */
     static void EmbedSignature(
         const std::string &file_path,
@@ -60,6 +62,8 @@ public:
     /**
      * Extract the embedded code signature (SuperBlob) from a Mach-O binary.
      * @returns SuperBlob bytes, or nullopt if no signature present
+     * @throws std::runtime_error if file is not a valid Mach-O or the signature
+     *         data lies outside the file
      */
     static std::optional<std::vector<std::uint8_t>> ExtractSignature(
         const std::string &file_path
@@ -67,12 +71,16 @@ public:
 
     /**
      * Check if a Mach-O binary has an embedded code signature.
+     * @throws std::runtime_error if file is not a valid Mach-O or the signature
+     *         area is malformed
      */
     static bool HasEmbeddedSignature(const std::string &file_path);
 
     /**
      * Extract the CMS signature blob from a SuperBlob.
-     * @returns DER-encoded CMS blob, or nullopt if not present
+     * @returns DER-encoded CMS blob, or nullopt if the SuperBlob is well formed
+     *          and has no CMS slot
+     * @throws std::runtime_error if the SuperBlob data is malformed
      */
     static std::optional<std::vector<std::uint8_t>> ExtractCmsFromSuperBlob(
         const std::vector<std::uint8_t> &super_blob
@@ -80,7 +88,9 @@ public:
 
     /**
      * Extract the CodeDirectory blob from a SuperBlob.
-     * @returns CodeDirectory bytes, or nullopt if not present
+     * @returns CodeDirectory bytes, or nullopt if the SuperBlob is well formed
+     *          and has no CodeDirectory slot
+     * @throws std::runtime_error if the SuperBlob data is malformed
      */
     static std::optional<std::vector<std::uint8_t>> ExtractCodeDirectoryFromSuperBlob(
         const std::vector<std::uint8_t> &super_blob

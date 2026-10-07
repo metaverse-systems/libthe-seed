@@ -66,7 +66,10 @@ class DependencyLister
      * that depend on it.
      *
      * Errors for individual binaries are collected in the error map without
-     * aborting processing of remaining binaries.
+     * aborting processing of remaining binaries. A named binary that cannot be
+     * read or is malformed appears in the error map with a message naming the
+     * format and the structure at fault; it is never reported as having no
+     * dependencies. A malformed library reached only indirectly is skipped.
      *
      * @param binary_paths List of file paths to compiled binaries (ELF or PE).
      * @param search_paths Ordered list of directories to search when resolving
