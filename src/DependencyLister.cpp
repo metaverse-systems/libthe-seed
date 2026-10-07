@@ -383,11 +383,34 @@ DependencyResult DependencyLister::ListDependencies(
         {
             listed.push_back(inputs[index].spelling);
         }
+
+        if(graph.nodes[id].status == NodeStatus::Unreadable)
+        {
+            // Reported once per key, naming every input that reaches it.
+            LibraryError &report = result.libraryErrors[graph.nodes[id].key];
+            if(report.reason.empty())
+            {
+                const std::string &key = graph.nodes[id].key;
+                const std::string &reason = graph.nodes[id].reason;
+                report.reason = reason.compare(0, key.size(), key) == 0 ? reason : key + ": " + reason;
+            }
+            for(const std::uint32_t index : credits[id])
+            {
+                report.inputs.push_back(inputs[index].spelling);
+            }
+        }
         if(shared_key)
         {
             std::sort(listed.begin(), listed.end());
             listed.erase(std::unique(listed.begin(), listed.end()), listed.end());
         }
+    }
+
+    for(auto &entry : result.libraryErrors)
+    {
+        std::sort(entry.second.inputs.begin(), entry.second.inputs.end());
+        entry.second.inputs.erase(std::unique(entry.second.inputs.begin(), entry.second.inputs.end()),
+                                  entry.second.inputs.end());
     }
 
     return result;
