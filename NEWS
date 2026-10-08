@@ -1,3 +1,38 @@
+libthe-seed 0.7.0
+
+* MsiSigner computes the same Authenticode fingerprint as osslsigncode 2.14
+  and writes signed packages that osslsigncode and an independent reader read
+  back. Every operation rebuilds the package in one canonical layout: the
+  signature is placed in the mini stream below the 4,096 byte cut-off and in
+  ordinary sectors from it, the directory entry sits at its sorted position,
+  \005MsiDigitalSignatureEx is dropped, other streams and storages keep their
+  names, bytes, class identifiers, state bits and times, and the output is
+  deterministic.
+
+* EmbedSignature gains require_matching_digest (default false): when true the
+  blob must hold the fingerprint of the package being written, otherwise the
+  call is refused and the file is unchanged. An empty blob is refused.
+
+* StripSignature now returns bool: true when a signature stream was removed,
+  false when there was none (the file is then untouched). It does not read
+  the old signature.
+
+* CheckSignature (new) reports None, Matches, Mismatch or Unreadable. Matches
+  compares fingerprints only and does not say the signature is valid.
+
+* Packages with two entries of one name in a storage, storages nested deeper
+  than 32 levels, and packages beyond the format's limits are refused with the
+  file unchanged.
+
+* Versions up to 0.6.0 produced installers that only look signed. Packages
+  signed by earlier versions of the-seed are repaired when signed again;
+  re-sign them from the unsigned original when you have it.
+
+* What is and is not verified: The fingerprint and the package structure written by libthe-seed were compared with osslsigncode 2.14, with an independent reader written for the tests, and (for stream lookup by name) with Wine 10's structured-storage implementation. They were not checked with Microsoft's signtool, WinVerifyTrust, the Windows Installer service or Microsoft's own storage code, because no Windows machine is part of the test setup. Certificate trust is not checked. Installers signed by earlier versions of the-seed may be damaged; re-sign them from the unsigned original when you have it.
+  The signature container that the-seed builds has no signed attributes and its cryptography is not checked by this library, so standard verifiers may reject it.
+
+* Version 0.7.0 (was 0.6.0). The libtool library version is unchanged.
+
 libthe-seed 0.6.0
 
 * MachOSigner signs Mac programs in two calls, PrepareSignature and

@@ -15,14 +15,17 @@
  * stream inside the compound document, using the same CMS/PKCS#7
  * format as PE Authenticode but with SpcSipInfo content type.
  *
- * What the library claims. The fingerprint it computes (see
- * ComputeAuthenticodeDigest) equals the one osslsigncode 2.14 calculates for
- * the same package, and the packages it writes are read back by osslsigncode
- * and by an independent reader written for the tests. It makes no claim about
- * the CMS blob it is given: the cryptography, the certificate and its trust are never checked,
- * and nothing was checked with Microsoft's signtool, WinVerifyTrust or the
- * Windows Installer service, because no Windows machine is part of the test
- * setup.
+ * What is and is not verified. The fingerprint and the package structure
+ * written by libthe-seed were compared with osslsigncode 2.14, with an
+ * independent reader written for the tests, and (for stream lookup by name)
+ * with Wine 10's structured-storage implementation. They were not checked with
+ * Microsoft's signtool, WinVerifyTrust, the Windows Installer service or
+ * Microsoft's own storage code, because no Windows machine is part of the test
+ * setup. Certificate trust is not checked. Installers signed by earlier
+ * versions of the-seed may be damaged; re-sign them from the unsigned original
+ * when you have it. The library makes no claim about the CMS blob it is given:
+ * its cryptography is never checked, and a blob without signed attributes may
+ * be rejected by standard verifiers.
  *
  * Every write (EmbedSignature, StripSignature) rebuilds the whole package in
  * one canonical layout, so signing and stripping repeatedly never grows the
