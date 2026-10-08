@@ -20,6 +20,9 @@
 namespace seed::internal
 {
 
+// A name for a message: printable ASCII as it is, any other unit as \uXXXX.
+std::string PrintableName(const std::u16string &name);
+
 // \005DigitalSignature
 const std::u16string &MsiSignatureName();
 

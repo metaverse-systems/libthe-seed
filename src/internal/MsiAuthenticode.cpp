@@ -38,26 +38,6 @@ bool RawNameLess(const std::u16string &a, const std::u16string &b)
     return a.size() < b.size();
 }
 
-// A name for a message: printable ASCII as it is, any other unit as \uXXXX.
-std::string Printable(const std::u16string &name)
-{
-    std::string text;
-    for(const char16_t unit : name)
-    {
-        if(unit >= 0x20 && unit < 0x7F)
-        {
-            text.push_back(static_cast<char>(unit));
-        }
-        else
-        {
-            char escaped[8];
-            std::snprintf(escaped, sizeof(escaped), "\\u%04X", static_cast<unsigned>(unit));
-            text += escaped;
-        }
-    }
-    return text;
-}
-
 // Two entries that the format's ordering treats as one name cannot be told
 // apart by a reader that searches the directory, so no fingerprint is defined.
 void RejectDuplicateNames(const CfbNode &storage)
@@ -75,7 +55,7 @@ void RejectDuplicateNames(const CfbNode &storage)
         if(PackageModel::CompareNames(sorted[i - 1]->name, sorted[i]->name) == 0)
         {
             ThrowMalformed(kFormat, "the package holds two entries named \"" +
-                                        Printable(sorted[i]->name) +
+                                        PrintableName(sorted[i]->name) +
                                         "\" in one storage; no fingerprint is defined");
         }
     }
@@ -124,6 +104,25 @@ void HashStorage(PackageModel &model, const CfbNode &storage, bool is_root,
 }
 
 } // namespace
+
+std::string PrintableName(const std::u16string &name)
+{
+    std::string text;
+    for(const char16_t unit : name)
+    {
+        if(unit >= 0x20 && unit < 0x7F)
+        {
+            text.push_back(static_cast<char>(unit));
+        }
+        else
+        {
+            char escaped[8];
+            std::snprintf(escaped, sizeof(escaped), "\\u%04X", static_cast<unsigned>(unit));
+            text += escaped;
+        }
+    }
+    return text;
+}
 
 const std::u16string &MsiSignatureName()
 {

@@ -109,6 +109,35 @@ std::vector<std::string> Samples()
     return names;
 }
 
+// The `signed-out <sample> <blob> <sha256>` lines, as (sample, blob, hash).
+std::vector<std::vector<std::string>> ReferenceSignedOut()
+{
+    std::vector<std::vector<std::string>> rows;
+    std::ifstream in(seedtest::FixturePath("msi-reference.txt"));
+    REQUIRE(in.good());
+    std::string line;
+    while(std::getline(in, line))
+    {
+        if(line.empty() || line[0] == '#')
+        {
+            continue;
+        }
+        std::istringstream fields(line);
+        std::string type;
+        std::string sample;
+        std::string blob;
+        std::string hash;
+        fields >> type;
+        if(type != "signed-out")
+        {
+            continue;
+        }
+        REQUIRE(static_cast<bool>(fields >> sample >> blob >> hash));
+        rows.push_back({sample, blob, hash});
+    }
+    return rows;
+}
+
 const std::string &RecordedFingerprint(const std::string &sample)
 {
     for(const auto &row : Recorded().fingerprints)
@@ -535,5 +564,50 @@ TEST_CASE("a damaged package is rejected and never given a fingerprint of nothin
             },
             "MSI", damaged.keyword, damaged.bytes.size());
         sm::RequireUnchanged(path, damaged.bytes);
+    }
+}
+
+TEST_CASE("the package the library writes has the recorded hash", "[MsiDigestReference][signed-out]")
+{
+    // Lines `signed-out <sample> <blob> <sha256>` of msi-reference.txt: the
+    // SHA-256 of the whole package the library writes when it signs <sample>
+    // with <blob>, recorded after osslsigncode verified that exact file. <blob>
+    // is either the name of a signed sample (its signature stream is the blob)
+    // or `pattern-<size>` (the first `size` bytes of PatternBytes with seed 9).
+    // The lines are written when the writer exists; a file without them has
+    // nothing to compare, which is said in the output and is not a failure.
+    seedtest::ScratchDir scratch("msi-digest-signed-out");
+    const auto rows = ReferenceSignedOut();
+    if(rows.empty())
+    {
+        WARN("msi-reference.txt holds no signed-out lines yet: they are recorded with the writer");
+    }
+    for(const auto &row : rows)
+    {
+        const std::string &sample = row[0];
+        const std::string &blob_name = row[1];
+        const std::string &recorded_hash = row[2];
+        INFO("sample " << sample << " blob " << blob_name);
+
+        Bytes blob;
+        if(blob_name.rfind("pattern-", 0) == 0)
+        {
+            blob = cfb::PatternBytes(static_cast<std::size_t>(std::stoull(blob_name.substr(8))), 9);
+        }
+        else
+        {
+            const auto found = cfb::Package(sm::LoadSample(blob_name)).FindSignature();
+            REQUIRE(found.has_value());
+            blob = cfb::Package(sm::LoadSample(blob_name)).ReadStream(*found);
+        }
+
+        const std::string path = sm::WriteScratch(scratch, sample, sm::LoadSample(sample));
+        REQUIRE_NOTHROW(MsiSigner::EmbedSignature(path, blob));
+        CHECK(cfb::Sha256Hex(sm::ReadAll(path)) == recorded_hash);
+
+        // The same input always gives the same bytes.
+        const std::string again = sm::WriteScratch(scratch, "again-" + sample, sm::LoadSample(sample));
+        REQUIRE_NOTHROW(MsiSigner::EmbedSignature(again, blob));
+        CHECK(sm::ReadAll(again) == sm::ReadAll(path));
     }
 }

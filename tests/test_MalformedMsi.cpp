@@ -43,12 +43,6 @@
 // (an unsigned file has no signature to extract, so ExtractSignature does not
 // look at an ordinary stream); the tests only impose a rejection on the
 // operations that must read the structure.
-//
-// The signature the library embeds is still written to ordinary sectors
-// whatever its size, while reading places it by size: a signature below the
-// 4,096-byte cut-off is therefore refused when read back. The "ok:" cases
-// that embed and then read use a signature at or above the cut-off until the
-// writer places signatures by size.
 
 #include "CfbReference.hpp"
 #include "MalformedInput.hpp"
@@ -453,7 +447,7 @@ TEST_CASE("ok: MSI embed then presence extract and strip", "[MalformedMsi][ok]")
 {
     seedtest::ScratchDir scratch;
     const std::string path = sm::WriteScratch(scratch, "tiny.msi", Tiny());
-    const Bytes signature = FakeSignature(5000);
+    const Bytes signature = FakeSignature();
 
     MsiSigner::EmbedSignature(path, signature);
 
@@ -1079,7 +1073,7 @@ TEST_CASE("ok: MSI signature of size zero is an existing signature to replace", 
         CHECK(MsiSigner::ComputeAuthenticodeDigest(path).digest == FromHex(cfb::Fingerprint(bytes)));
 
         // Signing replaces it; stripping removes it.
-        const Bytes blob = cfb::PatternBytes(5000, 7);
+        const Bytes blob = cfb::PatternBytes(1426, 7);
         MsiSigner::EmbedSignature(path, blob);
         const auto extracted = MsiSigner::ExtractSignature(path);
         REQUIRE(extracted.has_value());
@@ -1099,7 +1093,7 @@ TEST_CASE("ok: MSI signature chain that ends at once is replaced and stripped", 
 
     seedtest::ScratchDir scratch;
     const std::string path = sm::WriteScratch(scratch, "end-of-chain.msi", bytes);
-    const Bytes blob = cfb::PatternBytes(5000, 8);
+    const Bytes blob = cfb::PatternBytes(1426, 8);
     MsiSigner::EmbedSignature(path, blob);
     const auto extracted = MsiSigner::ExtractSignature(path);
     REQUIRE(extracted.has_value());

@@ -27,6 +27,7 @@ noinst_HEADERS = \
 	internal/MachOSuperBlob.hpp \
 	internal/MsiSignatureSize.hpp \
 	internal/CfbReader.hpp \
+	internal/CfbWriter.hpp \
 	internal/MsiAuthenticode.hpp \
 	internal/AuthenticodeDigestField.hpp
 
@@ -50,5 +51,6 @@ libthe_seed_la_SOURCES = LibraryLoader.cpp \
 		internal/FileIO.cpp \
 		internal/MachOLayout.cpp \
 		internal/CfbReader.cpp \
+		internal/CfbWriter.cpp \
 		internal/MsiAuthenticode.cpp \
 		internal/AuthenticodeDigestField.cpp

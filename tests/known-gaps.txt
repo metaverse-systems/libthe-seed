@@ -31,5 +31,3 @@
 #   - No suppression files, no disabled or commented-out tests. This file is the
 #     only allowance.
 
-all | test_MsiSigner | MsiSigner::EmbedSignature and ExtractSignature round-trip | disagrees with its chain | libthe-seed-1 finding 5 | libthe-seed-1: Windows installer signing
-all | test_MsiSigner | MsiSigner::EmbedSignature can replace existing signature | disagrees with its chain | libthe-seed-1 finding 5 | libthe-seed-1: Windows installer signing
