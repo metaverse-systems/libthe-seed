@@ -75,8 +75,30 @@ The workflow in `.github/workflows/ci.yaml` runs `make check` for the plain and 
 * Keys are the canonical path of the file found in the search folders (links resolve to the real file), or the recorded name when the library is not found. A library that is not found is listed and is not an error.
 * Delay-loaded Windows libraries are listed with the others. PE names match regardless of letter case; ELF names match exactly.
 * `errors` holds the named inputs that could not be read. `libraryErrors` is an additive field that holds libraries that were found but could not be read; they stay in `dependencies`, and the entry gives the reason and the inputs that need the library.
-* Mach-O inputs are declined with an error (`<path>: Mach-O files are not supported for dependency listing`). This will be revisited after roadmap task 5.
+* Mach-O inputs are now listed (decision of version 0.6.0, replacing the earlier refusal): the dependent library names of every slice of a universal file are read by `MachOParser::ListDependencies`. Names that contain a folder separator (`@rpath/`, `@loader_path/`, `@executable_path/` and absolute install names) are never joined to a search folder and are listed under the recorded name. A shape the parser declines (big-endian or 32-bit) appears in `errors` with the parser's text.
 * Release note: packaging output for existing projects can grow because more libraries are now attributed to the programs that need them (including libraries that were previously missing from every program but the first, and delay-loaded Windows libraries). This is the intended correction; check bundle contents and sizes after upgrading. Hard links are not merged: each name keeps its own canonical path.
+
+## Signing Mac programs
+
+`MachOSigner` signs 64-bit little-endian arm64 and x86-64 programs, alone or in a universal file. Signing is two calls and no other order exists:
+
+1. `PrepareSignature(path, identity, cmsCapacity)` builds the finished layout in memory (the new load command, the header counts, the extended `__LINKEDIT` segment and the region reserved for the signature) and returns the CodeDirectory of each slice. It never writes. The caller signs each CodeDirectory (the CMS is produced outside the library).
+2. `CompleteSignature(path, prepared, cmsSignatures)` builds the layout again, requires the CodeDirectories to be the prepared ones, and replaces the file in one step. All slices are signed or none.
+
+* Signing a program that already carries a signature replaces it in place: the one signature command is updated, never duplicated or left with size zero, and the file does not grow. A signature followed by other data is refused. `StripSignature(path)` removes a signature.
+* A program without room between its load commands and its first section for the 16-byte signature command is refused and left unchanged. The message gives the bytes needed and available. Relink with extra header space, for example `-headerpad 0x20`.
+* Big-endian and 32-bit programs, and a universal file with any such slice, are refused with a message that names the kind; the file is left unchanged.
+* `ComputeCodeDirectory` and `EmbedSignature` are removed: removed because hashing before the file is laid out cannot yield a valid signature; use PrepareSignature and CompleteSignature. `BuildSuperBlob` stays as a formatting helper.
+
+What was checked:
+
+* Page fingerprints in a signature produced by this library match the finished file; this is checked by an independent checker and by values recorded from Python's hashlib.
+* The checker accepts the ad-hoc signature written by ld64.lld, a different producer.
+* The structure of signed files parses with llvm-otool, llvm-objdump and llvm-lipo.
+* Signing again replaces the signature in place and does not grow the file; a signature that is larger or smaller is accommodated.
+* A program without room for the signature command is refused and left unchanged.
+
+Nobody has checked a signature produced by this library with the platform's own verifier (`codesign --verify`) or by running a signed program on a Mac. What was checked is described above. The CMS part of the signature is the minimal one the-seed has always produced and is not known to be accepted by Apple's tools. Programs signed by earlier versions of the-seed are malformed after re-signing and may need to be rebuilt from their unsigned originals.
 
 ## Replacing files
 
@@ -88,7 +110,7 @@ The workflow in `.github/workflows/ci.yaml` runs `make check` for the plain and 
 * A process killed during the replacement can leave a working file named `.<name>.seedtmp.<pid>.<hex>` in the same folder. It is never reused and can be deleted.
 * A link is followed: the file it points to is replaced and the link is kept. Read-only files are refused.
 * `PeSigner`: the fingerprint of an unsigned program includes the zero padding that embedding adds, so it is the same before and after embedding. Stripping removes up to seven trailing zero bytes of padding, never below the end of the last section, so a program whose last byte is not zero is restored to its original length and content, except that the CheckSum field holds the calculated checksum (embedding and stripping both recalculate it); one that ends in zeros may lose up to seven when its length was a multiple of eight.
-* The tests of the replacement run the PE and MSI signers. The Mach-O embedding cases in `test_SignersUseReplace` are skipped for now because embedding into the sample Mach-O files stops with a known gap (see "Known gaps").
+* The tests of the replacement run the PE, Mach-O and MSI signers.
 
 ## Usage
 

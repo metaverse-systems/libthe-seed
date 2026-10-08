@@ -1,3 +1,42 @@
+libthe-seed 0.6.0
+
+* MachOSigner signs Mac programs in two calls, PrepareSignature and
+  CompleteSignature (new). The CodeDirectory is computed over the finished
+  layout, so the page fingerprints match the file. Signing an already signed
+  program replaces the signature in place; StripSignature (new) removes it.
+  A program without room for the signature command is refused and left
+  unchanged, with the bytes needed and available; relink with extra header
+  space (for example -headerpad 0x20). Big-endian and 32-bit programs are
+  refused with a message that names the kind.
+
+* ComputeCodeDirectory and EmbedSignature are removed: removed because hashing
+  before the file is laid out cannot yield a valid signature; use
+  PrepareSignature and CompleteSignature.
+
+* MachOParser reads the real file layout (thin and universal, 32 and 64 bit
+  universal tables); GetArchSlices has additive fields for the signature and
+  for declined slices. HasEmbeddedSignature is true for a universal file only
+  when every slice is signed.
+
+* DependencyLister now lists Mach-O programs and libraries (it declined them
+  in 0.5.0), reading every slice. Names with a folder separator, such as
+  @rpath/ names, are listed under the recorded name.
+
+* What is and is not verified: Page fingerprints in a signature produced by
+  this library match the finished file; this is checked by an independent
+  checker and by values recorded from Python's hashlib. The checker accepts
+  the ad-hoc signature written by ld64.lld, a different producer. The
+  structure of signed files parses with llvm-otool, llvm-objdump and
+  llvm-lipo. Nobody has checked a signature produced by this library with
+  the platform's own verifier (`codesign --verify`) or by running a signed
+  program on a Mac. What was checked is described above. The CMS part of the
+  signature is the minimal one the-seed has always produced and is not known
+  to be accepted by Apple's tools. Programs signed by earlier versions of
+  the-seed are malformed after re-signing and may need to be rebuilt from
+  their unsigned originals.
+
+* Version 0.6.0 (was 0.5.0). The libtool library version is unchanged.
+
 libthe-seed 0.5.0
 
 * DependencyLister now credits every input program with every library it

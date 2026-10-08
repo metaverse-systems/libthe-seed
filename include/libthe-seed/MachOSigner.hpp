@@ -29,6 +29,23 @@
  *
  * Only 64-bit little-endian arm64 and x86-64 programs, alone or in a universal
  * file, are supported. Error text begins with the path or with "Mach-O".
+ *
+ * A program without room between its load commands and its first section for
+ * the 16-byte signature command is refused and left unchanged; relink with
+ * extra header space (for example -headerpad 0x20).
+ *
+ * What was checked: page fingerprints in a signature produced by this library
+ * match the finished file (an independent checker and values recorded from
+ * Python's hashlib); the checker accepts the ad-hoc signature written by
+ * ld64.lld, a different producer; the structure of signed files parses with
+ * llvm-otool, llvm-objdump and llvm-lipo.
+ *
+ * Nobody has checked a signature produced by this library with the platform's
+ * own verifier (`codesign --verify`) or by running a signed program on a Mac.
+ * What was checked is described above. The CMS part of the signature is the
+ * minimal one the-seed has always produced and is not known to be accepted by
+ * Apple's tools. Programs signed by earlier versions of the-seed are malformed
+ * after re-signing and may need to be rebuilt from their unsigned originals.
  */
 class MachOSigner
 {

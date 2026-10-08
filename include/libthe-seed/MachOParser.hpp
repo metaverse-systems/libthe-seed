@@ -32,6 +32,19 @@
  * first bytes alone decide, so Format::Fat can also hold declined slices. Signing
  * a universal file with any declined slice is refused whole, leaving the file
  * unchanged.
+ *
+ * Signing is done by MachOSigner. What was checked there: page fingerprints in
+ * a signature produced by this library match the finished file (an independent
+ * checker and values recorded from Python's hashlib); the checker accepts the
+ * ad-hoc signature written by ld64.lld, a different producer; the structure of
+ * signed files parses with llvm-otool, llvm-objdump and llvm-lipo.
+ *
+ * Nobody has checked a signature produced by this library with the platform's
+ * own verifier (`codesign --verify`) or by running a signed program on a Mac.
+ * What was checked is described above. The CMS part of the signature is the
+ * minimal one the-seed has always produced and is not known to be accepted by
+ * Apple's tools. Programs signed by earlier versions of the-seed are malformed
+ * after re-signing and may need to be rebuilt from their unsigned originals.
  */
 class MachOParser
 {
