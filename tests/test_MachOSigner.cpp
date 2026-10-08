@@ -1634,3 +1634,86 @@ TEST_CASE("MachOSigner StripSignature on a missing file names it", "[MachOSigner
     CHECK(NamesTheFile(message, missing));
     CHECK_FALSE(std::filesystem::exists(missing));
 }
+
+TEST_CASE("MachOSigner non-zero bytes between universal slices refuse signing and stripping", "[MachOSigner]")
+{
+    for(const char *name : {"tiny-macho-universal", "tiny-macho-universal-adhoc"})
+    {
+        INFO(name);
+        seedtest::ScratchDir scratch;
+        Bytes file = ms::LoadFixture(name);
+        const std::vector<TableEntry> table = ReadTable(file);
+        REQUIRE(table.size() == 2);
+        const std::uint64_t gap_start = table[0].offset + table[0].size;
+        REQUIRE(gap_start < table[1].offset);
+        file.at(static_cast<std::size_t>(gap_start + 1)) = 0x5A;
+        const std::string path = ms::WriteScratch(scratch, "padding", file);
+
+        const std::string prepare = ms::ErrorOf([&] { (void)MachOSigner::PrepareSignature(path, "test-identity", 64); });
+        CHECK(prepare.rfind(path + ": ", 0) == 0);
+        CHECK(Contains(prepare, "the bytes between slice 0 ("));
+        CHECK(Contains(prepare, "are not all zero (the first is at offset " + std::to_string(gap_start + 1) + ")"));
+        CHECK(ms::ReadAll(path) == file);
+
+        const std::string strip = ms::ErrorOf([&] { MachOSigner::StripSignature(path); });
+        CHECK(Contains(strip, "are not all zero"));
+        CHECK(ms::ReadAll(path) == file);
+    }
+}
+
+TEST_CASE("MachOSigner a signature command larger than 16 bytes keeps its size when re-signed", "[MachOSigner]")
+{
+    seedtest::ScratchDir scratch;
+    Bytes file = ms::LoadFixture("tiny-macho-x86_64-adhoc");
+    std::uint64_t ncmds = 0, sizeofcmds = 0;
+    REQUIRE(mr::ReadLE(file, 16, 4, ncmds));
+    REQUIRE(mr::ReadLE(file, 20, 4, sizeofcmds));
+    // The signature command is the last one; give it 8 more bytes (the zero
+    // bytes of the header space that follows it).
+    const std::uint64_t command_at = 32 + sizeofcmds - 16;
+    std::uint64_t cmd = 0, size = 0;
+    REQUIRE(mr::ReadLE(file, command_at, 4, cmd));
+    REQUIRE(mr::ReadLE(file, command_at + 4, 4, size));
+    REQUIRE(cmd == 0x1D);
+    REQUIRE(size == 16);
+    for(std::size_t i = 0; i < 8; ++i)
+    {
+        REQUIRE(file.at(static_cast<std::size_t>(32 + sizeofcmds + i)) == 0);
+    }
+    PutLE(file, static_cast<std::size_t>(command_at + 4), 24, 4);
+    PutLE(file, 20, sizeofcmds + 8, 4);
+    const std::string path = ms::WriteScratch(scratch, "wide-command", file);
+
+    const auto prepared = MachOSigner::PrepareSignature(path, "test-identity", 64);
+    const auto cms = ms::CountingCms(1);
+    MachOSigner::CompleteSignature(path, prepared, cms);
+    const Bytes signed_file = ms::ReadAll(path);
+
+    std::uint64_t after_ncmds = 0, after_sizeofcmds = 0, after_size = 0;
+    REQUIRE(mr::ReadLE(signed_file, 16, 4, after_ncmds));
+    REQUIRE(mr::ReadLE(signed_file, 20, 4, after_sizeofcmds));
+    REQUIRE(mr::ReadLE(signed_file, static_cast<std::size_t>(command_at + 4), 4, after_size));
+    CHECK(after_ncmds == ncmds);
+    CHECK(after_sizeofcmds == sizeofcmds + 8);
+    CHECK(after_size == 24);
+    // The bytes that follow the command are not touched.
+    for(std::size_t i = 0; i < 8; ++i)
+    {
+        CHECK(signed_file.at(static_cast<std::size_t>(32 + sizeofcmds + i)) == 0);
+    }
+    const mr::FileReport report = mr::CheckFile(signed_file);
+    INFO("problems: " << ms::JoinProblems(report));
+    CHECK(report.Ok());
+    CHECK(MachOSigner::HasEmbeddedSignature(path));
+    CHECK(MachOParser::GetArchSlices(path).at(0).is_signed);
+
+    // Stripping removes all 24 bytes of the command.
+    MachOSigner::StripSignature(path);
+    const Bytes stripped = ms::ReadAll(path);
+    std::uint64_t strip_ncmds = 0, strip_sizeofcmds = 0;
+    REQUIRE(mr::ReadLE(stripped, 16, 4, strip_ncmds));
+    REQUIRE(mr::ReadLE(stripped, 20, 4, strip_sizeofcmds));
+    CHECK(strip_ncmds == ncmds - 1);
+    CHECK(strip_sizeofcmds == sizeofcmds + 8 - 24);
+    CHECK_FALSE(MachOSigner::HasEmbeddedSignature(path));
+}

@@ -83,14 +83,19 @@ public:
      * (file bytes, identity, capacity) give an identical CodeDirectory. Each
      * slice of a universal file is its own program and gets its own.
      *
-     * @param file_path Path to the Mach-O program (thin or universal), unsigned
+     * An existing signature is not an obstacle: the layout is computed for
+     * replacing it in place.
+     *
+     * @param file_path Path to the Mach-O program (thin or universal)
      * @param identity Code signing identifier written into the CodeDirectory
      * @param cms_capacity Upper bound in bytes of the DER CMS the caller will
      *        supply for any one slice; 0 is allowed; above 2^31 is refused
      * @throws std::runtime_error if the file is not a supported Mach-O program,
-     *         has no room for the signature command or no link-edit segment at
-     *         its end, is already signed, or a slice is refused (the message
-     *         names the slice of a universal file)
+     *         has no room for the signature command (when it has no signature
+     *         yet) or no link-edit segment at its end, has data after its
+     *         signature, has non-zero bytes between the slices of a universal
+     *         file, or a slice is refused (the message names the slice of a
+     *         universal file)
      */
     [[nodiscard]] static PreparedSignature PrepareSignature(
         const std::string &file_path,

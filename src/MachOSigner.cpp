@@ -287,8 +287,12 @@ SlicePlan PlanSlice(const std::string &path, bool universal, std::size_t index, 
     // The signature command after the last one, and the counts that cover it.
     const std::size_t command_at = static_cast<std::size_t>(resign ? layout.codesig->command_offset
                                                                     : layout.header_end);
-    WriteLE32(out, command_at, LC_CODE_SIGNATURE_CMD);
-    WriteLE32(out, command_at + 4, static_cast<std::uint32_t>(kSignatureCommandSize));
+    // An existing command keeps its size, which may be larger than 16 bytes.
+    if(!resign)
+    {
+        WriteLE32(out, command_at, LC_CODE_SIGNATURE_CMD);
+        WriteLE32(out, command_at + 4, static_cast<std::uint32_t>(kSignatureCommandSize));
+    }
     WriteLE32(out, command_at + 8, static_cast<std::uint32_t>(dataoff));
     WriteLE32(out, command_at + 12, static_cast<std::uint32_t>(datasize));
     if(!resign)
@@ -344,6 +348,41 @@ SlicePlan PlanSlice(const std::string &path, bool universal, std::size_t index, 
     return plan;
 }
 
+// The bytes between two slices of a universal file are rewritten as zero padding
+// when slice lengths change, so they must be zero already; anything else would be
+// lost. (Bytes before the first slice and after the last are kept as they are.)
+void RequireZeroPadding(const std::string &path, const ByteSpan &file, const MachOContainer &container)
+{
+    if(container.form == ContainerForm::Thin)
+    {
+        return;
+    }
+    std::vector<std::size_t> order(container.entries.size());
+    for(std::size_t i = 0; i < order.size(); ++i)
+    {
+        order[i] = i;
+    }
+    std::stable_sort(order.begin(), order.end(), [&](std::size_t a, std::size_t b) {
+        return container.entries[a].offset < container.entries[b].offset;
+    });
+    for(std::size_t k = 1; k < order.size(); ++k)
+    {
+        const ContainerEntry &previous = container.entries[order[k - 1]];
+        const ContainerEntry &next = container.entries[order[k]];
+        for(std::uint64_t at = previous.offset + previous.size; at < next.offset; ++at)
+        {
+            if(file.Data()[at] != 0)
+            {
+                Refuse(path, "the bytes between slice " + std::to_string(order[k - 1]) + " (" +
+                                 seed::internal::ArchName(previous.cputype) + ") and slice " +
+                                 std::to_string(order[k]) + " (" + seed::internal::ArchName(next.cputype) +
+                                 ") are not all zero (the first is at offset " + std::to_string(at) +
+                                 "); they would be replaced by zero padding");
+            }
+        }
+    }
+}
+
 std::vector<SlicePlan> PlanAll(const std::string &path, const ByteSpan &file, const MachOContainer &container,
                                const std::string &identity, std::uint32_t capacity)
 {
@@ -353,6 +392,7 @@ std::vector<SlicePlan> PlanAll(const std::string &path, const ByteSpan &file, co
                          " is larger than the 2147483648 bytes that can be reserved");
     }
     RequireSupported(path, container);
+    RequireZeroPadding(path, file, container);
     const bool universal = container.form != ContainerForm::Thin;
     std::vector<SlicePlan> plans;
     for(std::size_t i = 0; i < container.entries.size(); ++i)
@@ -599,6 +639,7 @@ void MachOSigner::StripSignature(const std::string &file_path)
         const ByteSpan file(bytes, kProgramFormat);
         const MachOContainer container = ParseInput(bytes);
         RequireSupported(file_path, container);
+        RequireZeroPadding(file_path, file, container);
         const bool universal = container.form != ContainerForm::Thin;
 
         bool any = false;
