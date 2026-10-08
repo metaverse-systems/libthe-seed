@@ -353,8 +353,13 @@ public:
                 return out.str();
             });
             this->Report(path, "digest", [&] {
-                auto result = MachOSigner::ComputeCodeDirectory(path, "reference");
-                return Hex(result.cd_hash);
+                auto result = MachOSigner::PrepareSignature(path, "reference", 1500);
+                std::string out;
+                for(const auto &slice : result.slices)
+                {
+                    out += Hex(slice.cd_hash) + ",";
+                }
+                return out;
             });
             this->Report(path, "presence",
                          [&] { return MachOSigner::HasEmbeddedSignature(path) ? "yes" : "no"; });
@@ -363,10 +368,10 @@ public:
                 return sig ? Sha256Hex(*sig) : std::string("none");
             });
             this->Report(path, "embed", [&] {
-                auto directory = MachOSigner::ComputeCodeDirectory(path, "reference");
-                Bytes blob = MachOSigner::BuildSuperBlob(directory.code_directory, TestBlob(1500));
                 std::string copy = this->Copy(path);
-                MachOSigner::EmbedSignature(copy, blob);
+                auto prepared = MachOSigner::PrepareSignature(copy, "reference", 1500);
+                MachOSigner::CompleteSignature(copy, prepared,
+                                               std::vector<Bytes>(prepared.slices.size(), TestBlob(1500)));
                 return Sha256Hex(ReadFile(copy));
             });
         }

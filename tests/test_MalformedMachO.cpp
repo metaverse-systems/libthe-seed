@@ -7,16 +7,16 @@
 // legal-but-unusual input with today's result, "review:" and "f18:" for the
 // review's input, and "edge:" for an edge-case family.
 //
-// Byte order. The library reads every header field of a program whose first
-// four bytes are CF FA ED FE (a real little-endian 64-bit Mach-O) as
-// big-endian, and every field of a universal file whose first four bytes are
-// CA FE BA BE as little-endian, so it misreads the genuine samples. The synthetic images below are written in
-// the order the code reads today, so that their commands are seen as they are
-// meant; the genuine samples are seen as today's misreading, which ends the
-// load-command walk at the first command. When the byte order is corrected
-// the image builders and the expectations that name misread values change
-// with it. A load command whose 8-byte header does not fit inside the file
-// ends the walk (it is not an error); that rule stays until then.
+// Byte order. A program whose first four bytes are CF FA ED FE is a real
+// little-endian 64-bit Mach-O and holds every header and command field
+// little-endian; a universal file (CA FE BA BE or CA FE BA BF) has a
+// big-endian table and holds little-endian slices. The synthetic images below
+// are written that way (the "genuine" form) and are what MachOParser is
+// tested with.
+//
+// MachOParser and MachOSigner read the same layout, so one image serves both.
+// A rejected input is rejected by every operation that reads the load
+// commands, with the same message.
 //
 // Mac signature data: a SuperBlob that is well formed but has no slot of the
 // wanted type gives an empty result; anything malformed is rejected with
@@ -43,25 +43,22 @@
 //                             second one; data past the end of the file
 //                             ("... extends past the end of the file") or inside the
 //                             load-command area
-//   __LINKEDIT                EmbedSignature: the segment's file offset is past the end of the file
-//   No space for new load command
-//                             EmbedSignature: header size + sizeofcmds + 16 does not fit
+//   __LINKEDIT                the segment's file range is past the end of the file
+//   load commands             the load-command area announced by the header is not all in the file
 //   Truncated fat_arch entry table
 //                             the slice table does not fit in the file (checked before any
 //                             allocation); "Truncated fat_arch entry" is also kept verbatim
+//   not a Mach-O              a universal magic with a slice count of 0 or above 256, or whose first
+//                             slice does not start with a Mach-O magic (a Java class file has the
+//                             same first four bytes)
 //   past the end              a fat slice reaches past the end of the file
 //   overlap                   two fat slices overlap
 //   header table              a fat slice starts inside the slice table
 //   header                    a program shorter than its header fields
 //   too small                 a file under 4 bytes given to an operation that needs a program
-//   SuperBlob                 EmbedSignature: a SuperBlob that its 32-bit size field cannot describe
-//
-// An operation that does not read the faulty structure keeps answering as
-// today; the tests check that for MachOParser::ListDependencies when only the
-// segment or signature commands are faulty, and for the signer operations
-// other than EmbedSignature when only sizeofcmds or the __LINKEDIT file
-// offset is faulty.
+//   SuperBlob                 a SuperBlob that its 32-bit size field cannot describe
 
+#include "MachOReference.hpp"
 #include "MalformedInput.hpp"
 #include "DepFixtures.hpp"
 
@@ -70,6 +67,7 @@
 
 #include <algorithm>
 #include <cstdint>
+#include <cstdio>
 #include <filesystem>
 #include <functional>
 #include <limits>
@@ -553,32 +551,76 @@ constexpr std::uint64_t kDylibNameField = 24;
 constexpr std::uint64_t kSignatureDataoffField = 8;
 constexpr std::uint64_t kSignatureDatasizeField = 12;
 
+void Put32(Bytes &image, std::uint64_t at, std::uint32_t value)
+{
+    PatchLE<std::uint32_t>(image, at, value);
+}
+
+void Put64(Bytes &image, std::uint64_t at, std::uint64_t value)
+{
+    PatchLE<std::uint64_t>(image, at, value);
+}
+
+// A synthetic image; every change is made to its bytes.
+struct Image
+{
+    Bytes genuine;
+
+    void Patch32(std::uint64_t at, std::uint32_t value)
+    {
+        Put32(this->genuine, at, value);
+    }
+
+    void Patch64(std::uint64_t at, std::uint64_t value)
+    {
+        Put64(this->genuine, at, value);
+    }
+
+    void Fill(std::uint64_t from, std::uint64_t to, std::uint8_t value)
+    {
+        for(std::uint64_t i = from; i < to; ++i)
+        {
+            this->genuine.at(i) = value;
+        }
+    }
+
+    Image Cut(std::size_t length) const
+    {
+        return {Truncate(this->genuine, length)};
+    }
+
+    std::size_t size() const
+    {
+        return this->genuine.size();
+    }
+};
+
 void PutSegment(Bytes &image, std::uint64_t at, const std::string &name, std::uint64_t vmaddr,
                 std::uint64_t vmsize, std::uint64_t fileoff, std::uint64_t filesize)
 {
-    PatchBE<std::uint32_t>(image, at, kLcSegment64);
-    PatchBE<std::uint32_t>(image, at + 4, kSegmentCmdSize);
+    Put32(image, at, kLcSegment64);
+    Put32(image, at + 4, kSegmentCmdSize);
     for(std::size_t i = 0; i < name.size(); ++i)
     {
         image[at + kSegmentNameField + i] = static_cast<std::uint8_t>(name[i]);
     }
-    PatchBE<std::uint64_t>(image, at + 24, vmaddr);
-    PatchBE<std::uint64_t>(image, at + 32, vmsize);
-    PatchBE<std::uint64_t>(image, at + 40, fileoff);
-    PatchBE<std::uint64_t>(image, at + 48, filesize);
-    PatchBE<std::uint32_t>(image, at + 56, 5);
-    PatchBE<std::uint32_t>(image, at + 60, 5);
+    Put64(image, at + 24, vmaddr);
+    Put64(image, at + 32, vmsize);
+    Put64(image, at + 40, fileoff);
+    Put64(image, at + 48, filesize);
+    Put32(image, at + 56, 5);
+    Put32(image, at + 60, 5);
 }
 
 void PutSignatureCommand(Bytes &image, std::uint64_t at, std::uint32_t dataoff, std::uint32_t datasize)
 {
-    PatchBE<std::uint32_t>(image, at, kLcCodeSignature);
-    PatchBE<std::uint32_t>(image, at + 4, kSignatureCmdSize);
-    PatchBE<std::uint32_t>(image, at + kSignatureDataoffField, dataoff);
-    PatchBE<std::uint32_t>(image, at + kSignatureDatasizeField, datasize);
+    Put32(image, at, kLcCodeSignature);
+    Put32(image, at + 4, kSignatureCmdSize);
+    Put32(image, at + kSignatureDataoffField, dataoff);
+    Put32(image, at + kSignatureDatasizeField, datasize);
 }
 
-Bytes MakeImage(bool with_signature = false)
+Bytes MakeImageBytes(bool with_signature)
 {
     Bytes image(kUnsignedSize, 0);
     for(std::size_t i = 256; i < image.size(); ++i)
@@ -589,23 +631,22 @@ Bytes MakeImage(bool with_signature = false)
     image[1] = 0xFA;
     image[2] = 0xED;
     image[3] = 0xFE;
-    PatchBE<std::uint32_t>(image, 4, 0x01000007);
-    PatchBE<std::uint32_t>(image, 8, 3);
-    PatchBE<std::uint32_t>(image, 12, 2);
-    PatchBE<std::uint32_t>(image, kNcmdsField, with_signature ? 4 : 3);
-    PatchBE<std::uint32_t>(image, kSizeofcmdsField,
-                           static_cast<std::uint32_t>(kCommandsSize + (with_signature ? 16 : 0)));
-    PatchBE<std::uint32_t>(image, 24, 0x00200085);
+    Put32(image, 4, 0x01000007);
+    Put32(image, 8, 3);
+    Put32(image, 12, 2);
+    Put32(image, kNcmdsField, with_signature ? 4 : 3);
+    Put32(image, kSizeofcmdsField, static_cast<std::uint32_t>(kCommandsSize + (with_signature ? 16 : 0)));
+    Put32(image, 24, 0x00200085);
 
     PutSegment(image, kTextCmd, "__TEXT", 0, 4096, 0, 4096);
     PutSegment(image, kLinkeditCmd, "__LINKEDIT", 4096, 4096, kLinkeditOffset, 64);
 
-    PatchBE<std::uint32_t>(image, kDylibCmd, kLcLoadDylib);
-    PatchBE<std::uint32_t>(image, kDylibCmd + 4, kDylibCmdSize);
-    PatchBE<std::uint32_t>(image, kDylibCmd + kDylibNameOffsetField, kDylibNameField);
-    PatchBE<std::uint32_t>(image, kDylibCmd + 12, 2);
-    PatchBE<std::uint32_t>(image, kDylibCmd + 16, 0x10000);
-    PatchBE<std::uint32_t>(image, kDylibCmd + 20, 0x10000);
+    Put32(image, kDylibCmd, kLcLoadDylib);
+    Put32(image, kDylibCmd + 4, kDylibCmdSize);
+    Put32(image, kDylibCmd + kDylibNameOffsetField, kDylibNameField);
+    Put32(image, kDylibCmd + 12, 2);
+    Put32(image, kDylibCmd + 16, 0x10000);
+    Put32(image, kDylibCmd + 20, 0x10000);
     const std::string name = kDylibName;
     for(std::size_t i = 0; i < name.size(); ++i)
     {
@@ -624,14 +665,19 @@ Bytes MakeImage(bool with_signature = false)
     return image;
 }
 
+Image MakeImage(bool with_signature = false)
+{
+    return {MakeImageBytes(with_signature)};
+}
+
 std::vector<std::uint8_t> SignatureBytes(const Bytes &image)
 {
     return Bytes(image.begin() + static_cast<std::ptrdiff_t>(kSignatureOffset),
                  image.begin() + static_cast<std::ptrdiff_t>(kSignatureOffset + kSignatureSize));
 }
 
-// A universal file in the order the code reads (little-endian fields behind
-// the CA FE BA BE bytes).
+// A universal file as the platform writes it: a big-endian table behind the
+// CA FE BA BE bytes.
 struct FatEntry
 {
     std::uint32_t cpu_type;
@@ -641,36 +687,64 @@ struct FatEntry
     std::uint32_t align;
 };
 
-constexpr std::uint64_t kFatSize = 12288;
+// The size of each program held in a universal file below (the synthetic image).
+constexpr std::uint64_t kSliceSize = kUnsignedSize;
+constexpr std::uint64_t kFatSize = 16448;
 
-const std::vector<FatEntry> kGoodSlices = {{0x01000007, 3, 4096, 4096, 12},
-                                           {0x0100000C, 0, 8192, 4096, 14}};
+const std::vector<FatEntry> kGoodSlices = {
+    {0x01000007, 3, 4096, static_cast<std::uint32_t>(kSliceSize), 12},
+    {0x0100000C, 0, 12288, static_cast<std::uint32_t>(kSliceSize), 14}};
 
+// A table of `entries`, and a complete program (the genuine synthetic image)
+// at the offset of every entry that fits after the table. An entry whose
+// offset is damaged therefore does not get one. The first entry wins where
+// two overlap.
 Bytes MakeFat(const std::vector<FatEntry> &entries, std::uint64_t total_size = kFatSize)
 {
     Bytes fat(total_size, 0);
+    const Bytes program = MakeImageBytes(false);
+    const std::uint64_t table_end = 8 + 20 * entries.size();
+    for(std::size_t i = entries.size(); i-- > 0;)
+    {
+        const std::uint64_t at = entries[i].offset;
+        if(at >= table_end && at + program.size() <= fat.size())
+        {
+            std::copy(program.begin(), program.end(), fat.begin() + static_cast<std::ptrdiff_t>(at));
+        }
+    }
     fat[0] = 0xCA;
     fat[1] = 0xFE;
     fat[2] = 0xBA;
     fat[3] = 0xBE;
-    PatchLE<std::uint32_t>(fat, 4, static_cast<std::uint32_t>(entries.size()));
+    PatchBE<std::uint32_t>(fat, 4, static_cast<std::uint32_t>(entries.size()));
     for(std::size_t i = 0; i < entries.size(); ++i)
     {
         const std::uint64_t at = 8 + 20 * i;
-        PatchLE<std::uint32_t>(fat, at, entries[i].cpu_type);
-        PatchLE<std::uint32_t>(fat, at + 4, entries[i].cpu_subtype);
-        PatchLE<std::uint32_t>(fat, at + 8, entries[i].offset);
-        PatchLE<std::uint32_t>(fat, at + 12, entries[i].size);
-        PatchLE<std::uint32_t>(fat, at + 16, entries[i].align);
+        PatchBE<std::uint32_t>(fat, at, entries[i].cpu_type);
+        PatchBE<std::uint32_t>(fat, at + 4, entries[i].cpu_subtype);
+        PatchBE<std::uint32_t>(fat, at + 8, entries[i].offset);
+        PatchBE<std::uint32_t>(fat, at + 12, entries[i].size);
+        PatchBE<std::uint32_t>(fat, at + 16, entries[i].align);
     }
     return fat;
 }
 
-// Signature data for EmbedSignature, a SuperBlob of about 220 bytes.
+// The CMS capacity the operations reserve, and the CMS they supply.
+constexpr std::uint32_t kCapacity = 128;
+
+// A SuperBlob of about 220 bytes: the size the rejection checks budget for.
 const std::vector<std::uint8_t> &EmbeddedBlob()
 {
     static const std::vector<std::uint8_t> blob = MachOSigner::BuildSuperBlob(FakeCodeDirectory(), FakeCms());
     return blob;
+}
+
+// Prepares with the capacity above and completes with the fake CMS on every slice.
+void SignWithFakeCms(const std::string &path)
+{
+    const MachOSigner::PreparedSignature prepared = MachOSigner::PrepareSignature(path, "test-identity", kCapacity);
+    MachOSigner::CompleteSignature(path, prepared,
+                                   std::vector<std::vector<std::uint8_t>>(prepared.slices.size(), FakeCms()));
 }
 
 struct Operation
@@ -692,10 +766,10 @@ Operation SlicesOp()
             [](const std::string &path) { (void)MachOParser::GetArchSlices(path); }, false};
 }
 
-Operation ComputeOp()
+Operation PrepareOp()
 {
-    return {"MachOSigner::ComputeCodeDirectory",
-            [](const std::string &path) { (void)MachOSigner::ComputeCodeDirectory(path, "test-identity"); },
+    return {"MachOSigner::PrepareSignature",
+            [](const std::string &path) { (void)MachOSigner::PrepareSignature(path, "test-identity", kCapacity); },
             false};
 }
 
@@ -711,42 +785,43 @@ Operation HasOp()
             [](const std::string &path) { (void)MachOSigner::HasEmbeddedSignature(path); }, false};
 }
 
-Operation EmbedOp()
+Operation CompleteOp()
 {
-    return {"MachOSigner::EmbedSignature",
-            [](const std::string &path) { MachOSigner::EmbedSignature(path, EmbeddedBlob()); }, true};
+    return {"MachOSigner::CompleteSignature", [](const std::string &path) { SignWithFakeCms(path); }, true};
 }
 
 // Every operation that reads the load commands of a single-architecture program.
 std::vector<Operation> ProgramOps()
 {
-    return {ListOp(), ComputeOp(), ExtractOp(), HasOp(), EmbedOp()};
+    return {ListOp(), PrepareOp(), ExtractOp(), HasOp(), CompleteOp()};
 }
 
-std::vector<Operation> SignerOps()
-{
-    return {ComputeOp(), ExtractOp(), HasOp(), EmbedOp()};
-}
-
-// Each operation runs on a fresh copy of the input. It must be rejected with
-// "Mach-O: <keyword>" within the time and heap limits, and a rejected embed
-// must leave the file unchanged.
-void RequireAllRejected(const Bytes &input, const std::vector<Operation> &ops, const std::string &keyword)
+// Each operation runs on a fresh copy of the input in the byte order it
+// reads. It must be rejected with "Mach-O: <keyword>" within the time and heap
+// limits, and a rejected embed must leave the file unchanged.
+void RequireAllRejected(const Image &input, const std::vector<Operation> &ops, const std::string &keyword)
 {
     seedtest::ScratchDir scratch("malformed-macho");
     for(const auto &op : ops)
     {
         DYNAMIC_SECTION(op.name)
         {
-            const std::string path = WriteScratch(scratch, "input.bin", input);
-            seedtest::malformed::RequireRejected([&] { op.run(path); }, kProgramFormat, keyword, input.size(),
+            const Bytes &bytes = input.genuine;
+            const std::string path = WriteScratch(scratch, "input.bin", bytes);
+            seedtest::malformed::RequireRejected([&] { op.run(path); }, kProgramFormat, keyword, bytes.size(),
                                                  EmbeddedBlob().size());
             if(op.modifies)
             {
-                RequireUnchanged(path, input);
+                RequireUnchanged(path, bytes);
             }
         }
     }
+}
+
+// The same for an input whose bytes do not depend on the byte order.
+void RequireAllRejected(const Bytes &input, const std::vector<Operation> &ops, const std::string &keyword)
+{
+    RequireAllRejected(Image{input}, ops, keyword);
 }
 
 // For today's rejections of well-formed input: the message is only checked
@@ -767,27 +842,8 @@ void RequireThrowsText(F &&callable, const std::string &text)
     FAIL("expected std::runtime_error containing \"" << text << "\"");
 }
 
-// ListDependencies of an image that has no faulty dylib command.
-void RequireListAnswers(const Bytes &input, const std::vector<std::string> &expected)
-{
-    seedtest::ScratchDir scratch("malformed-macho");
-    const std::string path = WriteScratch(scratch, "input.bin", input);
-    CHECK(MachOParser::ListDependencies(path) == expected);
-}
-
-// The signer's read-only operations on an image whose layout parse accepts it
-// and that has no signature command.
-void RequireUnsignedQueriesAnswer(const Bytes &input)
-{
-    seedtest::ScratchDir scratch("malformed-macho");
-    const std::string path = WriteScratch(scratch, "input.bin", input);
-    CHECK_FALSE(MachOSigner::HasEmbeddedSignature(path));
-    CHECK_FALSE(MachOSigner::ExtractSignature(path).has_value());
-    CHECK_NOTHROW(MachOSigner::ComputeCodeDirectory(path, "test-identity"));
-}
-
-// Fields of the code directory that ComputeCodeDirectory builds for `identity`.
-void CheckCodeDirectoryShape(const MachOSigner::CodeDirectoryResult &result, std::uint64_t code_limit,
+// Fields of the code directory that PrepareSignature builds for `identity`.
+void CheckCodeDirectoryShape(const MachOSigner::PreparedSlice &result, std::uint64_t code_limit,
                              const std::string &identity)
 {
     const Bytes &cd = result.code_directory;
@@ -800,6 +856,19 @@ void CheckCodeDirectoryShape(const MachOSigner::CodeDirectoryResult &result, std
     CHECK(GetBE32(cd, 28) == slots);
     CHECK(GetBE32(cd, 32) == code_limit);
     CHECK(result.cd_hash.size() == 32);
+}
+
+std::uint32_t GetLE32(const Bytes &bytes, std::uint64_t offset)
+{
+    REQUIRE(offset + 4 <= bytes.size());
+    return static_cast<std::uint32_t>(bytes[offset]) | (static_cast<std::uint32_t>(bytes[offset + 1]) << 8) |
+           (static_cast<std::uint32_t>(bytes[offset + 2]) << 16) |
+           (static_cast<std::uint32_t>(bytes[offset + 3]) << 24);
+}
+
+std::uint64_t GetLE64(const Bytes &bytes, std::uint64_t offset)
+{
+    return GetLE32(bytes, offset) | (static_cast<std::uint64_t>(GetLE32(bytes, offset + 4)) << 32);
 }
 
 std::uint64_t GetBE64(const Bytes &bytes, std::uint64_t offset)
@@ -831,8 +900,9 @@ TEST_CASE("ok: Mach-O format queries", "[MalformedMachO][ok]")
         {"tiny-macho-x86_64", Sample("tiny-macho-x86_64"), MachOParser::Format::MachO64},
         {"tiny-macho-arm64", Sample("tiny-macho-arm64"), MachOParser::Format::MachO64},
         {"tiny-macho-universal", Sample("tiny-macho-universal"), MachOParser::Format::Fat},
-        {"synthetic image", MakeImage(), MachOParser::Format::MachO64},
-        {"synthetic signed image", MakeImage(true), MachOParser::Format::MachO64},
+        {"tiny-macho-universal64", Sample("tiny-macho-universal64"), MachOParser::Format::Fat},
+        {"synthetic image", MakeImage().genuine, MachOParser::Format::MachO64},
+        {"synthetic signed image", MakeImage(true).genuine, MachOParser::Format::MachO64},
         {"synthetic universal file", MakeFat(kGoodSlices), MachOParser::Format::Fat},
         {"tiny.exe", Sample("tiny.exe"), MachOParser::Format::NotMachO},
     };
@@ -850,25 +920,32 @@ TEST_CASE("ok: Mach-O format queries", "[MalformedMachO][ok]")
 
 TEST_CASE("ok: MachOParser::GetArchSlices on single-architecture programs", "[MalformedMachO][ok]")
 {
-    // One slice covering the whole file; the cpu fields are read as the code
-    // reads them today (big-endian).
+    // One slice covering the whole file; the cpu fields are the ones llvm-otool -h
+    // prints for the samples.
     seedtest::ScratchDir scratch("malformed-macho");
-    for(const std::string name : {"tiny-macho-x86_64", "tiny-macho-arm64"})
+    struct Expected
     {
-        DYNAMIC_SECTION(name)
+        const char *name;
+        std::uint32_t cpu_type;
+        std::uint32_t cpu_subtype;
+    };
+    for(const Expected &expected : {Expected{"tiny-macho-x86_64", 0x01000007, 0x80000003},
+                                    Expected{"tiny-macho-arm64", 0x0100000C, 0}})
+    {
+        DYNAMIC_SECTION(expected.name)
         {
-            const Bytes bytes = Sample(name);
+            const Bytes bytes = Sample(expected.name);
             const auto slices = MachOParser::GetArchSlices(WriteScratch(scratch, "input.bin", bytes));
             REQUIRE(slices.size() == 1);
-            CHECK(slices[0].cpu_type == GetBE32(bytes, 4));
-            CHECK(slices[0].cpu_subtype == GetBE32(bytes, 8));
+            CHECK(slices[0].cpu_type == expected.cpu_type);
+            CHECK(slices[0].cpu_subtype == expected.cpu_subtype);
             CHECK(slices[0].offset == 0);
             CHECK(slices[0].size == bytes.size());
         }
     }
     DYNAMIC_SECTION("synthetic image")
     {
-        const auto slices = MachOParser::GetArchSlices(WriteScratch(scratch, "input.bin", MakeImage()));
+        const auto slices = MachOParser::GetArchSlices(WriteScratch(scratch, "input.bin", MakeImage().genuine));
         REQUIRE(slices.size() == 1);
         CHECK(slices[0].cpu_type == 0x01000007);
         CHECK(slices[0].cpu_subtype == 3);
@@ -892,28 +969,33 @@ TEST_CASE("ok: MachOParser::GetArchSlices on a synthetic universal file", "[Malf
     }
 }
 
-TEST_CASE("ok: tiny-macho-universal is rejected as today", "[MalformedMachO][ok]")
+TEST_CASE("ok: tiny-macho-universal is read by the parser and by the signer", "[MalformedMachO][ok]")
 {
-    // The genuine universal file is read in the wrong byte order: its slice
-    // table is taken to hold 33,554,432 entries (a known gap).
+    // The parser reads the genuine universal file: two slices, one library.
+    // The signer operations read the same table: no slice is signed, one
+    // CodeDirectory is prepared per slice, and signing keeps the two slices.
     seedtest::ScratchDir scratch("malformed-macho");
     const Bytes bytes = Sample("tiny-macho-universal");
     const std::string path = WriteScratch(scratch, "input.bin", bytes);
-    RequireThrowsText([&] { (void)MachOParser::GetArchSlices(path); }, "Truncated fat_arch entry");
-    for(const auto &op : {ListOp(), ComputeOp(), ExtractOp(), HasOp(), EmbedOp()})
-    {
-        DYNAMIC_SECTION(op.name)
-        {
-            RequireThrowsText([&] { op.run(path); }, "Not a single-arch Mach-O binary");
-        }
-    }
+    CHECK(MachOParser::GetArchSlices(path).size() == 2);
+    CHECK(MachOParser::ListDependencies(path) == std::vector<std::string>{kDylibName});
+    CHECK_FALSE(MachOSigner::HasEmbeddedSignature(path));
+    CHECK_FALSE(MachOSigner::ExtractSignature(path).has_value());
+    const auto prepared = MachOSigner::PrepareSignature(path, "test-identity", kCapacity);
+    CHECK(prepared.slices.size() == 2);
     RequireUnchanged(path, bytes);
+
+    SignWithFakeCms(path);
+    CHECK(MachOSigner::HasEmbeddedSignature(path));
+    CHECK(MachOParser::GetArchSlices(path).size() == 2);
+    CHECK(MachOParser::ListDependencies(path) == std::vector<std::string>{kDylibName});
 }
 
 TEST_CASE("ok: genuine single-architecture programs", "[MalformedMachO][ok]")
 {
-    // Today the walk ends at the first command (its misread size is about
-    // 1.2 GB), so no dependency, segment or signature is seen.
+    // The parser lists the library the program needs. The signer finds no
+    // signature, prepares a CodeDirectory over the program as it will be
+    // after signing (the length rounded up to 16 bytes), and signs it.
     seedtest::ScratchDir scratch("malformed-macho");
     for(const std::string name : {"tiny-macho-x86_64", "tiny-macho-arm64"})
     {
@@ -921,14 +1003,15 @@ TEST_CASE("ok: genuine single-architecture programs", "[MalformedMachO][ok]")
         {
             const Bytes bytes = Sample(name);
             const std::string path = WriteScratch(scratch, "input.bin", bytes);
-            CHECK(MachOParser::ListDependencies(path).empty());
+            CHECK(MachOParser::ListDependencies(path) == std::vector<std::string>{kDylibName});
             CHECK_FALSE(MachOSigner::HasEmbeddedSignature(path));
             CHECK_FALSE(MachOSigner::ExtractSignature(path).has_value());
-            CheckCodeDirectoryShape(MachOSigner::ComputeCodeDirectory(path, "test-identity"), bytes.size(),
-                                    "test-identity");
-            RequireThrowsText([&] { MachOSigner::EmbedSignature(path, EmbeddedBlob()); },
-                              "No space for new load command");
+            const auto prepared = MachOSigner::PrepareSignature(path, "test-identity", kCapacity);
+            REQUIRE(prepared.slices.size() == 1);
+            CheckCodeDirectoryShape(prepared.slices[0], (bytes.size() + 15) / 16 * 16, "test-identity");
             RequireUnchanged(path, bytes);
+            SignWithFakeCms(path);
+            CHECK(MachOSigner::HasEmbeddedSignature(path));
         }
     }
 }
@@ -936,35 +1019,43 @@ TEST_CASE("ok: genuine single-architecture programs", "[MalformedMachO][ok]")
 TEST_CASE("ok: synthetic Mach-O image without a signature", "[MalformedMachO][ok]")
 {
     seedtest::ScratchDir scratch("malformed-macho");
-    const Bytes image = MakeImage();
-    const std::string path = WriteScratch(scratch, "input.bin", image);
+    const Image image = MakeImage();
+    const std::string path = WriteScratch(scratch, "input.bin", image.genuine);
 
     CHECK(MachOParser::ListDependencies(path) == std::vector<std::string>{kDylibName});
     CHECK_FALSE(MachOSigner::HasEmbeddedSignature(path));
     CHECK_FALSE(MachOSigner::ExtractSignature(path).has_value());
 
-    const auto result = MachOSigner::ComputeCodeDirectory(path, "test-identity");
+    const auto prepared = MachOSigner::PrepareSignature(path, "test-identity", kCapacity);
+    REQUIRE(prepared.slices.size() == 1);
+    const auto &result = prepared.slices[0];
     CheckCodeDirectoryShape(result, kUnsignedSize, "test-identity");
     CHECK(GetBE64(result.code_directory, 64) == 0);    // execSegBase: __TEXT file offset
     CHECK(GetBE64(result.code_directory, 72) == 4096); // execSegLimit: __TEXT file size
-    CHECK(MachOSigner::ComputeCodeDirectory(path, "test-identity").cd_hash == result.cd_hash);
+    CHECK(MachOSigner::PrepareSignature(path, "test-identity", kCapacity).slices[0].cd_hash == result.cd_hash);
+    RequireUnchanged(path, image.genuine);
 
-    SECTION("EmbedSignature, then the signature reads back")
+    SECTION("CompleteSignature, then the signature reads back")
     {
-        MachOSigner::EmbedSignature(path, EmbeddedBlob());
-        const Bytes embedded = seedtest::malformed::ReadAll(path);
-        CHECK(embedded.size() == kUnsignedSize + EmbeddedBlob().size());
-        CHECK(GetBE32(embedded, kNcmdsField) == 4);
-        CHECK(GetBE32(embedded, kSizeofcmdsField) == kCommandsSize + 16);
-        CHECK(GetBE32(embedded, kSignatureCmd) == kLcCodeSignature);
-        CHECK(GetBE32(embedded, kSignatureCmd + kSignatureDataoffField) == kUnsignedSize);
-        CHECK(GetBE32(embedded, kSignatureCmd + kSignatureDatasizeField) == EmbeddedBlob().size());
-        // __LINKEDIT grows to cover the signature.
-        CHECK(GetBE64(embedded, kLinkeditCmd + 48) == embedded.size() - kLinkeditOffset);
+        const Bytes cms = FakeCms();
+        MachOSigner::CompleteSignature(path, prepared, {cms});
+        const Bytes signed_image = seedtest::malformed::ReadAll(path);
+        const Bytes blob = MachOSigner::BuildSuperBlob(result.code_directory, cms);
+        const Bytes reserved = MachOSigner::BuildSuperBlob(result.code_directory, Bytes(kCapacity));
+        const std::uint64_t datasize = (reserved.size() + 15) / 16 * 16;
+        CHECK(signed_image.size() == kUnsignedSize + datasize);
+        CHECK(GetLE32(signed_image, kNcmdsField) == 4);
+        CHECK(GetLE32(signed_image, kSizeofcmdsField) == kCommandsSize + 16);
+        CHECK(GetLE32(signed_image, kSignatureCmd) == kLcCodeSignature);
+        CHECK(GetLE32(signed_image, kSignatureCmd + kSignatureDataoffField) == kUnsignedSize);
+        CHECK(GetLE32(signed_image, kSignatureCmd + kSignatureDatasizeField) == datasize);
+        // __LINKEDIT grows to cover the signature region.
+        CHECK(GetLE64(signed_image, kLinkeditCmd + 48) == signed_image.size() - kLinkeditOffset);
         CHECK(MachOSigner::HasEmbeddedSignature(path));
         const auto extracted = MachOSigner::ExtractSignature(path);
         REQUIRE(extracted.has_value());
-        CHECK(*extracted == EmbeddedBlob());
+        CHECK(*extracted == blob);
+        // The parser still reads the signed image.
         CHECK(MachOParser::ListDependencies(path) == std::vector<std::string>{kDylibName});
     }
 }
@@ -972,18 +1063,15 @@ TEST_CASE("ok: synthetic Mach-O image without a signature", "[MalformedMachO][ok
 TEST_CASE("ok: synthetic Mach-O image with a signature", "[MalformedMachO][ok]")
 {
     seedtest::ScratchDir scratch("malformed-macho");
-    const Bytes image = MakeImage(true);
-    const std::string path = WriteScratch(scratch, "input.bin", image);
+    const Image image = MakeImage(true);
+    const std::string path = WriteScratch(scratch, "input.bin", image.genuine);
 
     CHECK(MachOParser::ListDependencies(path) == std::vector<std::string>{kDylibName});
     CHECK(MachOSigner::HasEmbeddedSignature(path));
     const auto extracted = MachOSigner::ExtractSignature(path);
     REQUIRE(extracted.has_value());
-    CHECK(*extracted == SignatureBytes(image));
-
-    // The code directory covers the file up to the signature data.
-    CheckCodeDirectoryShape(MachOSigner::ComputeCodeDirectory(path, "test-identity"), kSignatureOffset,
-                            "test-identity");
+    // The data are not a SuperBlob, so the whole region is returned.
+    CHECK(*extracted == SignatureBytes(image.genuine));
 }
 
 TEST_CASE("ok: LC_CODE_SIGNATURE with datasize 0", "[MalformedMachO][ok]")
@@ -993,36 +1081,26 @@ TEST_CASE("ok: LC_CODE_SIGNATURE with datasize 0", "[MalformedMachO][ok]")
     {
         DYNAMIC_SECTION("dataoff " << dataoff)
         {
-            Bytes image = MakeImage(true);
-            PatchBE<std::uint32_t>(image, kSignatureCmd + kSignatureDataoffField, dataoff);
-            PatchBE<std::uint32_t>(image, kSignatureCmd + kSignatureDatasizeField, 0);
-            const std::string path = WriteScratch(scratch, "input.bin", image);
-            // The command exists, so a signature is present, but there are no data to extract.
-            CHECK(MachOSigner::HasEmbeddedSignature(path));
+            Image image = MakeImage(true);
+            image.Patch32(kSignatureCmd + kSignatureDataoffField, dataoff);
+            image.Patch32(kSignatureCmd + kSignatureDatasizeField, 0);
+            const std::string path = WriteScratch(scratch, "input.bin", image.genuine);
+            // The command exists, but there are no data: no signature is present
+            // and none can be extracted.
+            CHECK_FALSE(MachOSigner::HasEmbeddedSignature(path));
             CHECK_FALSE(MachOSigner::ExtractSignature(path).has_value());
             CHECK(MachOParser::ListDependencies(path) == std::vector<std::string>{kDylibName});
-            if(dataoff != 0)
-            {
-                CheckCodeDirectoryShape(MachOSigner::ComputeCodeDirectory(path, "test-identity"), dataoff,
-                                        "test-identity");
-            }
         }
     }
 }
 
-TEST_CASE("ok: a load command header past the end of the file ends the walk", "[MalformedMachO][ok]")
+TEST_CASE("ok: a load command header past the end of the file", "[MalformedMachO][ok]")
 {
-    // The file ends inside the header of the second command. That is not an
-    // error: the walk stops there, as it does for the genuine samples.
-    seedtest::ScratchDir scratch("malformed-macho");
-    const Bytes image = Truncate(MakeImage(), kLinkeditCmd + 4);
-    const std::string path = WriteScratch(scratch, "input.bin", image);
-    CHECK(MachOParser::ListDependencies(path).empty());
-    CHECK_FALSE(MachOSigner::HasEmbeddedSignature(path));
-    CHECK_FALSE(MachOSigner::ExtractSignature(path).has_value());
-    const auto result = MachOSigner::ComputeCodeDirectory(path, "test-identity");
-    CheckCodeDirectoryShape(result, image.size(), "test-identity");
-    CHECK(GetBE64(result.code_directory, 72) == 4096);
+    // The file ends inside the header of the second command. The load-command
+    // area the header announces is not all there, so every operation (parser
+    // and signer, which read the same layout) rejects the file.
+    const Image image = MakeImage().Cut(kLinkeditCmd + 4);
+    RequireAllRejected(image, ProgramOps(), "load commands");
 }
 
 // ---------------------------------------------------------------------------
@@ -1033,43 +1111,42 @@ TEST_CASE("review: Mach-O signature past the end", "[MalformedMachO][review]")
 {
     // The signature command names data (offset 5000, size 300) in a file of
     // 4160 bytes. The digest must not be computed over bytes that do not exist.
-    Bytes image = MakeImage(true);
-    PatchBE<std::uint32_t>(image, kSignatureCmd + kSignatureDataoffField, 5000);
-    PatchBE<std::uint32_t>(image, kSignatureCmd + kSignatureDatasizeField, 300);
-    RequireAllRejected(image, SignerOps(), "extends past the end of the file");
-    RequireListAnswers(image, {kDylibName});
+    Image image = MakeImage(true);
+    image.Patch32(kSignatureCmd + kSignatureDataoffField, 5000);
+    image.Patch32(kSignatureCmd + kSignatureDatasizeField, 300);
+    RequireAllRejected(image, ProgramOps(), "extends past the end of the file");
 }
 
 TEST_CASE("review: Mach-O segment name outside the file", "[MalformedMachO][review]")
 {
     // The file ends 4 bytes into the __TEXT segment command: its 8-byte header
     // is inside the file, its name is not.
-    const Bytes image = Truncate(MakeImage(), kTextCmd + 12);
-    RequireAllRejected(image, SignerOps(), "extends past the end of the file");
-    RequireListAnswers(image, {});
+    const Image image = MakeImage().Cut(kTextCmd + 12);
+    RequireAllRejected(image, ProgramOps(), "load commands");
 }
 
 TEST_CASE("review: Mach-O cmdsize 0", "[MalformedMachO][review]")
 {
     // The second command has size 0 and the header claims 4,294,967,295
     // commands: the walk must not stand still for 2^32 steps.
-    Bytes image = MakeImage();
-    PatchBE<std::uint32_t>(image, kLinkeditCmd + kCmdSizeField, 0);
-    PatchBE<std::uint32_t>(image, kNcmdsField, 0xFFFFFFFFu);
+    Image image = MakeImage();
+    image.Patch32(kLinkeditCmd + kCmdSizeField, 0);
+    image.Patch32(kNcmdsField, 0xFFFFFFFFu);
     RequireAllRejected(image, ProgramOps(), "load command 1 size 0");
 }
 
 TEST_CASE("f18: fat slice count", "[MalformedMachO][review]")
 {
-    // The slice count of the universal sample is 0xFFFFFFFF in the byte order
-    // the code reads (little-endian). It must be rejected before the 100 GB
-    // reservation the count would cause.
+    // The slice count of the universal sample is 0xFFFFFFFF in the table's
+    // byte order (big-endian). It must be rejected before the 100 GB
+    // reservation the count would cause; a count no real file holds is
+    // rejected as not being a Mach-O file.
     Bytes bytes = Sample("tiny-macho-universal");
-    PatchLE<std::uint32_t>(bytes, 4, 0xFFFFFFFFu);
+    PatchBE<std::uint32_t>(bytes, 4, 0xFFFFFFFFu);
     seedtest::ScratchDir scratch("malformed-macho");
     const std::string path = WriteScratch(scratch, "input.bin", bytes);
     seedtest::malformed::RequireRejected([&] { (void)MachOParser::GetArchSlices(path); }, kProgramFormat,
-                                         "Truncated fat_arch entry table", bytes.size());
+                                         "not a Mach-O", bytes.size());
 }
 
 // ---------------------------------------------------------------------------
@@ -1082,8 +1159,8 @@ TEST_CASE("edge: Mach-O cmdsize 4 or not a multiple of 4", "[MalformedMachO][edg
     {
         DYNAMIC_SECTION("second command size " << size)
         {
-            Bytes image = MakeImage();
-            PatchBE<std::uint32_t>(image, kLinkeditCmd + kCmdSizeField, size);
+            Image image = MakeImage();
+            image.Patch32(kLinkeditCmd + kCmdSizeField, size);
             RequireAllRejected(image, ProgramOps(), "load command 1 size " + std::to_string(size));
         }
     }
@@ -1091,33 +1168,31 @@ TEST_CASE("edge: Mach-O cmdsize 4 or not a multiple of 4", "[MalformedMachO][edg
 
 TEST_CASE("edge: Mach-O first command cmdsize 0", "[MalformedMachO][edge]")
 {
-    Bytes image = MakeImage();
-    PatchBE<std::uint32_t>(image, kTextCmd + kCmdSizeField, 0);
-    PatchBE<std::uint32_t>(image, kNcmdsField, 0xFFFFFFFFu);
+    Image image = MakeImage();
+    image.Patch32(kTextCmd + kCmdSizeField, 0);
+    image.Patch32(kNcmdsField, 0xFFFFFFFFu);
     RequireAllRejected(image, ProgramOps(), "load command 0 size 0");
 }
 
-TEST_CASE("edge: Mach-O embed with the new command past the end of the file", "[MalformedMachO][edge]")
+TEST_CASE("edge: Mach-O signing with the load commands past the end of the file", "[MalformedMachO][edge]")
 {
-    // header size + sizeofcmds + 16 is compared with the size of the file as
-    // it is, not with the size after the signature has been appended.
-    const Bytes image = Truncate(MakeImage(), kLinkeditCmd + 4);
-    RequireAllRejected(image, {EmbedOp()}, "No space for new load command");
+    // The area announced by the header is not all in the file: the signer
+    // rejects it when reading, before it looks for room for the new command.
+    const Image image = MakeImage().Cut(kLinkeditCmd + 4);
+    RequireAllRejected(image, {PrepareOp(), CompleteOp()}, "load commands");
 }
 
 TEST_CASE("edge: Mach-O sizeofcmds 0xFFFFFFFF", "[MalformedMachO][edge]")
 {
-    // Only EmbedSignature uses sizeofcmds; header size + sizeofcmds + 16 does
-    // not fit the file (and wraps in 32-bit arithmetic).
+    // The area that does not fit the file is rejected by every operation
+    // (header size + sizeofcmds is compared without wrapping).
     for(const std::uint32_t size : {0xFFFFFFFFu, 0xFFFFFFF0u, 0xFFFFFFEFu, 0x80000000u})
     {
         DYNAMIC_SECTION("sizeofcmds " << size)
         {
-            Bytes image = MakeImage();
-            PatchBE<std::uint32_t>(image, kSizeofcmdsField, size);
-            RequireAllRejected(image, {EmbedOp()}, "No space for new load command");
-            RequireListAnswers(image, {kDylibName});
-            RequireUnsignedQueriesAnswer(image);
+            Image image = MakeImage();
+            image.Patch32(kSizeofcmdsField, size);
+            RequireAllRejected(image, ProgramOps(), "load commands");
         }
     }
 }
@@ -1132,9 +1207,9 @@ TEST_CASE("edge: Mach-O LC_SEGMENT_64 smaller than 72 bytes", "[MalformedMachO][
     {
         DYNAMIC_SECTION("segment command at " << at)
         {
-            Bytes image = MakeImage();
-            PatchBE<std::uint32_t>(image, at + kCmdSizeField, 24);
-            RequireAllRejected(image, SignerOps(), "LC_SEGMENT_64");
+            Image image = MakeImage();
+            image.Patch32(at + kCmdSizeField, 24);
+            RequireAllRejected(image, ProgramOps(), "LC_SEGMENT_64");
         }
     }
 }
@@ -1146,8 +1221,8 @@ TEST_CASE("edge: Mach-O dylib name offset past the command", "[MalformedMachO][e
     {
         DYNAMIC_SECTION("name offset " << offset)
         {
-            Bytes image = MakeImage();
-            PatchBE<std::uint32_t>(image, kDylibCmd + kDylibNameOffsetField, offset);
+            Image image = MakeImage();
+            image.Patch32(kDylibCmd + kDylibNameOffsetField, offset);
             RequireAllRejected(image, {ListOp()}, "LC_LOAD_DYLIB");
         }
     }
@@ -1157,37 +1232,33 @@ TEST_CASE("edge: Mach-O dylib name with no NUL inside its command", "[MalformedM
 {
     // The name fills the command; zeros follow it in the file, so reading to
     // the next NUL would run into the following bytes.
-    Bytes image = MakeImage();
-    for(std::uint64_t i = kDylibCmd + kDylibNameField; i < kDylibCmd + kDylibCmdSize; ++i)
-    {
-        image[i] = 'A';
-    }
+    Image image = MakeImage();
+    image.Fill(kDylibCmd + kDylibNameField, kDylibCmd + kDylibCmdSize, 'A');
     RequireAllRejected(image, {ListOp()}, "LC_LOAD_DYLIB");
 }
 
 TEST_CASE("edge: Mach-O dylib command smaller than 24 bytes", "[MalformedMachO][edge]")
 {
-    Bytes image = MakeImage();
-    PatchBE<std::uint32_t>(image, kDylibCmd + kCmdSizeField, 16);
+    Image image = MakeImage();
+    image.Patch32(kDylibCmd + kCmdSizeField, 16);
     RequireAllRejected(image, {ListOp()}, "LC_LOAD_DYLIB");
 }
 
 TEST_CASE("edge: Mach-O two LC_CODE_SIGNATURE commands", "[MalformedMachO][edge]")
 {
-    Bytes image = MakeImage(true);
-    PutSignatureCommand(image, kSignatureCmd + kSignatureCmdSize, static_cast<std::uint32_t>(kSignatureOffset),
-                        static_cast<std::uint32_t>(kSignatureSize));
-    PatchBE<std::uint32_t>(image, kNcmdsField, 5);
-    PatchBE<std::uint32_t>(image, kSizeofcmdsField, static_cast<std::uint32_t>(kCommandsSize + 32));
-    RequireAllRejected(image, SignerOps(), "LC_CODE_SIGNATURE");
-    RequireListAnswers(image, {kDylibName});
+    Image image = MakeImage(true);
+    PutSignatureCommand(image.genuine, kSignatureCmd + kSignatureCmdSize,
+                        static_cast<std::uint32_t>(kSignatureOffset), static_cast<std::uint32_t>(kSignatureSize));
+    image.Patch32(kNcmdsField, 5);
+    image.Patch32(kSizeofcmdsField, static_cast<std::uint32_t>(kCommandsSize + 32));
+    RequireAllRejected(image, ProgramOps(), "LC_CODE_SIGNATURE");
 }
 
 TEST_CASE("edge: Mach-O LC_CODE_SIGNATURE smaller than 16 bytes", "[MalformedMachO][edge]")
 {
-    Bytes image = MakeImage(true);
-    PatchBE<std::uint32_t>(image, kSignatureCmd + kCmdSizeField, 8);
-    RequireAllRejected(image, SignerOps(), "LC_CODE_SIGNATURE");
+    Image image = MakeImage(true);
+    image.Patch32(kSignatureCmd + kCmdSizeField, 8);
+    RequireAllRejected(image, ProgramOps(), "LC_CODE_SIGNATURE");
 }
 
 TEST_CASE("edge: Mach-O signature dataoff 0xFFFFFFFF", "[MalformedMachO][edge]")
@@ -1196,21 +1267,20 @@ TEST_CASE("edge: Mach-O signature dataoff 0xFFFFFFFF", "[MalformedMachO][edge]")
     {
         DYNAMIC_SECTION("datasize " << datasize)
         {
-            Bytes image = MakeImage(true);
-            PatchBE<std::uint32_t>(image, kSignatureCmd + kSignatureDataoffField, 0xFFFFFFFFu);
-            PatchBE<std::uint32_t>(image, kSignatureCmd + kSignatureDatasizeField, datasize);
-            RequireAllRejected(image, SignerOps(), "LC_CODE_SIGNATURE");
-            RequireListAnswers(image, {kDylibName});
+            Image image = MakeImage(true);
+            image.Patch32(kSignatureCmd + kSignatureDataoffField, 0xFFFFFFFFu);
+            image.Patch32(kSignatureCmd + kSignatureDatasizeField, datasize);
+            RequireAllRejected(image, ProgramOps(), "LC_CODE_SIGNATURE");
         }
     }
 }
 
 TEST_CASE("edge: Mach-O signature data past the end by one byte", "[MalformedMachO][edge]")
 {
-    Bytes image = MakeImage(true);
-    PatchBE<std::uint32_t>(image, kSignatureCmd + kSignatureDatasizeField,
+    Image image = MakeImage(true);
+    image.Patch32(kSignatureCmd + kSignatureDatasizeField,
                            static_cast<std::uint32_t>(kSignatureSize + 1));
-    RequireAllRejected(image, SignerOps(), "LC_CODE_SIGNATURE");
+    RequireAllRejected(image, ProgramOps(), "LC_CODE_SIGNATURE");
 }
 
 TEST_CASE("edge: Mach-O signature data inside the load-command area", "[MalformedMachO][edge]")
@@ -1219,28 +1289,24 @@ TEST_CASE("edge: Mach-O signature data inside the load-command area", "[Malforme
     {
         DYNAMIC_SECTION("dataoff " << dataoff)
         {
-            Bytes image = MakeImage(true);
-            PatchBE<std::uint32_t>(image, kSignatureCmd + kSignatureDataoffField, dataoff);
-            PatchBE<std::uint32_t>(image, kSignatureCmd + kSignatureDatasizeField, 16);
-            RequireAllRejected(image, SignerOps(), "LC_CODE_SIGNATURE");
-            RequireListAnswers(image, {kDylibName});
+            Image image = MakeImage(true);
+            image.Patch32(kSignatureCmd + kSignatureDataoffField, dataoff);
+            image.Patch32(kSignatureCmd + kSignatureDatasizeField, 16);
+            RequireAllRejected(image, ProgramOps(), "LC_CODE_SIGNATURE");
         }
     }
 }
 
 TEST_CASE("edge: Mach-O __LINKEDIT file offset past the file", "[MalformedMachO][edge]")
 {
-    // Only EmbedSignature uses the offset (to size the segment after the
-    // signature is appended).
+    // Every operation checks that the segment lies inside the file.
     for(const std::uint64_t offset : {kUnsignedSize + 1, std::uint64_t{0x100000}, std::uint64_t{0xFFFFFFFFFFFFFFFF}})
     {
         DYNAMIC_SECTION("fileoff " << offset)
         {
-            Bytes image = MakeImage();
-            PatchBE<std::uint64_t>(image, kLinkeditCmd + kSegmentFileoffField, offset);
-            RequireAllRejected(image, {EmbedOp()}, "__LINKEDIT");
-            RequireListAnswers(image, {kDylibName});
-            RequireUnsignedQueriesAnswer(image);
+            Image image = MakeImage();
+            image.Patch64(kLinkeditCmd + kSegmentFileoffField, offset);
+            RequireAllRejected(image, ProgramOps(), "__LINKEDIT");
         }
     }
 }
@@ -1251,24 +1317,37 @@ TEST_CASE("edge: Mach-O __LINKEDIT file offset past the file", "[MalformedMachO]
 
 TEST_CASE("edge: Mach-O fat slice count larger than the file allows", "[MalformedMachO][edge]")
 {
-    for(const std::uint32_t count : {3u, 1000u, 0xFFFFFFFFu})
+    // The table of 2 entries (48 bytes) is in the file and 8 bytes follow it.
+    // A count that the table cannot hold is a truncated table (3 entries need
+    // 68 bytes); a count above the bound no real file reaches is rejected as
+    // not being a Mach-O file before the table is looked at.
+    Bytes fat = MakeFat(kGoodSlices, 48 + 8);
+    SECTION("nfat_arch 3")
+    {
+        PatchBE<std::uint32_t>(fat, 4, 3);
+        RequireAllRejected(fat, {SlicesOp(), ListOp()}, "Truncated fat_arch entry table");
+    }
+    for(const std::uint32_t count : {257u, 1000u, 0xFFFFFFFFu})
     {
         DYNAMIC_SECTION("nfat_arch " << count)
         {
-            // The table of 2 entries (48 bytes) is in the file and 8 bytes follow it;
-            // the count claims entries that do not fit (3 entries need 68 bytes).
-            Bytes fat = MakeFat(kGoodSlices, 48 + 8);
-            PatchLE<std::uint32_t>(fat, 4, count);
-            RequireAllRejected(fat, {SlicesOp()}, "Truncated fat_arch entry table");
+            PatchBE<std::uint32_t>(fat, 4, count);
+            RequireAllRejected(fat, {SlicesOp(), ListOp()}, "not a Mach-O");
         }
+    }
+    SECTION("nfat_arch 0")
+    {
+        PatchBE<std::uint32_t>(fat, 4, 0);
+        RequireAllRejected(fat, {SlicesOp(), ListOp()}, "not a Mach-O");
     }
 }
 
 TEST_CASE("edge: Mach-O fat slice covering the whole file", "[MalformedMachO][edge]")
 {
-    // The slice starts at offset 0, inside the slice table.
-    const Bytes fat = MakeFat({{0x01000007, 3, 0, static_cast<std::uint32_t>(kFatSize), 12}});
-    RequireAllRejected(fat, {SlicesOp()}, "header table");
+    // The second slice starts at offset 0, inside the slice table.
+    auto slices = kGoodSlices;
+    slices[1] = {0x0100000C, 0, 0, static_cast<std::uint32_t>(kFatSize), 12};
+    RequireAllRejected(MakeFat(slices), {SlicesOp(), ListOp()}, "header table");
 }
 
 TEST_CASE("edge: Mach-O fat slice starting inside the header table", "[MalformedMachO][edge]")
@@ -1279,9 +1358,9 @@ TEST_CASE("edge: Mach-O fat slice starting inside the header table", "[Malformed
         {
             // Two entries: the table is 8 + 2 * 20 = 48 bytes.
             auto slices = kGoodSlices;
-            slices[0].offset = offset;
-            slices[0].size = 100;
-            RequireAllRejected(MakeFat(slices), {SlicesOp()}, "header table");
+            slices[1].offset = offset;
+            slices[1].size = 100;
+            RequireAllRejected(MakeFat(slices), {SlicesOp(), ListOp()}, "header table");
         }
     }
 }
@@ -1292,22 +1371,21 @@ TEST_CASE("edge: Mach-O fat overlapping slices", "[MalformedMachO][edge]")
     {
         auto slices = kGoodSlices;
         slices[1].offset = 6000;
-        RequireAllRejected(MakeFat(slices), {SlicesOp()}, "overlap");
+        RequireAllRejected(MakeFat(slices), {SlicesOp(), ListOp()}, "overlap");
     }
     SECTION("two identical slices")
     {
         auto slices = kGoodSlices;
         slices[1] = slices[0];
-        RequireAllRejected(MakeFat(slices), {SlicesOp()}, "overlap");
+        RequireAllRejected(MakeFat(slices), {SlicesOp(), ListOp()}, "overlap");
     }
     SECTION("listed in the reverse order of their offsets")
     {
         auto slices = kGoodSlices;
-        slices[0].offset = 8192;
-        slices[0].size = 4096;
+        slices[0].offset = 12288;
         slices[1].offset = 4096;
-        slices[1].size = 5000;
-        RequireAllRejected(MakeFat(slices), {SlicesOp()}, "overlap");
+        slices[1].size = 9000;
+        RequireAllRejected(MakeFat(slices), {SlicesOp(), ListOp()}, "overlap");
     }
 }
 
@@ -1316,23 +1394,356 @@ TEST_CASE("edge: Mach-O fat slice past the end", "[MalformedMachO][edge]")
     SECTION("by one byte")
     {
         auto slices = kGoodSlices;
-        slices[1].size = 4097;
-        RequireAllRejected(MakeFat(slices), {SlicesOp()}, "past the end");
+        slices[1].size = static_cast<std::uint32_t>(kSliceSize + 1);
+        slices[1].offset = static_cast<std::uint32_t>(kFatSize - kSliceSize);
+        RequireAllRejected(MakeFat(slices), {SlicesOp(), ListOp()}, "past the end");
     }
     SECTION("offset and size near the largest 32-bit value")
     {
         auto slices = kGoodSlices;
         slices[1].offset = 0xFFFFFFFFu;
         slices[1].size = 0xFFFFFFFFu;
-        RequireAllRejected(MakeFat(slices), {SlicesOp()}, "past the end");
+        RequireAllRejected(MakeFat(slices), {SlicesOp(), ListOp()}, "past the end");
     }
     SECTION("offset past the file")
     {
         auto slices = kGoodSlices;
         slices[1].offset = static_cast<std::uint32_t>(kFatSize + 1);
         slices[1].size = 1;
-        RequireAllRejected(MakeFat(slices), {SlicesOp()}, "past the end");
+        RequireAllRejected(MakeFat(slices), {SlicesOp(), ListOp()}, "past the end");
     }
+}
+
+TEST_CASE("edge: Mach-O Java class header", "[MalformedMachO][edge]")
+{
+    // CA FE BA BE followed by a Java version number and zeros: the four bytes
+    // after the magic are not a slice count, and no slice starts with a Mach-O
+    // magic.
+    const Bytes java{0xCA, 0xFE, 0xBA, 0xBE, 0x00, 0x00, 0x00, 0x34};
+    Bytes padded = java;
+    padded.resize(2048, 0);
+    RequireAllRejected(padded, {SlicesOp(), ListOp()}, "not a Mach-O");
+}
+
+TEST_CASE("edge: Mach-O fat first slice that is not a Mach-O program", "[MalformedMachO][edge]")
+{
+    // A Java class file starts with the universal magic. The table here has a
+    // plausible count, but the first slice does not start with a Mach-O magic.
+    Bytes fat = MakeFat(kGoodSlices);
+    fat[4096] = 0;
+    RequireAllRejected(fat, {SlicesOp(), ListOp()}, "not a Mach-O");
+}
+
+// ---------------------------------------------------------------------------
+// Older byte orders and 32-bit programs are declined
+//
+// The three shapes below are synthetic: a magic, the CPU fields and zero
+// padding, built by tests/MachOReference.hpp. ld64.lld cannot write big-endian
+// or (usable) 32-bit output, so no genuine sample exists; the files prove only
+// that the first bytes are judged and that nothing past them is read. Each
+// shape is offered alone and as a slice of a universal file that also holds a
+// supported slice. Every public operation must give the one decline message,
+// naming the file (and, in a universal file, the slice), and no file may change.
+// ---------------------------------------------------------------------------
+
+namespace {
+
+namespace mr = machoref;
+
+constexpr const char *kSupportedClause =
+    "Mac programs are not supported (supported: 64-bit little-endian arm64 and x86-64, "
+    "alone or in a universal file)";
+
+struct DeclinedShape
+{
+    std::string name;
+    Bytes bytes;
+    MachOParser::Format format;
+    std::string kind;      // the <kind> of the message
+    std::uint32_t cputype; // as the header (or the table) states it
+};
+
+std::vector<DeclinedShape> DeclinedShapes()
+{
+    return {
+        {"synthetic big-endian 64-bit", mr::BigEndian64(), MachOParser::Format::MachO64, "big-endian", 0x01000012},
+        {"synthetic big-endian 32-bit", mr::BigEndian32(), MachOParser::Format::MachO32, "32-bit big-endian", 18},
+        {"synthetic little-endian 32-bit", mr::Little32(), MachOParser::Format::MachO32, "32-bit", 7},
+    };
+}
+
+std::string DeclineMessage(const std::string &path, const std::string &kind)
+{
+    return path + ": " + kind + " " + kSupportedClause;
+}
+
+// "cpu 0x%X" is how the signer names an architecture it does not know.
+std::string SliceDeclineMessage(const std::string &path, std::size_t index, std::uint32_t cputype,
+                                const std::string &kind)
+{
+    char arch[24];
+    std::snprintf(arch, sizeof(arch), "cpu 0x%X", static_cast<unsigned>(cputype));
+    return path + ": slice " + std::to_string(index) + " (" + arch + "): " + kind + " " + kSupportedClause;
+}
+
+// Returns what a call throws as std::runtime_error, or "<no error>".
+template <typename F>
+std::string ThrownBy(F &&callable)
+{
+    try
+    {
+        callable();
+    }
+    catch(const std::runtime_error &error)
+    {
+        return error.what();
+    }
+    return "<no error>";
+}
+
+// A universal file of one supported slice and one declined shape, in both orders.
+struct MixedFile
+{
+    std::string name;
+    Bytes bytes;
+    std::size_t declined_index;
+};
+
+std::vector<MixedFile> MixedFiles(const DeclinedShape &shape, bool wide)
+{
+    const Bytes supported = Sample("tiny-macho-arm64-adhoc");
+    return {
+        {"supported then declined", mr::Universal({supported, shape.bytes}, wide, 14), 1},
+        {"declined then supported", mr::Universal({shape.bytes, supported}, wide, 14), 0},
+    };
+}
+
+// Prepares for a supported file, so that a declined file offered to
+// CompleteSignature has a signature to be compared with.
+MachOSigner::PreparedSignature PreparedFor(const Bytes &supported_file, seedtest::ScratchDir &scratch)
+{
+    const std::string path = WriteScratch(scratch, "prepared-for.bin", supported_file);
+    return MachOSigner::PrepareSignature(path, "test-identity", kCapacity);
+}
+
+} // namespace
+
+TEST_CASE("declined: the format queries still recognise the file", "[MalformedMachO][declined]")
+{
+    seedtest::ScratchDir scratch("malformed-macho");
+    for(const DeclinedShape &shape : DeclinedShapes())
+    {
+        DYNAMIC_SECTION(shape.name)
+        {
+            const std::string path = WriteScratch(scratch, "input.bin", shape.bytes);
+            CHECK(MachOParser::DetectFormat(path) == shape.format);
+            CHECK(MachOParser::IsMachO(path));
+            CHECK_FALSE(MachOParser::IsFatBinary(path));
+            RequireUnchanged(path, shape.bytes);
+        }
+        for(const bool wide : {false, true})
+        {
+            for(const MixedFile &mixed : MixedFiles(shape, wide))
+            {
+                DYNAMIC_SECTION(shape.name << " in a " << (wide ? "64-bit" : "32-bit") << "-table universal file "
+                                           << mixed.name)
+                {
+                    const std::string path = WriteScratch(scratch, "input.bin", mixed.bytes);
+                    CHECK(MachOParser::DetectFormat(path) == MachOParser::Format::Fat);
+                    CHECK(MachOParser::IsMachO(path));
+                    CHECK(MachOParser::IsFatBinary(path));
+                    RequireUnchanged(path, mixed.bytes);
+                }
+            }
+        }
+    }
+}
+
+TEST_CASE("declined: GetArchSlices reports the shape as unsupported without throwing", "[MalformedMachO][declined]")
+{
+    seedtest::ScratchDir scratch("malformed-macho");
+    for(const DeclinedShape &shape : DeclinedShapes())
+    {
+        DYNAMIC_SECTION(shape.name)
+        {
+            const std::string path = WriteScratch(scratch, "input.bin", shape.bytes);
+            std::vector<MachOParser::ArchSlice> slices;
+            REQUIRE_NOTHROW(slices = MachOParser::GetArchSlices(path));
+            REQUIRE(slices.size() == 1);
+            CHECK_FALSE(slices[0].supported);
+            CHECK(slices[0].unsupported_reason == shape.kind + " " + kSupportedClause);
+            CHECK(slices[0].cpu_type == shape.cputype);
+            CHECK(slices[0].offset == 0);
+            CHECK(slices[0].size == shape.bytes.size());
+            CHECK_FALSE(slices[0].is_signed);
+            RequireUnchanged(path, shape.bytes);
+        }
+        for(const bool wide : {false, true})
+        {
+            for(const MixedFile &mixed : MixedFiles(shape, wide))
+            {
+                DYNAMIC_SECTION(shape.name << " in a " << (wide ? "64-bit" : "32-bit") << "-table universal file "
+                                           << mixed.name)
+                {
+                    const std::string path = WriteScratch(scratch, "input.bin", mixed.bytes);
+                    std::vector<MachOParser::ArchSlice> slices;
+                    REQUIRE_NOTHROW(slices = MachOParser::GetArchSlices(path));
+                    REQUIRE(slices.size() == 2);
+                    const std::size_t good = 1 - mixed.declined_index;
+                    CHECK(slices[good].supported);
+                    CHECK(slices[good].unsupported_reason.empty());
+                    CHECK(slices[good].cpu_type == 0x0100000C);
+                    CHECK(slices[good].is_signed);
+                    CHECK_FALSE(slices[mixed.declined_index].supported);
+                    CHECK(slices[mixed.declined_index].unsupported_reason == shape.kind + " " + kSupportedClause);
+                    CHECK(slices[mixed.declined_index].cpu_type == shape.cputype);
+                    CHECK(slices[mixed.declined_index].size == shape.bytes.size());
+                    CHECK_FALSE(slices[mixed.declined_index].is_signed);
+                    RequireUnchanged(path, mixed.bytes);
+                }
+            }
+        }
+    }
+}
+
+TEST_CASE("declined: every other operation refuses a thin file with the one message", "[MalformedMachO][declined]")
+{
+    seedtest::ScratchDir scratch("malformed-macho");
+    const MachOSigner::PreparedSignature prepared = PreparedFor(Sample("tiny-macho-x86_64"), scratch);
+    for(const DeclinedShape &shape : DeclinedShapes())
+    {
+        const std::string path = WriteScratch(scratch, "input.bin", shape.bytes);
+        const std::string expected = DeclineMessage(path, shape.kind);
+        DYNAMIC_SECTION(shape.name)
+        {
+            SECTION("ListDependencies")
+            {
+                CHECK(ThrownBy([&] { (void)MachOParser::ListDependencies(path); }) == expected);
+            }
+            SECTION("HasEmbeddedSignature")
+            {
+                CHECK(ThrownBy([&] { (void)MachOSigner::HasEmbeddedSignature(path); }) == expected);
+            }
+            SECTION("ExtractSignature")
+            {
+                CHECK(ThrownBy([&] { (void)MachOSigner::ExtractSignature(path); }) == expected);
+            }
+            SECTION("ExtractSignatures")
+            {
+                CHECK(ThrownBy([&] { (void)MachOSigner::ExtractSignatures(path); }) == expected);
+            }
+            SECTION("PrepareSignature")
+            {
+                CHECK(ThrownBy([&] { (void)MachOSigner::PrepareSignature(path, "test-identity", kCapacity); }) ==
+                      expected);
+            }
+            SECTION("CompleteSignature")
+            {
+                CHECK(ThrownBy([&] { MachOSigner::CompleteSignature(path, prepared, {FakeCms()}); }) == expected);
+            }
+            SECTION("StripSignature")
+            {
+                CHECK(ThrownBy([&] { MachOSigner::StripSignature(path); }) == expected);
+            }
+            RequireUnchanged(path, shape.bytes);
+        }
+    }
+}
+
+TEST_CASE("declined: every other operation refuses a universal file whole naming the slice",
+          "[MalformedMachO][declined]")
+{
+    seedtest::ScratchDir scratch("malformed-macho");
+    const Bytes supported = Sample("tiny-macho-arm64-adhoc");
+    const MachOSigner::PreparedSignature prepared =
+        PreparedFor(mr::Universal({supported, supported}, false, 14), scratch);
+    for(const DeclinedShape &shape : DeclinedShapes())
+    {
+        for(const bool wide : {false, true})
+        {
+            for(const MixedFile &mixed : MixedFiles(shape, wide))
+            {
+                const std::string path = WriteScratch(scratch, "input.bin", mixed.bytes);
+                const std::string expected =
+                    SliceDeclineMessage(path, mixed.declined_index, shape.cputype, shape.kind);
+                DYNAMIC_SECTION(shape.name << " in a " << (wide ? "64-bit" : "32-bit") << "-table universal file "
+                                           << mixed.name)
+                {
+                    SECTION("ListDependencies")
+                    {
+                        CHECK(ThrownBy([&] { (void)MachOParser::ListDependencies(path); }) == expected);
+                    }
+                    SECTION("HasEmbeddedSignature")
+                    {
+                        CHECK(ThrownBy([&] { (void)MachOSigner::HasEmbeddedSignature(path); }) == expected);
+                    }
+                    SECTION("ExtractSignatures")
+                    {
+                        CHECK(ThrownBy([&] { (void)MachOSigner::ExtractSignatures(path); }) == expected);
+                    }
+                    SECTION("PrepareSignature")
+                    {
+                        CHECK(ThrownBy([&] {
+                                  (void)MachOSigner::PrepareSignature(path, "test-identity", kCapacity);
+                              }) == expected);
+                    }
+                    SECTION("CompleteSignature")
+                    {
+                        CHECK(ThrownBy([&] {
+                                  MachOSigner::CompleteSignature(path, prepared, {FakeCms(), FakeCms()});
+                              }) == expected);
+                    }
+                    SECTION("StripSignature")
+                    {
+                        CHECK(ThrownBy([&] { MachOSigner::StripSignature(path); }) == expected);
+                    }
+                    RequireUnchanged(path, mixed.bytes);
+                }
+            }
+        }
+    }
+}
+
+TEST_CASE("declined: ExtractSignature of a universal file answers for its first supported slice",
+          "[MalformedMachO][declined]")
+{
+    seedtest::ScratchDir scratch("malformed-macho");
+    const Bytes supported = Sample("tiny-macho-arm64-adhoc");
+    const std::string thin = WriteScratch(scratch, "thin.bin", supported);
+    const auto expected = MachOSigner::ExtractSignature(thin);
+    REQUIRE(expected.has_value());
+    for(const DeclinedShape &shape : DeclinedShapes())
+    {
+        for(const MixedFile &mixed : MixedFiles(shape, false))
+        {
+            DYNAMIC_SECTION(shape.name << " " << mixed.name)
+            {
+                const std::string path = WriteScratch(scratch, "input.bin", mixed.bytes);
+                std::optional<Bytes> got;
+                REQUIRE_NOTHROW(got = MachOSigner::ExtractSignature(path));
+                CHECK(got == expected);
+                RequireUnchanged(path, mixed.bytes);
+            }
+        }
+    }
+}
+
+TEST_CASE("declined: a universal file of only declined slices is refused at its first slice",
+          "[MalformedMachO][declined]")
+{
+    seedtest::ScratchDir scratch("malformed-macho");
+    const Bytes bytes = mr::Universal({mr::BigEndian32(), mr::Little32()}, false, 14);
+    const std::string path = WriteScratch(scratch, "input.bin", bytes);
+    const std::string expected = SliceDeclineMessage(path, 0, 18, "32-bit big-endian");
+    const auto slices = MachOParser::GetArchSlices(path);
+    REQUIRE(slices.size() == 2);
+    CHECK_FALSE(slices[0].supported);
+    CHECK_FALSE(slices[1].supported);
+    CHECK(ThrownBy([&] { (void)MachOParser::ListDependencies(path); }) == expected);
+    CHECK(ThrownBy([&] { (void)MachOSigner::ExtractSignature(path); }) == expected);
+    CHECK(ThrownBy([&] { (void)MachOSigner::PrepareSignature(path, "test-identity", kCapacity); }) == expected);
+    CHECK(ThrownBy([&] { MachOSigner::StripSignature(path); }) == expected);
+    RequireUnchanged(path, bytes);
 }
 
 // ---------------------------------------------------------------------------
@@ -1353,7 +1764,7 @@ TEST_CASE("edge: Mach-O zero-length and 3-byte files", "[MalformedMachO][edge]")
             CHECK(MachOParser::DetectFormat(path) == MachOParser::Format::NotMachO);
             CHECK_FALSE(MachOParser::IsMachO(path));
             CHECK_FALSE(MachOParser::IsFatBinary(path));
-            RequireAllRejected(input, {SlicesOp(), ListOp(), ComputeOp(), ExtractOp(), HasOp(), EmbedOp()},
+            RequireAllRejected(input, {SlicesOp(), ListOp(), PrepareOp(), ExtractOp(), HasOp(), CompleteOp()},
                                "too small");
         }
     }
@@ -1363,9 +1774,9 @@ TEST_CASE("edge: Mach-O truncated inside the header", "[MalformedMachO][edge]")
 {
     // 18 bytes: the magic is there (so the format queries answer), the
     // command count at offset 16 is not.
-    const Bytes image = Truncate(MakeImage(), 18);
+    const Image image = MakeImage().Cut(18);
     seedtest::ScratchDir scratch("malformed-macho");
-    const std::string path = WriteScratch(scratch, "queries.bin", image);
+    const std::string path = WriteScratch(scratch, "queries.bin", image.genuine);
     CHECK(MachOParser::DetectFormat(path) == MachOParser::Format::MachO64);
     CHECK_FALSE(MachOParser::IsFatBinary(path));
     RequireAllRejected(image, ProgramOps(), "header");
@@ -1375,22 +1786,20 @@ TEST_CASE("edge: Mach-O truncated inside a command", "[MalformedMachO][edge]")
 {
     // The file ends 40 bytes into the __LINKEDIT segment command: its header
     // is inside the file, the command is not.
-    const Bytes image = Truncate(MakeImage(), kLinkeditCmd + 40);
-    RequireAllRejected(image, SignerOps(), "LC_SEGMENT_64");
-    RequireListAnswers(image, {});
+    const Image image = MakeImage().Cut(kLinkeditCmd + 40);
+    RequireAllRejected(image, ProgramOps(), "load commands");
 }
 
 TEST_CASE("edge: Mach-O truncated inside a dylib name", "[MalformedMachO][edge]")
 {
-    const Bytes image = Truncate(MakeImage(), kDylibCmd + kDylibNameField + 6);
-    RequireAllRejected(image, {ListOp()}, "LC_LOAD_DYLIB");
+    const Image image = MakeImage().Cut(kDylibCmd + kDylibNameField + 6);
+    RequireAllRejected(image, {ListOp()}, "load commands");
 }
 
 TEST_CASE("edge: Mach-O truncated inside the signature data", "[MalformedMachO][edge]")
 {
-    const Bytes image = Truncate(MakeImage(true), kSignatureOffset + 10);
-    RequireAllRejected(image, SignerOps(), "LC_CODE_SIGNATURE");
-    RequireListAnswers(image, {kDylibName});
+    const Image image = MakeImage(true).Cut(kSignatureOffset + 10);
+    RequireAllRejected(image, ProgramOps(), "LC_CODE_SIGNATURE");
 }
 
 TEST_CASE("edge: Mach-O oversized SuperBlob size check", "[MalformedMachO][edge]")
@@ -1441,7 +1850,7 @@ constexpr const char *kSevenCharacters = "/lib/ab";
 
 Bytes UnterminatedAt(const std::vector<dep::MachOReference> &references, std::size_t index)
 {
-    Bytes image = dep::MachOReferencing(references);
+    Bytes image = dep::MachOReferencing(references, dep::MachOFields::LittleAfterMagic);
     const std::uint64_t last_byte =
         kReferenceFirstCommand + (index + 1) * kReferenceCommandSize - 1;
     REQUIRE(image.at(last_byte) == 0);
@@ -1490,7 +1899,8 @@ TEST_CASE("f18: no empty library name is returned", "[MalformedMachO][f18]")
             references.push_back({kind.kind, "/lib/n" + std::to_string(number++)});
         }
         const std::string path =
-            WriteScratch(scratch, "input.bin", dep::MachOReferencing(references));
+            WriteScratch(scratch, "input.bin",
+                         dep::MachOReferencing(references, dep::MachOFields::LittleAfterMagic));
         const auto names = MachOParser::ListDependencies(path);
         CHECK(names.size() == 5);
         for(const std::string &name : names)

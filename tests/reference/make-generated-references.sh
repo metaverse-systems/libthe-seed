@@ -179,10 +179,10 @@ if [ -n "${LIBTHESEED_BUILD:-}" ]; then
 #include <iostream>
 int main(int, char **argv)
 {
-    auto directory = MachOSigner::ComputeCodeDirectory(argv[1], "reference");
+    auto prepared = MachOSigner::PrepareSignature(argv[1], "reference", 1500);
     std::vector<std::uint8_t> cms(1500);
     for(std::size_t i = 0; i < cms.size(); ++i) cms[i] = static_cast<std::uint8_t>((i * 7 + 3) & 0xFF);
-    auto blob = MachOSigner::BuildSuperBlob(directory.code_directory, cms);
+    auto blob = MachOSigner::BuildSuperBlob(prepared.slices.at(0).code_directory, cms);
     std::ofstream(argv[2], std::ios::binary).write(reinterpret_cast<const char *>(blob.data()), blob.size());
 }
 SRC

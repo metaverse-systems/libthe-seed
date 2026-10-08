@@ -11,7 +11,7 @@
 here=$(cd "$(dirname "$0")" && pwd)
 dir=${1:-$here/fixtures}
 root=$(cd "$dir/../.." && pwd)
-budget=131072
+budget=262144
 fail=0
 
 bad() { # sample rule message
@@ -20,6 +20,9 @@ bad() { # sample rule message
 }
 
 samples="tiny.exe test.dll tiny.msi tiny-macho-x86_64 tiny-macho-arm64 tiny-macho-universal plain.txt"
+samples="$samples tiny-macho-arm64-adhoc tiny-macho-x86_64-adhoc tiny-macho-universal-adhoc"
+samples="$samples tiny-macho-x86_64-nospace tiny-macho-x86_64-exactfit tiny-macho-universal64"
+samples="$samples tiny-macho-dylib-arm64 tiny-macho-x86_64-data-after-sig"
 samples="$samples dep/libbaz.so dep/libbar.so dep/libfoo.so dep/appA dep/appB"
 samples="$samples dep/libbaz.dll dep/libbar.dll dep/libfoo.dll dep/appA.exe dep/appB.exe"
 
@@ -45,7 +48,7 @@ for f in "$dir"/* "$dir"/.[!.]* "$dir"/dep/*; do
     [ -e "$f" ] || continue
     n=${f#"$dir"/}
     case $n in
-        SHA256SUMS|PROVENANCE.md|regenerate.sh|src|dep) continue ;;
+        SHA256SUMS|PROVENANCE.md|regenerate.sh|check_pages.py|src|dep) continue ;;
     esac
     if [ ! -f "$sums" ] || ! grep -q "^[0-9a-f]*  $n\$" "$sums"; then
         bad "$n" 1 "file is not listed in SHA256SUMS"
@@ -103,11 +106,14 @@ for s in $samples; do
         tiny.msi)
             [ "$(hex "$f" 0 8)" = d0cf11e0a1b11ae1 ] || bad "$s" 4 "does not begin with the Compound File signature"
             ;;
-        tiny-macho-x86_64|tiny-macho-arm64)
-            [ "$(hex "$f" 0 4)" = cffaedfe ] || bad "$s" 4 "does not begin with the Mach-O 64-bit magic"
+        tiny-macho-universal64)
+            [ "$(hex "$f" 0 4)" = cafebabf ] || bad "$s" 4 "does not begin with the 64-bit fat file magic"
             ;;
-        tiny-macho-universal)
+        tiny-macho-universal*)
             [ "$(hex "$f" 0 4)" = cafebabe ] || bad "$s" 4 "does not begin with the fat file magic"
+            ;;
+        tiny-macho-*)
+            [ "$(hex "$f" 0 4)" = cffaedfe ] || bad "$s" 4 "does not begin with the Mach-O 64-bit magic"
             ;;
     esac
 done

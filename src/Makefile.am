@@ -23,6 +23,7 @@ noinst_HEADERS = \
 	internal/FileIO.hpp \
 	internal/FileReplaceHooks.hpp \
 	internal/MachODefs.hpp \
+	internal/MachOLayout.hpp \
 	internal/MachOSuperBlob.hpp \
 	internal/MsiSignatureSize.hpp
 
@@ -43,4 +44,5 @@ libthe_seed_la_SOURCES = LibraryLoader.cpp \
 		MachOParser.cpp \
 		MachOSigner.cpp \
 		MsiSigner.cpp \
-		internal/FileIO.cpp
+		internal/FileIO.cpp \
+		internal/MachOLayout.cpp

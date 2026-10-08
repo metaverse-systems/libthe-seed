@@ -1,6 +1,6 @@
 // The three signers write through the shared file replacement.
 //
-// For each signer (PE embed and strip, Mach-O embed, MSI embed and strip) two
+// For each signer (PE embed and strip, Mach-O prepare and complete, MSI embed and strip) two
 // kinds of case:
 //   - on a copy with mode 755 and on one with mode 640, the mode is the same
 //     after the operation and the folder holds no new entries;
@@ -49,38 +49,13 @@ Bytes FakePkcs7()
     return blob;
 }
 
-Bytes MachOSuperBlob(const std::string &path)
+// Prepares and completes a signature with a 64-byte capacity and a CMS of 64
+// bytes per slice. The replacement is the single write of CompleteSignature.
+void SignMachO(const std::string &path)
 {
-    const auto directory = MachOSigner::ComputeCodeDirectory(path, "test-identity");
-    const Bytes cms(64, 0xDD);
-    return MachOSigner::BuildSuperBlob(directory.code_directory, cms);
-}
-
-// The Mach-O fixtures cannot be signed yet because of the recorded known gap
-// "MachOSigner::EmbedSignature and ExtractSignature round-trip" (see
-// known-gaps.txt): embedding stops before any file is written, so the
-// replacement cannot be reached. Those cases are skipped with a visible
-// message, and run for real once the gap is closed.
-bool MachOEmbedReachesReplacement(const std::string &fixture)
-{
-    seedtest::ScratchDir scratch("seed-signers-macho-probe");
-    const std::string path = CopyFixture(scratch, fixture);
-    try
-    {
-        MachOSigner::EmbedSignature(path, MachOSuperBlob(path));
-    }
-    catch(const std::runtime_error &error)
-    {
-        if(std::string(error.what()).find("No space for new load command") != std::string::npos)
-        {
-            SkipWithMessage("Mach-O embed on " + fixture +
-                            " stops at the known gap (No space for new load command) before the "
-                            "replacement is reached");
-            return false;
-        }
-        throw;
-    }
-    return true;
+    const MachOSigner::PreparedSignature prepared = MachOSigner::PrepareSignature(path, "test-identity", 64);
+    const std::vector<Bytes> cms(prepared.slices.size(), Bytes(64, 0xDD));
+    MachOSigner::CompleteSignature(path, prepared, cms);
 }
 
 std::vector<std::string> Names(const std::vector<FolderEntry> &entries)
@@ -161,14 +136,10 @@ TEST_CASE("signers: PE embed and strip keep the mode and add no entries", "[Sign
     CHECK(Names(ListFolder(scratch.Path())) == names);
 }
 
-TEST_CASE("signers: Mach-O embed keeps the mode and adds no entries", "[SignersUseReplace][macho]")
+TEST_CASE("signers: Mach-O completion keeps the mode and adds no entries", "[SignersUseReplace][macho]")
 {
     const unsigned mode = GENERATE(0755u, 0640u);
     const std::string fixture = GENERATE(as<std::string>{}, "tiny-macho-arm64", "tiny-macho-x86_64");
-    if(!MachOEmbedReachesReplacement(fixture))
-    {
-        return;
-    }
     seedtest::ScratchDir scratch("seed-signers-macho");
     const std::string path = CopyFixture(scratch, fixture);
     SetModeOf(path, mode);
@@ -177,7 +148,7 @@ TEST_CASE("signers: Mach-O embed keeps the mode and adds no entries", "[SignersU
     const unsigned expected = ModeOf(path);
     const auto names = Names(ListFolder(scratch.Path()));
 
-    MachOSigner::EmbedSignature(path, MachOSuperBlob(path));
+    SignMachO(path);
     CHECK(MachOSigner::HasEmbeddedSignature(path));
     CHECK(ModeOf(path) == expected);
     CHECK(Names(ListFolder(scratch.Path())) == names);
@@ -231,16 +202,13 @@ TEST_CASE("signers: a failure in the replacement leaves the PE file unchanged",
 TEST_CASE("signers: a failure in the replacement leaves the Mach-O file unchanged",
           "[SignersUseReplace][macho]")
 {
-    if(!MachOEmbedReachesReplacement("tiny-macho-x86_64"))
-    {
-        return;
-    }
     seedtest::ScratchDir scratch("seed-signers-macho-fail");
     const std::string path = CopyFixture(scratch, "tiny-macho-x86_64");
     SetModeOf(path, 0755);
-    const Bytes blob = MachOSuperBlob(path);
+    const MachOSigner::PreparedSignature prepared = MachOSigner::PrepareSignature(path, "test-identity", 64);
+    const std::vector<Bytes> cms(prepared.slices.size(), Bytes(64, 0xDD));
 
-    RequireFailureLeavesFile(scratch, path, [&] { MachOSigner::EmbedSignature(path, blob); });
+    RequireFailureLeavesFile(scratch, path, [&] { MachOSigner::CompleteSignature(path, prepared, cms); });
     CHECK_FALSE(MachOSigner::HasEmbeddedSignature(path));
 }
 

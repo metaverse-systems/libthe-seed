@@ -84,6 +84,16 @@ TEST_CASE("corpus: macho", "[FuzzCorpus]")
     Replay(seedfuzz::FuzzMachO, seedtest::malformed::LoadSample("tiny-macho-x86_64"));
     Replay(seedfuzz::FuzzMachO, seedtest::malformed::LoadSample("tiny-macho-arm64"));
     Replay(seedfuzz::FuzzMachO, seedtest::malformed::LoadSample("tiny-macho-universal"));
+    // The inputs of PrepareSignature and CompleteSignature: signed by another
+    // tool, no room, exactly enough room, 64-bit table, a library, data after
+    // the signature.
+    for(const char *name : {"tiny-macho-arm64-adhoc", "tiny-macho-x86_64-adhoc", "tiny-macho-universal-adhoc",
+                            "tiny-macho-x86_64-nospace", "tiny-macho-x86_64-exactfit", "tiny-macho-universal64",
+                            "tiny-macho-dylib-arm64", "tiny-macho-x86_64-data-after-sig"})
+    {
+        INFO("sample " << name);
+        Replay(seedfuzz::FuzzMachO, seedtest::malformed::LoadSample(name));
+    }
     Replay(seedfuzz::FuzzMachO, Bytes{});
     ReplayCorpus("macho", seedfuzz::FuzzMachO);
 }

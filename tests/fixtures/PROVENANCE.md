@@ -5,8 +5,8 @@ checked. Samples are rebuilt only with `regenerate.sh`, which rewrites
 `SHA256SUMS`; `../check-fixtures.sh` (run by `make check`) fails when a sample
 is missing, changed, unlisted here or untracked.
 
-Independent checks come from `regenerate.sh --verify`, run on 2026-10-05 with
-osslsigncode 2.14, LLVM 21.1.8 (`llvm-objdump`, `llvm-otool`) and file 5.47.
+Independent checks come from `regenerate.sh --verify`, run on 2026-10-07 with
+osslsigncode 2.14, LLVM 21.1.8 (`llvm-objdump`, `llvm-otool`, `llvm-lipo`), Python 3.14 (`check_pages.py`) and file 5.47.
 For the three Windows samples osslsigncode signed a scratch copy with a
 throw-away self-signed certificate and recomputed the digest; for the PE files
 the stored and calculated digests matched.
@@ -24,6 +24,14 @@ Apple, so redistribution is permitted.
 | tiny-macho-x86_64 | clang + ld64.lld | 21.1.8 | `clang -target x86_64-apple-macos11 -Os -fno-unwind-tables -fno-asynchronous-unwind-tables -c -o macho-x86_64.o src/macho.c`, then `ld64.lld -arch x86_64 -platform_version macos 11.0 11.0 -e _main -no_adhoc_codesign -o tiny-macho-x86_64 macho-x86_64.o -Lsrc -lSystem` | src/macho.c, src/libSystem.tbd | MIT (project) | 4248 | ok: `file` reports Mach-O 64-bit x86_64 executable; `llvm-objdump --macho -f` parses it and `llvm-otool -l` shows LC_MAIN |
 | tiny-macho-arm64 | clang + ld64.lld | 21.1.8 | same as x86_64 with `arm64` in place of `x86_64`, output `tiny-macho-arm64` | src/macho.c, src/libSystem.tbd | MIT (project) | 16536 | ok: `file` reports Mach-O 64-bit arm64 executable; `llvm-objdump --macho -f` parses it and `llvm-otool -l` shows LC_MAIN |
 | tiny-macho-universal | llvm-lipo | 21.1.8 | `llvm-lipo -create tiny-macho-x86_64 tiny-macho-arm64 -output tiny-macho-universal` | the two thin files above | MIT (project) | 32920 | ok: `file` reports a universal binary with 2 architectures; `llvm-otool -f` lists 2 slices |
+| tiny-macho-arm64-adhoc | clang + ld64.lld | 21.1.8 | `clang -target arm64-apple-macos11 -Os -fno-unwind-tables -fno-asynchronous-unwind-tables -c -o macho-arm64.o src/macho.c`, then `ld64.lld -arch arm64 -platform_version macos 11.0 11.0 -e _main -adhoc_codesign -o tiny-macho-arm64-adhoc macho-arm64.o -Lsrc -lSystem` | src/macho.c, src/libSystem.tbd | MIT (project) | 16848 | ok: `file` reports Mach-O 64-bit arm64 executable; `llvm-objdump --macho -f` parses it, `llvm-otool -l` shows LC_MAIN and LC_CODE_SIGNATURE; `check_pages.py` recomputes every page hash of the ad-hoc signature written by ld64.lld |
+| tiny-macho-x86_64-adhoc | clang + ld64.lld | 21.1.8 | `clang -target x86_64-apple-macos11 -Os -fno-unwind-tables -fno-asynchronous-unwind-tables -c -o macho-x86_64.o src/macho.c`, then `ld64.lld -arch x86_64 -platform_version macos 11.0 11.0 -e _main -adhoc_codesign -o tiny-macho-x86_64-adhoc macho-x86_64.o -Lsrc -lSystem` | src/macho.c, src/libSystem.tbd | MIT (project) | 4464 | ok: `file` reports Mach-O 64-bit x86_64 executable; `llvm-objdump --macho -f` parses it, `llvm-otool -l` shows LC_MAIN and LC_CODE_SIGNATURE; `check_pages.py` recomputes every page hash |
+| tiny-macho-universal-adhoc | llvm-lipo | 21.1.8 | `llvm-lipo -create tiny-macho-x86_64-adhoc tiny-macho-arm64-adhoc -output tiny-macho-universal-adhoc` | the two ad-hoc signed thin files above | MIT (project) | 33232 | ok: `file` reports a universal binary with 2 architectures; `llvm-lipo -archs` lists x86_64 arm64; `check_pages.py` recomputes every page hash in both slices |
+| tiny-macho-x86_64-nospace | clang + ld64.lld | 21.1.8 | `clang -target x86_64-apple-macos11 -Os -fno-unwind-tables -fno-asynchronous-unwind-tables -c -o macho-x86_64.o src/macho.c`, then `ld64.lld -arch x86_64 -platform_version macos 11.0 11.0 -e _main -no_adhoc_codesign -headerpad 0 -o tiny-macho-x86_64-nospace macho-x86_64.o -Lsrc -lSystem` | src/macho.c, src/libSystem.tbd | MIT (project) | 4248 | ok: `file` reports Mach-O 64-bit x86_64 executable; `llvm-otool -l` shows LC_MAIN; `check_pages.py` reports 0 free header bytes (load commands end at 680, first section at 680) |
+| tiny-macho-x86_64-exactfit | clang + ld64.lld | 21.1.8 | `clang -target x86_64-apple-macos11 -Os -fno-unwind-tables -fno-asynchronous-unwind-tables -c -o macho-x86_64.o src/macho.c`, then `ld64.lld -arch x86_64 -platform_version macos 11.0 11.0 -e _main -no_adhoc_codesign -headerpad 0x10 -o tiny-macho-x86_64-exactfit macho-x86_64.o -Lsrc -lSystem` | src/macho.c, src/libSystem.tbd | MIT (project) | 4248 | ok: `file` reports Mach-O 64-bit x86_64 executable; `llvm-otool -l` shows LC_MAIN; `check_pages.py` reports exactly 16 free header bytes (load commands end at 680, first section at 696) |
+| tiny-macho-universal64 | llvm-lipo | 21.1.8 | `llvm-lipo -create -fat64 tiny-macho-x86_64 tiny-macho-arm64 -output tiny-macho-universal64` | the two unsigned thin files above | MIT (project) | 32920 | ok: first four bytes CA FE BA BF; `llvm-lipo -archs` lists x86_64 arm64; `llvm-objdump --macho --universal-headers` reports FAT_MAGIC_64; `file` 5.47 reports only "data" for the 64-bit table, and `llvm-otool -f` prints the 64-bit magic as 0xcafebabe, so neither is used for it |
+| tiny-macho-dylib-arm64 | clang + ld64.lld | 21.1.8 | `clang -target arm64-apple-macos11 -Os -fno-unwind-tables -fno-asynchronous-unwind-tables -c -o macho-arm64.o src/macho.c`, then `ld64.lld -arch arm64 -platform_version macos 11.0 11.0 -e _main -no_adhoc_codesign -dylib -o tiny-macho-dylib-arm64 macho-arm64.o -Lsrc -lSystem` | src/macho.c, src/libSystem.tbd | MIT (project) | 16472 | ok: `file` reports Mach-O 64-bit arm64 dynamically linked shared library; `llvm-objdump --macho -f` parses it and `llvm-otool -l` shows LC_ID_DYLIB |
+| tiny-macho-x86_64-data-after-sig | cp + printf (SYNTHETIC) | n/a | `cp tiny-macho-x86_64-adhoc tiny-macho-x86_64-data-after-sig`, then 16 fixed bytes (a5 a6 ... b4) appended | tiny-macho-x86_64-adhoc | MIT (project) | 4480 | synthetic (not linker output): used only for the refusal case "data after the signature", never as evidence of validity; `check_pages.py` flags the 16 bytes after the signature |
 | plain.txt | hand-written | n/a | none (typed by hand) | none | MIT (project) | 64 | ok: `file` reports ASCII text; deliberately not a binary format |
 | dep/libbaz.so | gcc | 16.2.0 | `gcc <elf flags> -shared -fPIC -Wl,-soname,libbaz.so -o libbaz.so src/dep/libbaz.c` | src/dep/libbaz.c | MIT (project) | 1288 | ok: `readelf -d` shows bottom of the chain, soname libbaz.so, no needed libraries; `file` reports ELF 64-bit LSB |
 | dep/libbar.so | gcc | 16.2.0 | `gcc <elf flags> -shared -fPIC -Wl,-soname,libbar.so -o libbar.so src/dep/libbar.c -L. -Wl,--no-as-needed -lbaz` | src/dep/libbar.c | MIT (project) | 1720 | ok: `readelf -d` shows needs libbaz.so; `file` reports ELF 64-bit LSB |
@@ -60,9 +68,30 @@ programs are never run. Flags used above:
 No sample has a delay-load import table, because the mingw-w64 linker cannot
 write one; tests build those bytes in code (see `src/dep/DELAYLOAD.txt`).
 
-Total size of the samples: 111936 bytes (budget 131072; raised from 102400 to
-make room for the ten `dep/` samples, 22840 bytes).
+Total size of the samples: 228848 bytes (budget 262144; raised from 131072 to make
+room for the eight Mach-O samples added for the signing work, 116912 bytes, which
+together with the three existing ones are 170616 bytes; earlier: raised from 102400
+to 131072 for the ten `dep/` samples, 22840 bytes).
 
-The Mach-O files are unsigned (`-no_adhoc_codesign`), so signer tests start
-from a file with no signature. The installer embeds its creation time, so
+The first three Mach-O files (`tiny-macho-x86_64`, `-arm64`, `-universal`) are
+unsigned (`-no_adhoc_codesign`), so signer tests start from a file with no
+signature. They are genuine linker output and are unchanged by the later
+samples. The `-adhoc` samples carry the signature `ld64.lld` writes itself (a
+different producer from this library), `-nospace` and `-exactfit` differ from
+the unsigned x86-64 base only in the header space left after the load commands
+(0 and 16 bytes, where the base has 32), `-universal64` is the same two slices
+as `-universal` behind a 64-bit offset table, and `-dylib-arm64` is a library.
+Only `tiny-macho-x86_64-data-after-sig` is synthetic. Big-endian and 32-bit
+programs cannot be made with `ld64.lld` 21, so the tests build header-only
+synthetic images in code (`tests/MachOReference.hpp`); they are never stored here.
+
+`check_pages.py` is the independent checker (Python standard library only, no
+library code): it walks the header table and slice table of a Mach-O file,
+recomputes every 4096-byte page hash and the requirements special slot of the
+CodeDirectory and checks the structure facts of a signed program.
+`macho-reference.txt` records its output (and `llvm-lipo -archs`) for every
+sample; it is written by `regenerate.sh --reference macho-reference.txt` and
+recomputed by `regenerate.sh --verify`. The Mach-O samples alone are rebuilt
+with `regenerate.sh --macho`, which leaves the Windows samples (and the
+installer, whose hash changes on every rebuild) untouched. The installer embeds its creation time, so
 rebuilding it changes its hash; rebuild only to replace a sample on purpose.

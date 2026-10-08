@@ -336,3 +336,69 @@ TEST_CASE("DependencyLister reports errors for truncated PE files", "[Dependency
     REQUIRE(result.dependencies.empty());
     REQUIRE(result.errors.count(corrupt_file.string()) == 1);
 }
+
+// ---------------------------------------------------------------------------
+// Mach-O files are listed, on the genuine samples
+// ---------------------------------------------------------------------------
+
+namespace {
+const char kLibSystem[] = "/usr/lib/libSystem.B.dylib";
+}
+
+TEST_CASE("DependencyLister lists the genuine Mach-O samples", "[DependencyLister][US5]")
+{
+    for(const char *sample : {"tiny-macho-arm64", "tiny-macho-x86_64", "tiny-macho-universal", "tiny-macho-dylib-arm64"})
+    {
+        SECTION(sample)
+        {
+            seedtest::ScratchDir scratch;
+            const std::string mac = seedtest::dep::CopyFixture(scratch.Path() / "mac", sample).string();
+            DependencyLister lister;
+
+            const auto result = lister.ListDependencies({mac}, {(scratch.Path() / "mac").string()});
+
+            REQUIRE(result.errors.empty());
+            REQUIRE(result.libraryErrors.empty());
+            REQUIRE(result.dependencies.size() == 1);
+            REQUIRE(result.dependencies.count(kLibSystem) == 1);
+            CHECK(result.dependencies.at(kLibSystem) == std::vector<std::string>{mac});
+        }
+    }
+}
+
+TEST_CASE("DependencyLister lists several genuine Mach-O samples together", "[DependencyLister][US5]")
+{
+    seedtest::ScratchDir scratch;
+    const auto folder = scratch.Path() / "mac";
+    const std::string arm = seedtest::dep::CopyFixture(folder, "tiny-macho-arm64").string();
+    const std::string universal = seedtest::dep::CopyFixture(folder, "tiny-macho-universal").string();
+    DependencyLister lister;
+
+    const auto result = lister.ListDependencies({universal, arm}, {folder.string()});
+
+    REQUIRE(result.errors.empty());
+    REQUIRE(result.dependencies.size() == 1);
+    CHECK(result.dependencies.at(kLibSystem) == std::vector<std::string>{arm, universal});
+}
+
+TEST_CASE("DependencyLister finds a genuine Mach-O library by its bare name", "[DependencyLister][US5]")
+{
+    seedtest::ScratchDir scratch;
+    const auto folder = scratch.Path() / "mac";
+    seedtest::dep::CopyFixture(folder, "tiny-macho-dylib-arm64", "libtiny.dylib");
+    // A program that records the bare name: the genuine program with its
+    // library reference rewritten is not available, so one is synthesised.
+    const std::string app = seedtest::dep::WriteFile(
+        folder, "app", seedtest::dep::MachOReferencing({{seedtest::dep::kLoadDylib, "libtiny.dylib"}},
+                                                       seedtest::dep::MachOFields::LittleAfterMagic)).string();
+    DependencyLister lister;
+
+    const auto result = lister.ListDependencies({app}, {folder.string()});
+
+    REQUIRE(result.errors.empty());
+    REQUIRE(result.libraryErrors.empty());
+    const std::string key = Canon(folder / "libtiny.dylib");
+    REQUIRE(result.dependencies.size() == 2);
+    CHECK(result.dependencies.at(key) == std::vector<std::string>{app});
+    CHECK(result.dependencies.at(kLibSystem) == std::vector<std::string>{app});
+}
