@@ -107,7 +107,13 @@ TEST_CASE("corpus: superblob", "[FuzzCorpus]")
 
 TEST_CASE("corpus: msi", "[FuzzCorpus]")
 {
-    Replay(seedfuzz::FuzzMsi, seedtest::malformed::LoadSample("tiny.msi"));
+    for(const char *name : {"tiny.msi", "tiny-v4.msi", "tiny-osslsig-small.msi", "tiny-osslsig-large.msi",
+                            "tiny-osslsig-dse.msi", "nested.msi", "nested-osslsig.msi", "two-neighbours.msi",
+                            "legacy-the-seed-0.6.0.msi"})
+    {
+        INFO("sample " << name);
+        Replay(seedfuzz::FuzzMsi, seedtest::malformed::LoadSample(name));
+    }
     Replay(seedfuzz::FuzzMsi, Bytes{});
     ReplayCorpus("msi", seedfuzz::FuzzMsi);
 }
