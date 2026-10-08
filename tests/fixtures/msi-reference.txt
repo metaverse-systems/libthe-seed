@@ -59,3 +59,22 @@ entries legacy-the-seed-0.6.0.msi 19 none
 file legacy-the-seed-0.6.0.msi MSI Installer
 blob osslsig-large-unauth 6000 4b8a5fee84271f9cc9516b89e117edace633d2c6bdaf1426967f0fdabe135f4f
 blob legacy-fixed 1426 1bebb05e44b8711775c85b6482b9ac38bada79217b6cf325b58a3ef672b2748b
+#   with the signature stream of the signed sample <blob>, recorded after osslsigncode read that exact
+#   file (the signature it extracts equals the blob's, "Current DigitalSignature" equals
+#   "Calculated DigitalSignature" equals the fingerprint of <sample>, no structure error).
+#   with the signature stream of the signed sample <blob>, recorded after osslsigncode read that exact
+#   file (the signature it extracts equals the blob's, "Current DigitalSignature" equals
+#   "Calculated DigitalSignature" equals the fingerprint of <sample>, no structure error).
+# signed-out <sample> <blob> <sha256>: SHA-256 of the package libthe-seed writes when it signs <sample>
+#   with the signature stream of the signed sample <blob>, recorded after osslsigncode read that exact
+#   file (the signature it extracts equals the blob's, "Current DigitalSignature" equals
+#   "Calculated DigitalSignature" equals the fingerprint of <sample>, no structure error).
+signed-out nested-osslsig.msi nested-osslsig.msi 41ff6f42209afda39ed2e0aeae966c40a7afa675495ef97ffc9aeb50258e3e3f
+signed-out nested.msi nested-osslsig.msi 41ff6f42209afda39ed2e0aeae966c40a7afa675495ef97ffc9aeb50258e3e3f
+signed-out tiny-osslsig-dse.msi tiny-osslsig-small.msi 803262bf10ec95e78dfbad5623d2448b317957a39441ca0bf8cc1970675fdd97
+signed-out tiny-osslsig-large.msi tiny-osslsig-small.msi 803262bf10ec95e78dfbad5623d2448b317957a39441ca0bf8cc1970675fdd97
+signed-out tiny-v4.msi tiny-osslsig-large.msi 6688c7ca5a8fdb846b0fa596106794837b6baf71192ef471e02eaf09d8cd8bdd
+signed-out tiny-v4.msi tiny-osslsig-small.msi 5e1e1770d7150be1d1e970595cc152c0bc2ee89fd218656e594be81b65b20903
+signed-out tiny.msi tiny-osslsig-large.msi c972a38236c5f9f7cfbcb7a4adc6c2062fd40742fd5144ba6f5feecad146b05e
+signed-out tiny.msi tiny-osslsig-small.msi 803262bf10ec95e78dfbad5623d2448b317957a39441ca0bf8cc1970675fdd97
+signed-out two-neighbours.msi two-neighbours.msi 577a526269d1b5b5fc2e655aed12c952297669bb7f070038f60c34aca1f1ec50

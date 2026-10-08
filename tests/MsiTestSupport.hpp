@@ -16,6 +16,7 @@
 #include <fstream>
 #include <map>
 #include <optional>
+#include <set>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -160,6 +161,102 @@ inline constexpr std::size_t kHeaderDirectorySectors = 40;
 inline constexpr std::size_t kHeaderFatSectors = 44;
 inline constexpr std::size_t kHeaderMiniFatStart = 60;
 inline constexpr std::size_t kHeaderMiniFatSectors = 64;
+
+// Every entry listed under a storage is also reached by searching that storage
+// with the format's ordering (no enumeration).
+inline void RequireAllFindable(const cfb::Package &package)
+{
+    for(std::uint32_t storage = 0; storage < package.Entries().size(); ++storage)
+    {
+        const cfb::DirEntry &parent = package.Entries()[storage];
+        if(parent.type != cfb::kTypeStorage && parent.type != cfb::kTypeRoot)
+        {
+            continue;
+        }
+        for(const std::uint32_t child : package.Children(storage))
+        {
+            INFO("searching " << cfb::Display(parent.name) << " for " << cfb::Display(package.Entries()[child].name));
+            const auto found = package.Find(storage, package.Entries()[child].name);
+            REQUIRE(found.has_value());
+            REQUIRE(*found == child);
+        }
+    }
+}
+
+namespace detail
+{
+inline void CollectFindable(const cfb::Package &package, std::uint32_t storage, const std::string &prefix,
+                            std::set<std::string> &out, unsigned depth)
+{
+    if(depth > 64)
+    {
+        return;
+    }
+    for(const std::uint32_t child : package.Children(storage))
+    {
+        const cfb::DirEntry &entry = package.Entries()[child];
+        const std::string path = prefix + "/" + cfb::Display(entry.name);
+        const auto found = package.Find(storage, entry.name);
+        if(found.has_value() && *found == child)
+        {
+            out.insert(path);
+        }
+        if(entry.type == cfb::kTypeStorage)
+        {
+            CollectFindable(package, child, path, out, depth + 1);
+        }
+    }
+}
+} // namespace detail
+
+// The paths (outside the signature streams) that searching a storage with the
+// format's ordering reaches.
+inline std::set<std::string> FindablePaths(const cfb::Package &package)
+{
+    std::set<std::string> out;
+    detail::CollectFindable(package, 0, "", out, 0);
+    out.erase("/" + cfb::Display(cfb::SignatureName()));
+    out.erase("/" + cfb::Display(cfb::ExtendedSignatureName()));
+    return out;
+}
+
+// Every entry that a search reached before the operation is reached after it,
+// and every entry of the result is reached. The second part matters for the
+// packages another tool wrote with a storage out of the format's order
+// (nested-osslsig.msi has the root entries "B" and "a" in raw byte order): the
+// writer puts such a storage into the format's order, so nothing is lost and
+// the entries that no search reached before are reachable after.
+inline void RequireStillFindable(const cfb::Package &before, const cfb::Package &after)
+{
+    const std::set<std::string> was = FindablePaths(before);
+    const std::set<std::string> is = FindablePaths(after);
+    for(const std::string &path : was)
+    {
+        INFO("entry " << path << " was found by searching before and is not after");
+        CHECK(is.count(path) == 1);
+    }
+    RequireAllFindable(after);
+}
+
+// The listing paths of the signature streams in a package.
+inline std::vector<std::string> SignaturePaths(const Bytes &bytes)
+{
+    const cfb::Package package(bytes);
+    std::vector<std::string> without;
+    for(const cfb::ListedEntry &entry : cfb::Listing(package, true))
+    {
+        without.push_back(entry.path);
+    }
+    std::vector<std::string> only;
+    for(const cfb::ListedEntry &entry : cfb::Listing(package, false))
+    {
+        if(std::find(without.begin(), without.end(), entry.path) == without.end())
+        {
+            only.push_back(entry.path);
+        }
+    }
+    return only;
+}
 
 // Number of mini sectors the streams below the cut-off need, counting every
 // stream of the package as listed by the independent reader.

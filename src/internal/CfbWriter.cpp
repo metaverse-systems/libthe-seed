@@ -160,9 +160,17 @@ private:
 
     // Gives the entries of one storage consecutive positions, then does the
     // same for each of its storages.
-    void Expand(std::uint32_t parent, const std::vector<const CfbNode *> &sequence)
+    //
+    // A storage that another writer left out of the format's order (a package
+    // whose entries are in raw byte order, for example) is put into that order
+    // here, so that the balanced tree built from it can find every entry. A
+    // storage already in order is not touched. Names equal by the ordering are
+    // refused first, so the result is a pure function of the model.
+    void Expand(std::uint32_t parent, std::vector<const CfbNode *> sequence)
     {
         this->CheckUniqueNames(sequence);
+        std::stable_sort(sequence.begin(), sequence.end(), [](const CfbNode *a, const CfbNode *b)
+                         { return PackageModel::CompareNames(a->name, b->name) < 0; });
 
         std::vector<std::uint32_t> positions;
         positions.reserve(sequence.size());
@@ -603,22 +611,12 @@ void CompareEntry(const std::vector<Entry> &entries, std::uint32_t position, Pac
         ThrowDifference(want.name, "entry count");
     }
 
-    // A storage whose entries are in the format's order must be searchable for
-    // every one of them. Entries that another writer ordered differently keep
-    // their order, so for those storages only the signature is required to be
-    // found by search.
-    bool ordered = true;
-    for(std::size_t i = 1; i < entry.children.size(); ++i)
-    {
-        ordered = ordered && PackageModel::CompareNames(entries[entry.children[i - 1]].node->name,
-                                                        entries[entry.children[i]].node->name) < 0;
-    }
+    // Every entry of every storage must be reachable by a search in the format's
+    // order, because the writer puts each storage's entries into that order.
     for(std::size_t i = 0; i < entry.children.size(); ++i)
     {
         const CfbNode &child = got.children[i];
-        const bool is_signature = position == 0 && child.name == MsiSignatureName();
-        if((ordered || is_signature) &&
-           PackageModel::FindBySearch(got, entries[entry.children[i]].node->name) != &child)
+        if(PackageModel::FindBySearch(got, entries[entry.children[i]].node->name) != &child)
         {
             ThrowDifference(entries[entry.children[i]].node->name, "place in the search tree");
         }

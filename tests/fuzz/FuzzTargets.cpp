@@ -312,12 +312,25 @@ void FuzzMsi(const std::uint8_t *data, std::size_t size)
     Call("MsiSigner::ExtractSignature", size, 0,
          [&] { (void)MsiSigner::ExtractSignature(path); });
 
+    Call("MsiSigner::CheckSignature", size, 0, [&] { (void)MsiSigner::CheckSignature(path); });
+
     const std::vector<std::uint8_t> blob(1500, 0x5A);
     WriteFile(work, data, size);
     Call("MsiSigner::EmbedSignature", size, blob.size(),
          [&] { MsiSigner::EmbedSignature(work, blob); });
+    Call("MsiSigner::CheckSignature after embed", size, blob.size(),
+         [&] { (void)MsiSigner::CheckSignature(work); });
     Call("MsiSigner::StripSignature", size, blob.size(),
-         [&] { MsiSigner::StripSignature(work); });
+         [&] { (void)MsiSigner::StripSignature(work); });
+
+    // A signature of the other kind (ordinary sectors), with the digest check
+    // (which refuses it: nothing in the blob is a fingerprint).
+    const std::vector<std::uint8_t> large(6000, 0xA5);
+    WriteFile(work, data, size);
+    Call("MsiSigner::EmbedSignature large", size, large.size(),
+         [&] { MsiSigner::EmbedSignature(work, large); });
+    Call("MsiSigner::EmbedSignature with digest check", size, large.size(),
+         [&] { MsiSigner::EmbedSignature(work, large, true); });
 }
 
 } // namespace seedfuzz

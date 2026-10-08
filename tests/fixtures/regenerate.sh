@@ -11,6 +11,23 @@
 #                                       two-neighbours.msi), msi-open.exe and
 #                                       msi-reference.txt, then rewrite SHA256SUMS.
 #                                       tiny.msi and the legacy sample are kept
+#        regenerate.sh --signed-out FOLDER
+#                                       record the packages libthe-seed writes:
+#                                       FOLDER holds <sample>--<blob>.msi files
+#                                       (test_MsiLiveTools writes them when
+#                                       SEED_MSI_WRITE_SIGNED names the folder;
+#                                       <blob> is the signed sample whose
+#                                       signature was embedded). Each file is
+#                                       read by osslsigncode first (the
+#                                       signature it extracts equals the
+#                                       blob's, "Current" and "Calculated"
+#                                       DigitalSignature equal the recorded
+#                                       fingerprint, no structure error); only
+#                                       then its SHA-256 is written to
+#                                       msi-reference.txt as a `signed-out`
+#                                       line (earlier signed-out lines are
+#                                       replaced) and SHA256SUMS is rewritten.
+#                                       The samples are not rebuilt
 #        regenerate.sh --verify         check the samples with independent tools,
 #                                       and the recorded program fingerprints
 #        regenerate.sh --reference FILE [SIGNED_FOLDER]
@@ -321,8 +338,8 @@ msi_file_kind() { # file -> "MSI Installer" or "other"
 # osslsigncode calculates for it without its signature, what libgsf and file
 # report, and the digests stored by the signatures osslsigncode wrote; then the
 # deterministic blobs used. The signed-out lines (what the library writes,
-# recorded after osslsigncode accepts that exact file) are added when the
-# library can write such packages.
+# recorded after osslsigncode accepts that exact file) are added afterwards by
+# regenerate.sh --signed-out, which does not rebuild any sample.
 derive_msi_reference() { # output-file
     need osslsigncode openssl python3 gsf file sha256sum
     mr_out=$1
@@ -622,10 +639,12 @@ if [ "${1:-}" = "--verify" ]; then
         derive_msi_reference "$scratch/msi-reference.txt"
         # Comment lines hold the date, the tools and the hashes of the signed
         # samples, which change with every signing; every other line must match.
-        if [ "$(grep -v '^#' "$here/msi-reference.txt")" = "$(grep -v '^#' "$scratch/msi-reference.txt")" ]; then
+        # The signed-out lines come from the library, not from the tools: they
+        # are recorded by --signed-out and compared by test_MsiDigestReference.
+        if [ "$(grep -v -e '^#' -e '^signed-out ' "$here/msi-reference.txt")" = "$(grep -v -e '^#' -e '^signed-out ' "$scratch/msi-reference.txt")" ]; then
             report msi-reference.txt ok "osslsigncode, file and gsf reproduce every recorded answer"
         else
-            diff "$here/msi-reference.txt" "$scratch/msi-reference.txt" | grep -v '^[<>] #' || true
+            diff "$here/msi-reference.txt" "$scratch/msi-reference.txt" | grep -v -e '^[<>] #' -e '^[<>] signed-out ' || true
             report msi-reference.txt FAIL "recorded answers differ from the tools"
         fi
     else
@@ -659,8 +678,58 @@ if [ "${1:-}" = "--msi" ] && [ $# -eq 1 ]; then
     exit 0
 fi
 
+if [ "${1:-}" = "--signed-out" ] && [ $# -eq 2 ]; then
+    need osslsigncode sha256sum
+    so_dir=$2
+    [ -d "$so_dir" ] || { echo "regenerate.sh: $so_dir is not a folder" >&2; exit 1; }
+    so_new=$scratch/msi-reference-signed-out.txt
+    grep -v -e '^signed-out ' -e '^# signed-out ' "$here/msi-reference.txt" >"$so_new"
+    {
+        echo "# signed-out <sample> <blob> <sha256>: SHA-256 of the package libthe-seed writes when it signs <sample>"
+        echo "#   with the signature stream of the signed sample <blob>, recorded after osslsigncode read that exact"
+        echo "#   file (the signature it extracts equals the blob's, \"Current DigitalSignature\" equals"
+        echo "#   \"Calculated DigitalSignature\" equals the fingerprint of <sample>, no structure error)."
+    } >>"$so_new"
+    so_count=0
+    for so_file in "$so_dir"/*--*.msi; do
+        [ -f "$so_file" ] || continue
+        so_base=$(basename "$so_file" .msi)
+        so_sample=${so_base%%--*}
+        so_blob=${so_base#*--}
+        [ -f "$here/$so_sample" ] && [ -f "$here/$so_blob" ] || { echo "regenerate.sh: unknown sample or blob in $so_base" >&2; exit 1; }
+        so_fp=$(awk -v s="$so_sample" '$1 == "fingerprint" && $2 == s { print $3 }' "$here/msi-reference.txt")
+        [ -n "$so_fp" ] || { echo "regenerate.sh: no recorded fingerprint for $so_sample" >&2; exit 1; }
+        rm -f "$scratch/so-got.sig" "$scratch/so-want.sig"
+        osslsigncode extract-signature -in "$so_file" -out "$scratch/so-got.sig" >"$scratch/so-extract.log" 2>&1 ||
+            { cat "$scratch/so-extract.log" >&2; echo "regenerate.sh: osslsigncode cannot extract the signature of $so_base" >&2; exit 1; }
+        osslsigncode extract-signature -in "$here/$so_blob" -out "$scratch/so-want.sig" >/dev/null 2>&1 ||
+            { echo "regenerate.sh: osslsigncode cannot extract the signature of $so_blob" >&2; exit 1; }
+        cmp -s "$scratch/so-got.sig" "$scratch/so-want.sig" ||
+            { echo "regenerate.sh: the signature in $so_base differs from that of $so_blob" >&2; exit 1; }
+        osslsigncode verify -in "$so_file" >"$scratch/so-verify.log" 2>&1 || true
+        if grep -q -e "Failed to get a next" -e "Corrupted" -e "data error" -e "Failed to extract" "$scratch/so-verify.log"; then
+            cat "$scratch/so-verify.log" >&2
+            echo "regenerate.sh: osslsigncode reports a structure error for $so_base" >&2
+            exit 1
+        fi
+        so_cur=$(sed -n 's/^Current DigitalSignature *: *//p' "$scratch/so-verify.log" | head -n 1 | tr -d ' ' | tr 'A-F' 'a-f')
+        so_calc=$(sed -n 's/^Calculated DigitalSignature *: *//p' "$scratch/so-verify.log" | head -n 1 | tr -d ' ' | tr 'A-F' 'a-f')
+        if [ "$so_cur" != "$so_calc" ] || [ "$so_calc" != "$so_fp" ]; then
+            echo "regenerate.sh: $so_base: current $so_cur, calculated $so_calc, recorded fingerprint $so_fp" >&2
+            exit 1
+        fi
+        echo "signed-out $so_sample $so_blob $(sha256sum "$so_file" | cut -d' ' -f1)" >>"$so_new"
+        so_count=$((so_count + 1))
+    done
+    [ "$so_count" -gt 0 ] || { echo "regenerate.sh: no <sample>--<blob>.msi files in $so_dir" >&2; exit 1; }
+    cp "$so_new" "$here/msi-reference.txt"
+    (cd "$here" && sha256sum $samples $msi_samples $legacy_sample $dep_samples pe-reference-digests.txt macho-reference.txt msi-reference.txt >SHA256SUMS)
+    echo "regenerate.sh: recorded $so_count signed-out lines in msi-reference.txt and rewrote SHA256SUMS."
+    exit 0
+fi
+
 if [ $# -ne 0 ]; then
-    echo "usage: regenerate.sh [--macho | --msi | --verify | --reference FILE [SIGNED_FOLDER]]" >&2
+    echo "usage: regenerate.sh [--macho | --msi | --signed-out FOLDER | --verify | --reference FILE [SIGNED_FOLDER]]" >&2
     exit 2
 fi
 
