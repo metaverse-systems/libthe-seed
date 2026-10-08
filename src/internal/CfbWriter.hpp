@@ -28,11 +28,12 @@
 // stream below the cut-off has no mini stream and no mini index.
 //
 // The tree of each storage is rebuilt as a balanced search tree (all entries
-// black) from the sequence of its entries, in the order they had. The two
-// signature streams of the root are the only entries the writer places by the
-// format's ordering: both are dropped, and a new \005DigitalSignature is
-// inserted before the first entry that orders after it. Every other entry
-// keeps its position relative to the others.
+// black) from the sequence of its entries. A storage whose entries are in the
+// format's order keeps them exactly; a storage another writer left out of that
+// order is stable-sorted by the format's ordering first, so that a search finds
+// every entry. Names equal by that ordering are refused. In the root, both
+// signature streams are dropped and a new \005DigitalSignature is inserted
+// before the first entry that orders after it.
 //
 // Kept for every storage and stream: name, bytes, class identifier, state bits
 // and the creation and modification times; and from the header: version,

@@ -77,8 +77,8 @@ programs are never run. Flags used above:
 No sample has a delay-load import table, because the mingw-w64 linker cannot
 write one; tests build those bytes in code (see `src/dep/DELAYLOAD.txt`).
 
-Total size of the samples: 367600 bytes (budget 393216; raised from 262144 for the
-nine files added for the installer signing work, 138752 bytes: tiny-v4.msi 24576,
+Total size of the samples: 367088 bytes (budget 393216; raised from 262144 for the
+nine files added for the installer signing work, 138240 bytes: tiny-v4.msi 24576,
 tiny-osslsig-small.msi 12288, tiny-osslsig-large.msi 18432, tiny-osslsig-dse.msi 12288,
 nested.msi 17920, nested-osslsig.msi 20480, two-neighbours.msi 15872,
 legacy-the-seed-0.6.0.msi 12288 and msi-open.exe 4096; earlier: 228848 bytes with budget
