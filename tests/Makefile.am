@@ -23,7 +23,7 @@ seed_test_programs = test_NameParser test_LibraryLoader test_DependencyLister te
                  test_PeSigner test_MachOParser test_MachOSigner test_MsiSigner test_ResourcePak \
                  test_ComponentLoader test_SystemLoader test_PakLoader \
                  test_LoaderConcurrency test_JSONLoader test_BoundedBytes test_MalformedPe test_PeDigestReference test_PeRoundTrip test_MalformedElf test_MalformedMachO test_MachONoRoom test_MachOLayout test_MachOReference \
-                 test_MalformedMsi test_MsiDigestReference test_TruncatedSamples test_FuzzCorpus \
+                 test_MalformedMsi test_MsiDigestReference test_MsiSignatureSizes test_TruncatedSamples test_FuzzCorpus \
                  test_FileReplace test_FileReplaceKill test_SignersUseReplace
 
 check_PROGRAMS = $(seed_test_programs)
@@ -115,6 +115,9 @@ test_MalformedMsi_LDADD = libcatch.la ../src/libthe-seed.la ${LIBECS_LIBS}
 
 test_MsiDigestReference_SOURCES = test_MsiDigestReference.cpp
 test_MsiDigestReference_LDADD = libcatch.la ../src/libthe-seed.la ${LIBECS_LIBS}
+
+test_MsiSignatureSizes_SOURCES = test_MsiSignatureSizes.cpp
+test_MsiSignatureSizes_LDADD = libcatch.la ../src/libthe-seed.la ${LIBECS_LIBS}
 
 test_TruncatedSamples_SOURCES = test_TruncatedSamples.cpp fuzz/FuzzTargets.cpp
 test_TruncatedSamples_LDADD = libcatch.la ../src/libthe-seed.la ${LIBECS_LIBS}

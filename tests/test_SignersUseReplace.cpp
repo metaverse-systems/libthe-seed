@@ -39,14 +39,21 @@ std::string CopyFixture(const seedtest::ScratchDir &scratch, const std::string &
     return destination;
 }
 
-Bytes FakePkcs7()
+Bytes FakePkcs7(std::size_t size = 128)
 {
-    Bytes blob(128);
+    Bytes blob(size);
     for(std::size_t i = 0; i < blob.size(); ++i)
     {
         blob[i] = static_cast<std::uint8_t>(i & 0xFF);
     }
     return blob;
+}
+
+// At or above the installer's 4,096-byte mini-stream cut-off, where the
+// current writer places the signature where reading by size looks for it.
+Bytes LargeFakePkcs7()
+{
+    return FakePkcs7(5000);
 }
 
 // Prepares and completes a signature with a 64-byte capacity and a CMS of 64
@@ -165,7 +172,7 @@ TEST_CASE("signers: MSI embed and strip keep the mode and add no entries", "[Sig
     const unsigned expected = ModeOf(path);
     const auto names = Names(ListFolder(scratch.Path()));
 
-    MsiSigner::EmbedSignature(path, FakePkcs7());
+    MsiSigner::EmbedSignature(path, LargeFakePkcs7());
     CHECK(MsiSigner::HasEmbeddedSignature(path));
     CHECK(ModeOf(path) == expected);
     CHECK(Names(ListFolder(scratch.Path())) == names);
@@ -222,12 +229,12 @@ TEST_CASE("signers: a failure in the replacement leaves the MSI file unchanged",
     SECTION("embed")
     {
         RequireFailureLeavesFile(scratch, path,
-                                 [&] { MsiSigner::EmbedSignature(path, FakePkcs7()); });
+                                 [&] { MsiSigner::EmbedSignature(path, LargeFakePkcs7()); });
         CHECK_FALSE(MsiSigner::HasEmbeddedSignature(path));
     }
     SECTION("strip")
     {
-        MsiSigner::EmbedSignature(path, FakePkcs7());
+        MsiSigner::EmbedSignature(path, LargeFakePkcs7());
         RequireFailureLeavesFile(scratch, path, [&] { MsiSigner::StripSignature(path); });
         CHECK(MsiSigner::HasEmbeddedSignature(path));
     }

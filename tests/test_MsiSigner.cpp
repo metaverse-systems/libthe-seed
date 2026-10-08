@@ -93,8 +93,9 @@ TEST_CASE("MsiSigner::StripSignature removes embedded signature", "[MsiSigner]")
     seedtest::ScratchDir scratch;
     auto tempPath = CopyFixture(scratch, "tiny.msi");
 
-    // Embed a fake signature first
-    std::vector<std::uint8_t> fakePkcs7(64, 0xAA);
+    // Embed a fake signature first; one at or above the 4,096-byte cut-off,
+    // which the current writer places where reading by size looks for it
+    std::vector<std::uint8_t> fakePkcs7(5000, 0xAA);
     MsiSigner::EmbedSignature(tempPath, fakePkcs7);
     REQUIRE(MsiSigner::HasEmbeddedSignature(tempPath) == true);
 

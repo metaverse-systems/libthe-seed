@@ -1,7 +1,9 @@
 #include <libthe-seed/MsiSigner.hpp>
 
 #include "internal/BoundedBytes.hpp"
+#include "internal/CfbReader.hpp"
 #include "internal/FileIO.hpp"
+#include "internal/MsiAuthenticode.hpp"
 #include "internal/MsiSignatureSize.hpp"
 
 #include <algorithm>
@@ -12,11 +14,14 @@
 #include <string>
 #include <vector>
 
-#include "../external/picosha2.h"
-
 namespace {
 
 using seed::internal::ByteOrder;
+using seed::internal::CfbNode;
+using seed::internal::CfbReader;
+using seed::internal::ComputeMsiFingerprint;
+using seed::internal::MsiSignatureName;
+using seed::internal::PackageModel;
 using seed::internal::ByteSpan;
 using seed::internal::CheckMsiSignatureSize;
 using seed::internal::GuardEntryPoint;
@@ -97,16 +102,6 @@ struct CfbDocument
 
     std::vector<std::uint32_t> fat_sectors;  // Sectors that hold the FAT
     std::vector<std::uint32_t> dir_chain;    // Sectors that hold the directory
-    std::vector<std::size_t> tree_streams;   // Streams reachable from the root, in tree order
-
-    // The mini stream (the root's stream) is built once per document.
-    std::vector<std::uint8_t> mini_stream;
-    bool mini_stream_ready = false;
-
-    // Which stream read each sector and mini sector in this operation.
-    std::vector<std::uint32_t> sector_owner;
-    std::vector<std::uint32_t> mini_owner;
-    std::uint32_t last_owner = 0;
 
     // Lowest FAT index that may still be free.
     std::size_t free_cursor = 0;
@@ -296,41 +291,6 @@ struct CfbDocument
         return this->WalkChain(start_sector, owner, 1, what);
     }
 
-    // Same walk through the mini-FAT.
-    std::vector<std::uint32_t> WalkMiniChain(std::uint32_t start_sector, std::uint32_t id)
-    {
-        if(this->mini_owner.size() != this->mini_fat.size())
-        {
-            this->mini_owner.assign(this->mini_fat.size(), 0);
-        }
-
-        std::vector<std::uint32_t> chain;
-        std::uint32_t current = start_sector;
-        while(current != ENDOFCHAIN)
-        {
-            if(current >= this->mini_fat.size())
-            {
-                ThrowMalformed(kFormat, "stream mini sector " + std::to_string(current) +
-                                            " is past the end of the mini-FAT (" +
-                                            std::to_string(this->mini_fat.size()) + " entries)");
-            }
-            if(this->mini_owner[current] == id)
-            {
-                ThrowMalformed(kFormat, "stream mini-FAT chain has a loop at mini sector " +
-                                            std::to_string(current));
-            }
-            if(this->mini_owner[current] != 0)
-            {
-                ThrowMalformed(kFormat, "mini sector " + std::to_string(current) +
-                                            " is used by more than one stream");
-            }
-            this->mini_owner[current] = id;
-            chain.push_back(current);
-            current = this->mini_fat[current];
-        }
-        return chain;
-    }
-
     // ── Tables ─────────────────────────────────────────────
 
     // Build the full FAT from DIFAT entries in the header + DIFAT chain
@@ -482,10 +442,9 @@ struct CfbDocument
     }
 
     // Check that entry 0 is the root and walk the tree from it once, with an
-    // explicit stack, recording the streams in tree order.
+    // explicit stack.
     void ValidateTree()
     {
-        this->tree_streams.clear();
         if(this->directory.empty() || this->directory[0].type != DIR_TYPE_ROOT)
         {
             ThrowMalformed(kFormat, "directory entry 0 is not the root storage");
@@ -547,11 +506,7 @@ struct CfbDocument
             else if(stage == 1)
             {
                 stack.back().stage = 2;
-                if(entry.type == DIR_TYPE_STREAM)
-                {
-                    this->tree_streams.push_back(id);
-                }
-                else if(entry.type == DIR_TYPE_STORAGE)
+                if(entry.type == DIR_TYPE_STORAGE)
                 {
                     // Recurse into storage's children
                     push(entry.child);
@@ -563,200 +518,6 @@ struct CfbDocument
                 push(entry.right_sibling);
             }
         }
-    }
-
-    // ── Streams ────────────────────────────────────────────
-
-    // A stream is read from the mini stream when it is small and its start
-    // sector is actually within the mini-FAT.  WriteStream always allocates
-    // regular sectors, so newly-written small streams will have a start_sector
-    // that exceeds the mini-FAT range and are read from regular sectors.
-    bool UsesMiniStream(const CfbDirEntry &entry) const
-    {
-        return entry.type != DIR_TYPE_ROOT &&
-               entry.stream_size < this->header.mini_stream_cutoff &&
-               !this->mini_fat.empty() &&
-               entry.start_sector < static_cast<std::uint32_t>(this->mini_fat.size());
-    }
-
-    static std::uint64_t UnitsFor(std::uint64_t size, std::uint64_t unit)
-    {
-        return size / unit + ((size % unit) != 0 ? 1 : 0);
-    }
-
-    // Read a stream held in regular sectors. The whole chain is validated
-    // before any memory is reserved.
-    std::vector<std::uint8_t> ReadRegularStream(const CfbDirEntry &entry)
-    {
-        if(this->sector_owner.size() != this->SectorCount())
-        {
-            this->sector_owner.assign(static_cast<std::size_t>(this->SectorCount()), 0);
-        }
-        const std::uint32_t id = ++this->last_owner;
-        const auto chain = this->WalkChain(entry.start_sector, this->sector_owner, id, "stream");
-
-        const std::uint64_t sector_size = this->header.sector_size;
-        const std::uint64_t needed = this->UnitsFor(entry.stream_size, sector_size);
-        if(chain.size() < needed)
-        {
-            ThrowMalformed(kFormat, "stream size " + std::to_string(entry.stream_size) +
-                                        " exceeds its chain of " + std::to_string(chain.size()) +
-                                        " sectors");
-        }
-
-        // A partial last sector is fine when the bytes that are needed are present.
-        std::uint64_t remaining = entry.stream_size;
-        for(std::uint64_t i = 0; i < needed; ++i)
-        {
-            const std::uint64_t chunk = std::min(sector_size, remaining);
-            if(!RangeFits(this->SectorStart(chain[i]), chunk, this->bytes.size()))
-            {
-                ThrowMalformed(kFormat, "stream sector " + std::to_string(chain[i]) +
-                                            " extends past the end of the file (" +
-                                            std::to_string(this->bytes.size()) + " bytes)");
-            }
-            remaining -= chunk;
-        }
-
-        std::vector<std::uint8_t> data;
-        data.reserve(static_cast<std::size_t>(entry.stream_size));
-        const ByteSpan file(this->bytes, kFormat);
-        remaining = entry.stream_size;
-        for(std::uint64_t i = 0; i < needed; ++i)
-        {
-            const std::uint64_t chunk = std::min(sector_size, remaining);
-            const ByteSpan part = file.Sub(this->SectorStart(chain[i]), chunk, "stream sector");
-            data.insert(data.end(), part.Data(), part.Data() + chunk);
-            remaining -= chunk;
-        }
-        return data;
-    }
-
-    // Build the mini stream (the root's stream) once.
-    void EnsureMiniStream()
-    {
-        if(this->mini_stream_ready)
-        {
-            return;
-        }
-        const CfbDirEntry root = this->directory[0];
-        if(root.stream_size != 0)
-        {
-            this->mini_stream = this->ReadRegularStream(root);
-        }
-        this->mini_stream_ready = true;
-    }
-
-    std::vector<std::uint8_t> ReadMiniStream(const CfbDirEntry &entry)
-    {
-        this->EnsureMiniStream();
-        const std::uint32_t id = ++this->last_owner;
-        const auto chain = this->WalkMiniChain(entry.start_sector, id);
-
-        const std::uint64_t unit = this->header.mini_sector_size;
-        const std::uint64_t needed = this->UnitsFor(entry.stream_size, unit);
-        if(chain.size() < needed)
-        {
-            ThrowMalformed(kFormat, "stream size " + std::to_string(entry.stream_size) +
-                                        " exceeds its chain of " + std::to_string(chain.size()) +
-                                        " mini sectors");
-        }
-
-        std::vector<std::uint8_t> data;
-        data.reserve(static_cast<std::size_t>(entry.stream_size));
-        const ByteSpan mini(this->mini_stream, kFormat, "the mini stream");
-        std::uint64_t remaining = entry.stream_size;
-        for(std::uint64_t i = 0; i < needed; ++i)
-        {
-            const std::uint64_t chunk = std::min(unit, remaining);
-            const ByteSpan part = mini.Sub(static_cast<std::uint64_t>(chain[i]) * unit, chunk,
-                                           "stream mini sector");
-            data.insert(data.end(), part.Data(), part.Data() + chunk);
-            remaining -= chunk;
-        }
-        return data;
-    }
-
-    // Read a stream's data given its directory entry
-    std::vector<std::uint8_t> ReadStream(const CfbDirEntry &entry)
-    {
-        if(entry.stream_size == 0)
-        {
-            return {};
-        }
-        if(this->UsesMiniStream(entry))
-        {
-            return this->ReadMiniStream(entry);
-        }
-        return this->ReadRegularStream(entry);
-    }
-
-    // The presence check does not read the stream; it only makes sure that
-    // the storage the stream would be read from holds its start sector.
-    void CheckStreamStart(const CfbDirEntry &entry) const
-    {
-        if(entry.stream_size == 0 || this->UsesMiniStream(entry))
-        {
-            return;
-        }
-        const std::uint64_t count = this->SectorCount();
-        if(entry.start_sector >= count)
-        {
-            ThrowMalformed(kFormat, "stream start sector " + std::to_string(entry.start_sector) +
-                                        " is past the end of the file (" +
-                                        std::to_string(count) + " sectors)");
-        }
-    }
-
-    // Convert UTF-16 name to UTF-8 for comparison
-    static std::string Utf16ToUtf8(const std::u16string &u16)
-    {
-        std::string result;
-        for(char16_t ch : u16)
-        {
-            if(ch < 0x80)
-            {
-                result.push_back(static_cast<char>(ch));
-            }
-            else if(ch < 0x800)
-            {
-                result.push_back(static_cast<char>(0xC0 | (ch >> 6)));
-                result.push_back(static_cast<char>(0x80 | (ch & 0x3F)));
-            }
-            else
-            {
-                result.push_back(static_cast<char>(0xE0 | (ch >> 12)));
-                result.push_back(static_cast<char>(0x80 | ((ch >> 6) & 0x3F)));
-                result.push_back(static_cast<char>(0x80 | (ch & 0x3F)));
-            }
-        }
-        return result;
-    }
-
-    // Check if a name matches the digital signature stream names
-    static bool IsSignatureStream(const std::u16string &name)
-    {
-        // \x05DigitalSignature
-        static const std::u16string sig_name = {
-            0x0005, u'D', u'i', u'g', u'i', u't', u'a', u'l',
-            u'S', u'i', u'g', u'n', u'a', u't', u'u', u'r', u'e'
-        };
-        // \x05MsiDigitalSignatureEx
-        static const std::u16string sig_ex_name = {
-            0x0005, u'M', u's', u'i', u'D', u'i', u'g', u'i', u't', u'a', u'l',
-            u'S', u'i', u'g', u'n', u'a', u't', u'u', u'r', u'e', u'E', u'x'
-        };
-
-        return name == sig_name || name == sig_ex_name;
-    }
-
-    static bool IsDigitalSignatureStream(const std::u16string &name)
-    {
-        static const std::u16string sig_name = {
-            0x0005, u'D', u'i', u'g', u'i', u't', u'a', u'l',
-            u'S', u'i', u'g', u'n', u'a', u't', u'u', u'r', u'e'
-        };
-        return name == sig_name;
     }
 
     // Find a directory entry by name (searches children of root)
@@ -1256,6 +1017,12 @@ struct CfbDocument
     }
 };
 
+// The signature stream among the root's children, found by enumeration.
+const CfbNode *FindSignatureEntry(const PackageModel &model)
+{
+    return PackageModel::FindByEnumeration(model.Root(), MsiSignatureName());
+}
+
 } // anonymous namespace
 
 // ── MsiSigner Public Methods ───────────────────────────────
@@ -1283,51 +1050,11 @@ bool MsiSigner::IsMsi(const std::string &file_path)
 MsiSigner::DigestResult MsiSigner::ComputeAuthenticodeDigest(const std::string &file_path)
 {
     return GuardEntryPoint(kFormat, [&] {
-        CfbDocument doc;
-        doc.bytes = ReadFileBytes(file_path);
-        doc.Parse();
-
-        // Collect all non-signature streams from the root's children
-        std::vector<const CfbDirEntry*> streams;
-        for(const std::size_t index : doc.tree_streams)
-        {
-            if(!CfbDocument::IsSignatureStream(doc.directory[index].name))
-            {
-                streams.push_back(&doc.directory[index]);
-            }
-        }
-
-        // Sort streams alphabetically by name (case-insensitive)
-        std::sort(streams.begin(), streams.end(),
-            [](const CfbDirEntry *a, const CfbDirEntry *b)
-            {
-                // Case-insensitive comparison of UTF-16 names
-                auto name_a = a->name;
-                auto name_b = b->name;
-                for(auto &ch : name_a) { if(ch >= u'A' && ch <= u'Z') ch += 32; }
-                for(auto &ch : name_b) { if(ch >= u'A' && ch <= u'Z') ch += 32; }
-                return name_a < name_b;
-            });
-
-        // Hash all stream data in sorted order
-        picosha2::hash256_one_by_one hasher;
-        hasher.init();
-
-        for(const auto *entry : streams)
-        {
-            auto data = doc.ReadStream(*entry);
-            if(!data.empty())
-            {
-                hasher.process(data.begin(), data.end());
-            }
-        }
-
-        hasher.finish();
+        const std::vector<std::uint8_t> bytes = ReadFileBytes(file_path);
+        PackageModel model = CfbReader::Parse(bytes);
 
         DigestResult result;
-        result.digest.resize(picosha2::k_digest_size);
-        hasher.get_hash_bytes(result.digest.begin(), result.digest.end());
-
+        result.digest = ComputeMsiFingerprint(model);
         return result;
     });
 }
@@ -1377,45 +1104,33 @@ std::optional<std::vector<std::uint8_t>> MsiSigner::ExtractSignature(
     const std::string &file_path)
 {
     return GuardEntryPoint(kFormat, [&] {
-        CfbDocument doc;
-        doc.bytes = ReadFileBytes(file_path);
-        doc.Parse();
+        const std::vector<std::uint8_t> bytes = ReadFileBytes(file_path);
+        PackageModel model = CfbReader::Parse(bytes);
 
-        static const std::u16string sig_name = {
-            0x0005, u'D', u'i', u'g', u'i', u't', u'a', u'l',
-            u'S', u'i', u'g', u'n', u'a', u't', u'u', u'r', u'e'
-        };
-
-        const auto *entry = doc.FindEntry(sig_name);
-        if(!entry || entry->stream_size == 0)
+        // A signature of size zero is no signature.
+        const CfbNode *entry = FindSignatureEntry(model);
+        if(entry == nullptr || entry->size == 0)
         {
             return std::optional<std::vector<std::uint8_t>>();
         }
-
-        return std::optional<std::vector<std::uint8_t>>(doc.ReadStream(*entry));
+        return std::optional<std::vector<std::uint8_t>>(model.ReadStream(*entry));
     });
 }
 
 bool MsiSigner::HasEmbeddedSignature(const std::string &file_path)
 {
     return GuardEntryPoint(kFormat, [&] {
-        CfbDocument doc;
-        doc.bytes = ReadFileBytes(file_path);
-        doc.Parse();
+        const std::vector<std::uint8_t> bytes = ReadFileBytes(file_path);
+        PackageModel model = CfbReader::Parse(bytes);
 
-        static const std::u16string sig_name = {
-            0x0005, u'D', u'i', u'g', u'i', u't', u'a', u'l',
-            u'S', u'i', u'g', u'n', u'a', u't', u'u', u'r', u'e'
-        };
-
-        const auto *entry = doc.FindEntry(sig_name);
-        if(entry == nullptr || entry->stream_size == 0)
+        const CfbNode *entry = FindSignatureEntry(model);
+        if(entry == nullptr || entry->size == 0)
         {
             return false;
         }
 
-        // The container is valid; the signature's contents are not read.
-        doc.CheckStreamStart(*entry);
+        // The chain must be valid for the size; no byte is copied or parsed.
+        (void)model.Resolve(*entry);
         return true;
     });
 }

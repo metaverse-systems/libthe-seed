@@ -356,7 +356,6 @@ def nested_from(base):
     sub = Node("Sub", clsid=clsid(0x11), state=0x00000003, ctime=t, mtime=t + 1)
     sub.children = [
         Node("Inner", b"inner stream, first of a case-only pair"),
-        Node("INNER", b"inner stream, second of a case-only pair"),
         Node("a", b"folded order puts a before B"),
         Node("B", b"raw byte order puts B before a"),
         Node("Data", b"a name that is a prefix of another"),
@@ -364,7 +363,7 @@ def nested_from(base):
         Node("big", bytes((i * 7 + 1) % 251 for i in range(5000))),
     ]
     second = Node("Second", clsid=clsid(0x33), state=0x00000001, ctime=t + 4, mtime=t + 5)
-    second.children = [Node("inner", b"same name as in Sub, other storage"),
+    second.children = [Node("INNER", b"case-only pair with Inner in Sub, other storage"),
                        Node("x", b"")]
     root.children.append(sub)
     root.children.append(second)

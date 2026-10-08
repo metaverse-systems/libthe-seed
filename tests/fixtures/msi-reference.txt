@@ -19,8 +19,8 @@
 # sample tiny-osslsig-small.msi 2c646c8a188c25fa2a99e3f3a527939aac51c751fc7b669a9e49ae9297d06b4d
 # sample tiny-osslsig-large.msi b1deb046b4d7d882ad3fad88010c2931cf7558daa793dca3bad11ebd8c52a2ce
 # sample tiny-osslsig-dse.msi 28b76359e6caffe8d710f57ff6ea2aa0c07158f5d795ff48333d8dcd2db59ce8
-# sample nested.msi fc7fc6fead681e67b8d442201780095b8c3e423b8b0a1af244c0a1cc032ff9d4
-# sample nested-osslsig.msi f6289c36f8bc658d9f4e82fd5091ef769242273656f7310d74d4f59526272483
+# sample nested.msi 28ba0837019eeddbfaa43ce3543809b93f69b4b841c90a70e856234494fb7bc8
+# sample nested-osslsig.msi aed388e6a7f1d7a6b240d313734a11fc8c7c1d18e6b34fe1b7f94d2b7b6c2963
 # sample two-neighbours.msi 5143e4e0159cbeca9ac07f95d7f8cb2981b60dac0c2f1a2a6deb1b376c9dc9cb
 # sample legacy-the-seed-0.6.0.msi 21d3a34cebfb648edd04907be33a5b6c200502719c78a04519fa21c3ca20525d
 fingerprint tiny.msi 4244b8292b29b2397d1d45950372db7d46a7437544570f21386a58babae992b9
@@ -42,13 +42,13 @@ entries tiny-osslsig-dse.msi 21 1444
 file tiny-osslsig-dse.msi MSI Installer
 stored-digest tiny-osslsig-dse.msi ccf645da4ba5903aef368becd312b29034639985dc84eae2b531891731338f6b
 stored-ex tiny-osslsig-dse.msi 3461fd67bd8c51646241f784883d76274b0659e129cb2f2330520a732cc58022
-fingerprint nested.msi 2cefaa96311ded59380eef7676180db988d5f127d10c0b2f9a0194675966708f
-entries nested.msi 32 none
+fingerprint nested.msi 28859c4ad01bf38d30b8b04a4b0c7477463b2e6a57bc0a5c7206747451461af6
+entries nested.msi 31 none
 file nested.msi MSI Installer
-fingerprint nested-osslsig.msi 2cefaa96311ded59380eef7676180db988d5f127d10c0b2f9a0194675966708f
-entries nested-osslsig.msi 33 1444
+fingerprint nested-osslsig.msi 28859c4ad01bf38d30b8b04a4b0c7477463b2e6a57bc0a5c7206747451461af6
+entries nested-osslsig.msi 32 1444
 file nested-osslsig.msi MSI Installer
-stored-digest nested-osslsig.msi 2cefaa96311ded59380eef7676180db988d5f127d10c0b2f9a0194675966708f
+stored-digest nested-osslsig.msi 28859c4ad01bf38d30b8b04a4b0c7477463b2e6a57bc0a5c7206747451461af6
 fingerprint two-neighbours.msi c639df394453761c9ed4c8a33ccc9aa7231fea1421c4a56c4d36ea5d3395e2ad
 entries two-neighbours.msi 34 1444
 file two-neighbours.msi MSI Installer

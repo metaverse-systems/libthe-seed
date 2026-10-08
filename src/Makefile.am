@@ -25,7 +25,10 @@ noinst_HEADERS = \
 	internal/MachODefs.hpp \
 	internal/MachOLayout.hpp \
 	internal/MachOSuperBlob.hpp \
-	internal/MsiSignatureSize.hpp
+	internal/MsiSignatureSize.hpp \
+	internal/CfbReader.hpp \
+	internal/MsiAuthenticode.hpp \
+	internal/AuthenticodeDigestField.hpp
 
 libthe_seed_la_CXXFLAGS = -std=c++20 -I$(top_srcdir)/include -I$(top_srcdir)/external ${LIBECS_CFLAGS} $(SANITIZER_CXXFLAGS)
 libthe_seed_la_LIBADD = -lpthread ${LIBECS_LIBS}
@@ -45,4 +48,7 @@ libthe_seed_la_SOURCES = LibraryLoader.cpp \
 		MachOSigner.cpp \
 		MsiSigner.cpp \
 		internal/FileIO.cpp \
-		internal/MachOLayout.cpp
+		internal/MachOLayout.cpp \
+		internal/CfbReader.cpp \
+		internal/MsiAuthenticode.cpp \
+		internal/AuthenticodeDigestField.cpp
