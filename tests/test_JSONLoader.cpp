@@ -9,8 +9,10 @@
 #include <fstream>
 #include <iostream>
 #include <stdexcept>
+#ifndef _WIN32
 #include <unistd.h>
 #include <sys/stat.h>
+#endif
 #include <string>
 
 namespace
@@ -243,6 +245,10 @@ TEST_CASE("JSONLoader reports a directory as unopenable", "[JSONLoader]")
 
 TEST_CASE("JSONLoader reports an unreadable scene file as unopenable", "[JSONLoader]")
 {
+#ifdef _WIN32
+    std::cerr << "SKIPPED: unreadable scene file case, file permissions are not modelled by chmod on this platform\n";
+    return;
+#else
     if(geteuid() == 0)
     {
         std::cerr << "SKIPPED: unreadable scene file case, running as root\n";
@@ -265,6 +271,7 @@ TEST_CASE("JSONLoader reports an unreadable scene file as unopenable", "[JSONLoa
     REQUIRE(Contains(failure.message, "Permission denied"));
     REQUIRE(Contains(failure.message, file));
     REQUIRE_FALSE(Contains(failure.message, "parse"));
+#endif
 }
 
 TEST_CASE("JSONLoader reports an empty file and a syntax error as not understood", "[JSONLoader]")
