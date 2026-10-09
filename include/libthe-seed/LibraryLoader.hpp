@@ -32,7 +32,12 @@ struct LibraryDeleter
  * code, so function pointers returned by FunctionGet and objects made by them
  * stay valid after this loader is destroyed. The code stays loaded until the
  * process ends.
- * 
+ *
+ * FunctionGet searches the locations added with PathAdd in order and the first
+ * file holding the library decides; the working directory is searched only if
+ * it was added. Failures are LoadError (NotFound, NotLoadable,
+ * EntryPointMissing, InvalidName). The library name given to the constructor
+ * must not contain '/', '\\' or ':'.
  */
 class LibraryLoader
 {

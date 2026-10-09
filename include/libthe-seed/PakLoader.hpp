@@ -7,6 +7,21 @@
 #include <vector>
 #include <libecs-cpp/ecs.hpp>
 
+/**
+ * @brief Loads resource paks by name.
+ *
+ * Search: locations added with PathAdd are searched first, in order, and the
+ * first location holding <library>.pak decides. A pak that is present but
+ * cannot be read fails the load with LoadError (NotLoadable) and later
+ * locations are not tried. The working directory is never searched unless the
+ * application adds it with PathAdd. Development locations are searched only
+ * after DevelopmentPathsEnable, and after the configured ones. Failures are
+ * LoadError (InvalidName, NotFound, NotLoadable).
+ *
+ * Threads: every method is safe to call from several threads at once. A
+ * request made after PathAdd or DevelopmentPathsEnable returned uses the new
+ * setting.
+ */
 class PakLoader
 {
   public:
