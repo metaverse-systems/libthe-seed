@@ -10,6 +10,8 @@
 #include "PluginSearch.hpp"
 
 #include <atomic>
+#include <cwctype>
+#include <string>
 #include <system_error>
 #include <utility>
 
@@ -21,6 +23,17 @@ namespace
 std::atomic<std::uint64_t> open_calls{0};
 
 #ifdef _WIN32
+std::wstring PathKey(const std::wstring &path)
+{
+    std::wstring key = path;
+    for(wchar_t &c : key)
+    {
+        if(c == L'/') c = L'\\';
+        c = static_cast<wchar_t>(::towlower(c));
+    }
+    return key;
+}
+
 std::string PlatformMessage(DWORD id)
 {
     if(id == 0) return {};
@@ -59,6 +72,22 @@ void *OpenPinned(const std::filesystem::path &absolute_path, std::string &error)
         error = PlatformMessage(load_error);
     }
     else
+    {
+        // The platform returns a module of the same name that is already
+        // loaded, wherever it came from; the file that was asked for must be
+        // the one that is mapped.
+        std::wstring loaded(32768, L'\0');
+        DWORD length = GetModuleFileNameW(module, loaded.data(), static_cast<DWORD>(loaded.size()));
+        loaded.resize(length);
+        if(length != 0 && PathKey(loaded) != PathKey(absolute_path.wstring()))
+        {
+            error = "a different module with the same name is already loaded from " + std::filesystem::path(loaded).string();
+            FreeLibrary(module);
+            module = nullptr;
+        }
+    }
+
+    if(module != nullptr)
     {
         HMODULE pinned = nullptr;
         if(!GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_PIN | GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS,
@@ -218,6 +247,19 @@ void *PluginOpen(const std::vector<std::string> &locations, size_t configured_co
         NotLoadableThrow(result, name, error, kind);
     }
     return handle;
+}
+
+void EntryPointMissingThrow(const std::filesystem::path &file, const std::string &name,
+                            const std::string &symbol, const std::string &reason, const std::string &kind)
+{
+    throw LoadError(LoadError::Reason::EntryPointMissing, name, file.string(), {},
+                    reason.empty() ? symbol : symbol + ": " + reason, kind);
+}
+
+void NoObjectThrow(const std::filesystem::path &file, const std::string &name,
+                   const std::string &symbol, const std::string &kind)
+{
+    throw LoadError(LoadError::Reason::NoObject, name, file.string(), {}, symbol, kind);
 }
 
 void *SymbolFind(void *handle, const std::string &symbol, std::string &error)

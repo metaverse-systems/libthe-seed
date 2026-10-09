@@ -23,7 +23,7 @@ AM_TESTS_ENVIRONMENT = \
 seed_test_programs = test_NameParser test_LoadError test_LibraryLoader test_DependencyLister test_DependencyAttribution test_DependencyReporting \
                  test_PeSigner test_MachOParser test_MachOSigner test_MsiSigner test_ResourcePak \
                  test_ComponentLoader test_SystemLoader test_PakLoader \
-                 test_LoaderConcurrency test_JSONLoader test_PluginLifetime test_PluginSearchOrder test_BoundedBytes test_MalformedPe test_PeDigestReference test_PeRoundTrip test_MalformedElf test_MalformedMachO test_MachONoRoom test_MachOLayout test_MachOReference \
+                 test_LoaderConcurrency test_JSONLoader test_PluginLifetime test_PluginSearchOrder test_PluginLoadErrors test_BoundedBytes test_MalformedPe test_PeDigestReference test_PeRoundTrip test_MalformedElf test_MalformedMachO test_MachONoRoom test_MachOLayout test_MachOReference \
                  test_MalformedMsi test_MsiDigestReference test_MsiSignatureSizes test_MsiLayouts test_MsiCheckSignature test_MsiPreservation test_MsiLarge test_MsiLiveTools test_TruncatedSamples test_FuzzCorpus \
                  test_FileReplace test_FileReplaceKill test_SignersUseReplace
 
@@ -181,6 +181,10 @@ test_PluginLifetime_LDFLAGS = $(AM_LDFLAGS) -pthread
 test_PluginSearchOrder_SOURCES = test_PluginSearchOrder.cpp
 test_PluginSearchOrder_LDADD = libcatch.la ../src/libthe-seed.la ${LIBECS_LIBS}
 test_PluginSearchOrder_LDFLAGS = $(AM_LDFLAGS) -pthread
+
+test_PluginLoadErrors_SOURCES = test_PluginLoadErrors.cpp
+test_PluginLoadErrors_LDADD = libcatch.la ../src/libthe-seed.la ${LIBECS_LIBS}
+test_PluginLoadErrors_LDFLAGS = $(AM_LDFLAGS) -pthread
 
 EXTRA_DIST = TestPaths.hpp LoaderTestSupport.hpp CfbReference.hpp MsiTestSupport.hpp ToolSupport.hpp MachOReference.hpp MachOSigningSupport.hpp HeapCounter.hpp MalformedInput.hpp ReplaceTestSupport.hpp \
              reference/reference-dump.cpp reference/compare-reference.sh \

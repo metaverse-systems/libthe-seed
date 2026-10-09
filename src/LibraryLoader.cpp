@@ -10,7 +10,6 @@
 
 #include <libthe-seed/LoadError.hpp>
 
-#include <stdexcept>
 
 void LibraryLoader::PathAdd(const std::string &path)
 {
@@ -39,6 +38,7 @@ void LibraryLoader::Load()
     seed::internal::SearchResult search;
     void *lib = seed::internal::PluginOpen(this->paths, this->paths.size(), this->name, this->name, "library", search);
     this->library_handle.reset(lib);
+    this->loaded_file = search.file.string();
 }
 
 void *LibraryLoader::FunctionGet(const std::string &FunctionName)
@@ -49,7 +49,7 @@ void *LibraryLoader::FunctionGet(const std::string &FunctionName)
     void *ptr = seed::internal::SymbolFind(this->library_handle.get(), FunctionName, error);
     if(!ptr)
     {
-        throw std::runtime_error(error);
+        seed::internal::EntryPointMissingThrow(this->loaded_file, this->name, FunctionName, error, "library");
     }
     return ptr;
 }

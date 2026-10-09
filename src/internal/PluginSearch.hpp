@@ -73,6 +73,17 @@ SearchResult SearchFirst(const std::vector<std::string> &locations, const std::s
 void *PluginOpen(const std::vector<std::string> &locations, size_t configured_count, const std::string &library,
                  const std::string &name, const std::string &kind, SearchResult &result);
 
+// Throws LoadError (EntryPointMissing) for a plugin `file` that was opened but
+// has no `symbol`; `reason` is the platform's text.
+[[noreturn]] void EntryPointMissingThrow(const std::filesystem::path &file, const std::string &name,
+                                         const std::string &symbol, const std::string &reason,
+                                         const std::string &kind);
+
+// Throws LoadError (NoObject) for an entry point `symbol` in `file` that
+// returned no object.
+[[noreturn]] void NoObjectThrow(const std::filesystem::path &file, const std::string &name,
+                                const std::string &symbol, const std::string &kind);
+
 // Address of `symbol` in an opened plugin, or nullptr with the platform's
 // message in `error`.
 void *SymbolFind(void *handle, const std::string &symbol, std::string &error);

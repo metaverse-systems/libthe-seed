@@ -71,4 +71,5 @@ class LibraryLoader
     std::unique_ptr<void, LibraryDeleter> library_handle;
     void Load();
     std::vector<std::string> paths;
+    std::string loaded_file;
 };

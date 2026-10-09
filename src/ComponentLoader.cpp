@@ -3,7 +3,6 @@
 #include "internal/PluginSearch.hpp"
 #include "NameParser.hpp"
 #include <shared_mutex>
-#include <stdexcept>
 
 ComponentLoader::ComponentLoader() = default;
 
@@ -17,7 +16,19 @@ std::unique_ptr<ecs::Component> ComponentLoader::Create(const std::string &name)
 std::unique_ptr<ecs::Component> ComponentLoader::Create(const std::string &name, void *data)
 {
     auto creator = this->Get(name);
-    return std::unique_ptr<ecs::Component>(creator(data));
+    ecs::Component *object = creator(data);
+    if (object == nullptr)
+    {
+        std::string file;
+        {
+            std::shared_lock lock(this->mutex);
+            auto it = this->files.find(name);
+            if (it != this->files.end())
+                file = it->second;
+        }
+        seed::internal::NoObjectThrow(file, name, "create_component", "component plugin");
+    }
+    return std::unique_ptr<ecs::Component>(object);
 }
 
 ComponentLoader::ComponentCreator ComponentLoader::Get(const std::string &name)
@@ -49,10 +60,11 @@ ComponentLoader::ComponentCreator ComponentLoader::Get(const std::string &name)
     std::string error;
     void *ptr = seed::internal::SymbolFind(handle, "create_component", error);
     if (ptr == nullptr)
-        throw std::runtime_error(error);
+        seed::internal::EntryPointMissingThrow(search.file, name, "create_component", error, "component plugin");
 
     auto creator = reinterpret_cast<ComponentCreator>(ptr);
     this->entries[name] = creator;
+    this->files[name] = search.file.string();
 
     return creator;
 }

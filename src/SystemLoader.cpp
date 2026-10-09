@@ -3,7 +3,6 @@
 #include "internal/PluginSearch.hpp"
 #include "NameParser.hpp"
 #include <shared_mutex>
-#include <stdexcept>
 
 SystemLoader::SystemLoader() = default;
 
@@ -17,7 +16,19 @@ std::unique_ptr<ecs::System> SystemLoader::Create(const std::string &name)
 std::unique_ptr<ecs::System> SystemLoader::Create(const std::string &name, void *data)
 {
     auto creator = this->Get(name);
-    return std::unique_ptr<ecs::System>(creator(data));
+    ecs::System *object = creator(data);
+    if (object == nullptr)
+    {
+        std::string file;
+        {
+            std::shared_lock lock(this->mutex);
+            auto it = this->files.find(name);
+            if (it != this->files.end())
+                file = it->second;
+        }
+        seed::internal::NoObjectThrow(file, name, "create_system", "system plugin");
+    }
+    return std::unique_ptr<ecs::System>(object);
 }
 
 SystemLoader::SystemCreator SystemLoader::Get(const std::string &name)
@@ -49,10 +60,11 @@ SystemLoader::SystemCreator SystemLoader::Get(const std::string &name)
     std::string error;
     void *ptr = seed::internal::SymbolFind(handle, "create_system", error);
     if (ptr == nullptr)
-        throw std::runtime_error(error);
+        seed::internal::EntryPointMissingThrow(search.file, name, "create_system", error, "system plugin");
 
     auto creator = reinterpret_cast<SystemCreator>(ptr);
     this->entries[name] = creator;
+    this->files[name] = search.file.string();
 
     return creator;
 }

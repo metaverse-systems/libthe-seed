@@ -60,5 +60,6 @@ class ComponentLoader
     std::vector<std::string> paths;
     bool development_paths = false;
     std::map<std::string, ComponentCreator> entries;
+    std::map<std::string, std::string> files;
     mutable std::shared_mutex mutex;
 };
