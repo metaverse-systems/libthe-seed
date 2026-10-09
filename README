@@ -100,6 +100,23 @@ What was checked:
 
 Nobody has checked a signature produced by this library with the platform's own verifier (`codesign --verify`) or by running a signed program on a Mac. What was checked is described above. The CMS part of the signature is the minimal one the-seed has always produced and is not known to be accepted by Apple's tools. Programs signed by earlier versions of the-seed are malformed after re-signing and may need to be rebuilt from their unsigned originals.
 
+## Signing Windows installers
+
+`MsiSigner` reads and signs Windows Installer packages (`.msi`, OLE compound documents).
+
+* `ComputeAuthenticodeDigest` returns the SHA-256 fingerprint by the rule osslsigncode uses. It is the same before signing, after signing and after the signature is removed. It throws on a package that cannot be fully read, on a package that holds two entries with one name in a storage, and on storages nested deeper than 32 levels.
+* `EmbedSignature(path, blob, require_matching_digest = false)` rebuilds the whole package in one canonical layout on every call and replaces the file in one step. The blob is stored in the mini stream when it is smaller than the header's cut-off (4,096 bytes) and in ordinary sectors otherwise, and its directory entry is placed where the format's ordering puts it, so a reader that searches by name finds it. `\005MsiDigitalSignatureEx` is dropped and never created. Every other storage and stream keeps its name, bytes, class identifier, state bits and times. The same package and blob always give the same bytes, and signing again does not grow the file. An empty blob is refused. With `require_matching_digest` the blob must hold a SHA-256 fingerprint equal to the fingerprint of the package that is written, otherwise the call is refused and the file is unchanged.
+* `StripSignature(path)` now returns `bool`: `true` when `\005DigitalSignature` or `\005MsiDigitalSignatureEx` was removed, `false` when neither existed (the file is then untouched, byte for byte). It never reads the old signature, so a damaged one can be removed.
+* `CheckSignature(path)` returns one of four states: `None` (no signature stream, or an empty one), `Matches` (readable, and its stored fingerprint equals the package's), `Mismatch` (readable, fingerprint differs) and `Unreadable` (present but damaged, not a signature structure, or not SHA-256), with the stored and computed fingerprints and a short reason. A bad signature is a state, not an exception. `Matches` compares fingerprints only; it does not say the signature is valid.
+* A malformed package, an unsupported shape (sector size other than 512 or 4096, duplicate names in a storage, more sectors than the format allows) or a size limit is refused with the file unchanged.
+* Released versions up to 0.6.0 wrote installers that only look signed: the signature was placed in a way that osslsigncode and Wine could not read, and the fingerprint differed from the one osslsigncode calculates. Packages signed by those versions are repaired when signed again, because every operation rebuilds the package; re-sign from the unsigned original when you have it.
+
+What was checked:
+
+The fingerprint and the package structure written by libthe-seed were compared with osslsigncode 2.14, with an independent reader written for the tests, and (for stream lookup by name) with Wine 10's structured-storage implementation. They were not checked with Microsoft's signtool, WinVerifyTrust, the Windows Installer service or Microsoft's own storage code, because no Windows machine is part of the test setup. Certificate trust is not checked. Installers signed by earlier versions of the-seed may be damaged; re-sign them from the unsigned original when you have it.
+
+The signature container that the-seed builds has no signed attributes and its cryptography is not checked by this library, so standard verifiers may reject it.
+
 ## Replacing files
 
 `PeSigner`, `MachOSigner` and `MsiSigner` write their result by replacing the file at the given path.

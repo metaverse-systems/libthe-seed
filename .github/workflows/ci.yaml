@@ -43,9 +43,15 @@ jobs:
           persist-credentials: false
 
       - name: Install dependencies
+        # osslsigncode and Wine are read live by the installer tests
+        # (test_MsiLiveTools, test_MsiLarge): a missing tool fails the test
+        # rather than skipping it, see tests/ToolSupport.hpp.
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential autoconf automake libtool pkg-config uuid-dev
+          sudo apt-get install -y build-essential autoconf automake libtool pkg-config uuid-dev \
+            osslsigncode wine wine64
+          osslsigncode --version
+          wine --version
 
       - name: Restore libecs-cpp
         id: ecs-cache
@@ -94,6 +100,9 @@ jobs:
       - name: Test
         env:
           REPEAT: ${{ inputs.repeat || 1 }}
+          # Headless Wine: do not try to install Mono or Gecko when the test
+          # prefix is created.
+          WINEDLLOVERRIDES: "mscoree,mshtml="
         run: |
           case "$REPEAT" in
             ''|*[!0-9]*|0)

@@ -39,9 +39,9 @@ std::string CopyFixture(const seedtest::ScratchDir &scratch, const std::string &
     return destination;
 }
 
-Bytes FakePkcs7()
+Bytes FakePkcs7(std::size_t size = 128)
 {
-    Bytes blob(128);
+    Bytes blob(size);
     for(std::size_t i = 0; i < blob.size(); ++i)
     {
         blob[i] = static_cast<std::uint8_t>(i & 0xFF);

@@ -14,6 +14,24 @@
  * Authenticode signatures are stored in the \x05DigitalSignature
  * stream inside the compound document, using the same CMS/PKCS#7
  * format as PE Authenticode but with SpcSipInfo content type.
+ *
+ * What is and is not verified. The fingerprint and the package structure
+ * written by libthe-seed were compared with osslsigncode 2.14, with an
+ * independent reader written for the tests, and (for stream lookup by name)
+ * with Wine 10's structured-storage implementation. They were not checked with
+ * Microsoft's signtool, WinVerifyTrust, the Windows Installer service or
+ * Microsoft's own storage code, because no Windows machine is part of the test
+ * setup. Certificate trust is not checked. Installers signed by earlier
+ * versions of the-seed may be damaged; re-sign them from the unsigned original
+ * when you have it. The library makes no claim about the CMS blob it is given:
+ * its cryptography is never checked, and a blob without signed attributes may
+ * be rejected by standard verifiers.
+ *
+ * Every write (EmbedSignature, StripSignature) rebuilds the whole package in
+ * one canonical layout, so signing and stripping repeatedly never grows the
+ * file and the output depends only on the content and the signature. Sectors
+ * that nothing refers to, free directory entries and the old signature streams
+ * are not carried over.
  */
 class MsiSigner
 {
@@ -22,6 +40,24 @@ public:
     struct DigestResult
     {
         std::vector<std::uint8_t> digest;   // SHA-256 hash (32 bytes)
+    };
+
+    /** What CheckSignature found. */
+    enum class SignatureState
+    {
+        None,       // no \x05DigitalSignature stream, or one of size zero
+        Matches,    // readable; its SHA-256 fingerprint equals the package's
+        Mismatch,   // readable; its fingerprint differs from the package's
+        Unreadable  // present, but damaged, not a signature structure, or not SHA-256
+    };
+
+    /** Result of CheckSignature. */
+    struct SignatureCheck
+    {
+        SignatureState state = SignatureState::None;
+        std::vector<std::uint8_t> stored_digest;   // from the signature; empty when it cannot be read
+        std::vector<std::uint8_t> computed_digest; // fingerprint of the package
+        std::string detail;                        // short reason for Mismatch and Unreadable
     };
 
     /**
@@ -33,19 +69,32 @@ public:
     static bool IsMsi(const std::string &file_path);
 
     /**
-     * Compute the Authenticode digest (SHA-256) for an MSI file.
-     * The digest covers all stream data in the compound document
-     * EXCEPT the \x05DigitalSignature and \x05MsiDigitalSignatureEx
-     * streams, enumerated recursively and sorted alphabetically.
-     * @throws std::runtime_error if file is not a valid CFBF or is malformed
+     * Compute the Authenticode fingerprint (SHA-256) of an MSI file, by the
+     * rule osslsigncode uses. For each storage, starting at the root: its
+     * children are ordered by the raw bytes of their UTF-16LE names (the
+     * shorter name first when one begins with the other, no case folding);
+     * for each child in that order a stream contributes its bytes and a
+     * storage contributes, recursively, the same; after the children the
+     * storage's 16-byte class identifier follows. Names are not hashed. In
+     * the root, the \x05DigitalSignature and \x05MsiDigitalSignatureEx
+     * streams are left out, so the value is the same before signing, after
+     * signing and after the signature is removed.
+     * @throws std::runtime_error if file is not a valid CFBF, is malformed, or
+     *         holds two entries with the same name in one storage
      */
     [[nodiscard]] static DigestResult ComputeAuthenticodeDigest(const std::string &file_path);
 
     /**
      * Embed a PKCS#7/CMS SignedData blob as an Authenticode signature.
-     * Writes the blob to the \x05DigitalSignature stream inside the
-     * compound document. Creates the stream if it does not exist;
-     * replaces it if it does.
+     * Rebuilds the package with the blob as its \x05DigitalSignature stream:
+     * in the mini stream when the blob is smaller than the header's cut-off
+     * (4,096 bytes) and in ordinary sectors otherwise, and with the entry
+     * placed where the format's ordering puts it, so a reader that searches
+     * the directory finds it. An existing signature is replaced without being
+     * read (even a damaged one, or one written by an earlier version), and
+     * \x05MsiDigitalSignatureEx is dropped and never created. Everything else
+     * (names, bytes, class identifiers, state bits, times) is kept. The same
+     * package and blob always give the same bytes.
      * The file is replaced as one step: after a failure or a crash of the
      * process it holds the complete old or the complete new content, and no
      * temporary file remains when the call returns. Permissions are preserved
@@ -59,20 +108,32 @@ public:
      * can be deleted. A link is followed: the file it points to is replaced and
      * the link is kept. Read-only files are refused.
      * @param file_path Path to MSI file (replaced in place)
-     * @param pkcs7_der DER-encoded PKCS#7 SignedData blob
-     * @throws std::runtime_error if file is not a valid CFBF, is malformed or read-only;
-     *         a rejected call leaves the file unchanged
+     * @param pkcs7_der DER-encoded PKCS#7 SignedData blob; must not be empty
+     * @param require_matching_digest When true, the blob must hold a SHA-256
+     *        fingerprint equal to the fingerprint of the package that is
+     *        written; otherwise the call is refused (the message names the
+     *        file and says "signature does not match the package contents").
+     *        When false any non-empty blob is accepted. Only the fingerprint
+     *        stored in the blob is compared; its cryptography is not checked.
+     * @throws std::runtime_error if the blob is empty, the file is not a valid
+     *         CFBF, is malformed, holds two entries with one name in a
+     *         storage, needs more sectors than the format allows, or is
+     *         read-only; a rejected call leaves the file unchanged
      */
     static void EmbedSignature(
         const std::string &file_path,
-        const std::vector<std::uint8_t> &pkcs7_der
+        const std::vector<std::uint8_t> &pkcs7_der,
+        bool require_matching_digest = false
     );
 
     /**
      * Extract the embedded Authenticode signature from an MSI file.
+     * The stream is read by its recorded size and the header's cut-off: from
+     * the mini stream below the cut-off, from ordinary sectors at or above it.
      * @returns DER-encoded PKCS#7 blob, or nullopt if \x05DigitalSignature
-     *          stream does not exist
-     * @throws std::runtime_error if file is not a valid CFBF or is malformed
+     *          stream does not exist or is empty
+     * @throws std::runtime_error if file is not a valid CFBF or is malformed,
+     *         or the signature's chain does not fit its size
      */
     [[nodiscard]] static std::optional<std::vector<std::uint8_t>> ExtractSignature(
         const std::string &file_path
@@ -80,16 +141,34 @@ public:
 
     /**
      * Check if an MSI file has an embedded Authenticode signature.
-     * @returns true if \x05DigitalSignature stream exists and is non-empty
-     * @throws std::runtime_error if file is not a valid CFBF or is malformed
+     * Neither the signature's content nor its cryptography is read or checked:
+     * use CheckSignature to see whether it belongs to the package.
+     * @returns true if \x05DigitalSignature stream exists, is non-empty and its
+     *          chain fits its size
+     * @throws std::runtime_error if file is not a valid CFBF or is malformed,
+     *         or the signature's chain does not fit its size
      */
     static bool HasEmbeddedSignature(const std::string &file_path);
 
     /**
      * Strip any existing embedded signature from an MSI file.
      * Removes the \x05DigitalSignature and \x05MsiDigitalSignatureEx
-     * streams from the compound document.
+     * streams by rebuilding the package without them. Neither stream is read,
+     * so a damaged signature can be removed.
+     * @returns true when something was removed; false when neither stream
+     *          existed, in which case the file is left byte for byte as it was
      * @throws std::runtime_error if file is not a valid CFBF or is malformed
      */
-    static void StripSignature(const std::string &file_path);
+    static bool StripSignature(const std::string &file_path);
+
+    /**
+     * Compare the signature of a package with the package. Reads the file only.
+     * Only the fingerprint stored in the signature is compared with the
+     * fingerprint computed for the package: the CMS cryptography, the
+     * certificate and its trust are not checked, so Matches does not say the
+     * signature is valid.
+     * A bad signature is a state, not an exception.
+     * @throws std::runtime_error only when the package itself cannot be read
+     */
+    [[nodiscard]] static SignatureCheck CheckSignature(const std::string &file_path);
 };

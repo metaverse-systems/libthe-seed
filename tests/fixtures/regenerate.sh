@@ -5,6 +5,29 @@
 # Usage: regenerate.sh                  rebuild the samples and SHA256SUMS
 #        regenerate.sh --macho          rebuild only the Mach-O samples and
 #                                       rewrite SHA256SUMS from the files present
+#        regenerate.sh --msi            rebuild the installer samples derived from
+#                                       tiny.msi (tiny-v4.msi, nested.msi, the
+#                                       samples signed by osslsigncode,
+#                                       two-neighbours.msi), msi-open.exe and
+#                                       msi-reference.txt, then rewrite SHA256SUMS.
+#                                       tiny.msi and the legacy sample are kept
+#        regenerate.sh --signed-out FOLDER
+#                                       record the packages libthe-seed writes:
+#                                       FOLDER holds <sample>--<blob>.msi files
+#                                       (test_MsiLiveTools writes them when
+#                                       SEED_MSI_WRITE_SIGNED names the folder;
+#                                       <blob> is the signed sample whose
+#                                       signature was embedded). Each file is
+#                                       read by osslsigncode first (the
+#                                       signature it extracts equals the
+#                                       blob's, "Current" and "Calculated"
+#                                       DigitalSignature equal the recorded
+#                                       fingerprint, no structure error); only
+#                                       then its SHA-256 is written to
+#                                       msi-reference.txt as a `signed-out`
+#                                       line (earlier signed-out lines are
+#                                       replaced) and SHA256SUMS is rewritten.
+#                                       The samples are not rebuilt
 #        regenerate.sh --verify         check the samples with independent tools,
 #                                       and the recorded program fingerprints
 #        regenerate.sh --reference FILE [SIGNED_FOLDER]
@@ -21,14 +44,17 @@
 #                                       SEED_MACHO_SIGNED_DIR names it
 #
 # Tools: gcc, x86_64-w64-mingw32-gcc, wixl, clang, ld64.lld, llvm-lipo for the
-# rebuild; osslsigncode, openssl, llvm-objdump, llvm-otool, file for --verify;
+# rebuild; osslsigncode, openssl, python3, x86_64-w64-mingw32-gcc for --msi;
+# osslsigncode, openssl, llvm-objdump, llvm-otool, file, gsf for --verify;
 # osslsigncode and openssl for --reference (llvm-lipo, llvm-otool, llvm-objdump,
 # python3 and sha256sum for the Mach-O reference); python3 for --verify of the
 # Mach-O signatures (check_pages.py).
 # Versioned names such as ld64.lld-21 are found when the plain name is absent.
 # The script refuses to run when a needed tool is missing and names it.
 #
-# plain.txt is hand-written and is not rebuilt. pe-reference-digests.txt is
+# plain.txt is hand-written and is not rebuilt. neither is
+# legacy-the-seed-0.6.0.msi (made once with libthe-seed at commit 6a70071, see
+# PROVENANCE.md), nor tiny.msi by --msi. pe-reference-digests.txt is
 # recorded evidence rather than a sample: it is rewritten only with
 # --reference, and --verify recomputes it.
 
@@ -38,6 +64,12 @@ here=$(cd "$(dirname "$0")" && pwd)
 src=$here/src
 macho_samples="tiny-macho-x86_64 tiny-macho-arm64 tiny-macho-universal tiny-macho-arm64-adhoc tiny-macho-x86_64-adhoc tiny-macho-universal-adhoc tiny-macho-x86_64-nospace tiny-macho-x86_64-exactfit tiny-macho-universal64 tiny-macho-dylib-arm64 tiny-macho-x86_64-data-after-sig"
 samples="tiny.exe test.dll tiny.msi $macho_samples plain.txt"
+# Installer samples made from tiny.msi by --msi (make_cfb.py is the SYNTHETIC
+# builder; osslsigncode signs with a throw-away certificate whose key is
+# discarded) and the program that looks the signature stream up by name.
+msi_samples="tiny-v4.msi tiny-osslsig-small.msi tiny-osslsig-large.msi tiny-osslsig-dse.msi nested.msi nested-osslsig.msi two-neighbours.msi msi-open.exe"
+legacy_sample=legacy-the-seed-0.6.0.msi
+msi_reference_samples="tiny.msi tiny-v4.msi tiny-osslsig-small.msi tiny-osslsig-large.msi tiny-osslsig-dse.msi nested.msi nested-osslsig.msi two-neighbours.msi $legacy_sample"
 # The dependency chain libbaz <- libbar <- libfoo <- appA, appB, built for ELF
 # and for PE. Listed in SHA256SUMS and PROVENANCE.md like the other samples.
 dep_samples="dep/libbaz.so dep/libbar.so dep/libfoo.so dep/appA dep/appB dep/libbaz.dll dep/libbar.dll dep/libfoo.dll dep/appA.exe dep/appB.exe"
@@ -243,8 +275,146 @@ derive_macho_reference() { # output-file [signed-folder]
     } >"$mr_out"
 }
 
+
+# One throw-away certificate per run, for the samples signed by osslsigncode.
+msi_cert() {
+    [ -f "$scratch/msi-k.pem" ] && return 0
+    openssl req -x509 -newkey rsa:2048 -nodes -keyout "$scratch/msi-k.pem" \
+        -out "$scratch/msi-c.pem" -subj /CN=sample-check -days 2 >/dev/null 2>&1
+}
+
+# osslsigncode signs: msi_sign IN OUT [extra osslsigncode options...]
+msi_sign() {
+    ms_in=$1
+    ms_out=$2
+    shift 2
+    msi_cert
+    rm -f "$ms_out"
+    osslsigncode sign -h sha256 -certs "$scratch/msi-c.pem" -key "$scratch/msi-k.pem" "$@" \
+        -in "$ms_in" -out "$ms_out" >"$scratch/msi-sign.log" 2>&1 ||
+        { echo "regenerate.sh: osslsigncode could not sign $ms_in" >&2; cat "$scratch/msi-sign.log" >&2; exit 1; }
+}
+
+# The value osslsigncode names "Calculated DigitalSignature" for a package:
+# the Authenticode fingerprint of its content. For a package that carries a
+# signature, the signature (and the extended stream) is removed first, then
+# the bare package is signed once more by osslsigncode and verified.
+msi_fingerprint() { # file -> lower-case hex
+    mf_bare=$scratch/msi-bare.msi
+    mf_signed=$scratch/msi-bare-signed.msi
+    rm -f "$mf_bare" "$mf_signed"
+    if osslsigncode remove-signature -in "$1" -out "$mf_bare" >/dev/null 2>&1; then
+        :
+    else
+        cp "$1" "$mf_bare"
+    fi
+    msi_sign "$mf_bare" "$mf_signed"
+    osslsigncode verify -in "$mf_signed" >"$scratch/msi-verify.log" 2>&1 || true
+    sed -n 's/^Calculated DigitalSignature *: *//p' "$scratch/msi-verify.log" | head -n 1 | tr -d ' ' | tr 'A-F' 'a-f'
+}
+
+# Values stored in the signature of a package, as osslsigncode reads them.
+msi_stored() { # file kind(DigitalSignature|MsiDigitalSignatureEx)
+    osslsigncode verify -in "$1" 2>/dev/null | sed -n "s/^Current $2 *: *//p" | head -n 1 | tr -d ' ' | tr 'A-F' 'a-f'
+}
+
+# What libgsf (gsf list) sees: the number of entries below the root, and the
+# size of the DigitalSignature stream or "none".
+msi_gsf_facts() { # file -> "<entries> <signature size|none>"
+    gsf list "$1" >"$scratch/msi-gsf.txt" 2>/dev/null || true
+    mg_n=$(awk '($1 == "f" || $1 == "d") { n++ } END { print n - 1 }' "$scratch/msi-gsf.txt")
+    mg_s=$(awk '$1 == "f" && $NF ~ /DigitalSignature$/ { print $2 }' "$scratch/msi-gsf.txt")
+    echo "$mg_n ${mg_s:-none}"
+}
+
+msi_file_kind() { # file -> "MSI Installer" or "other"
+    case $(file -b "$1") in
+        *"MSI Installer"*) echo "MSI Installer" ;;
+        *) echo other ;;
+    esac
+}
+
+# Writes msi-reference.txt: for every installer sample the fingerprint
+# osslsigncode calculates for it without its signature, what libgsf and file
+# report, and the digests stored by the signatures osslsigncode wrote; then the
+# deterministic blobs used. The signed-out lines (what the library writes,
+# recorded after osslsigncode accepts that exact file) are added afterwards by
+# regenerate.sh --signed-out, which does not rebuild any sample.
+derive_msi_reference() { # output-file
+    need osslsigncode openssl python3 gsf file sha256sum
+    mr_out=$1
+    ver=$(osslsigncode --version 2>&1 | head -n 1 | sed 's/, using:$//')
+    {
+        echo "# Known answers for the installer samples."
+        echo "# Tools: $ver, gsf $(gsf --version 2>&1 | head -n 1 | sed 's/^gsf *//'), $(file --version | head -n 1), Python $(python3 -c 'import sys; print("%d.%d.%d" % sys.version_info[:3])')"
+        echo "# Date: $(date -u +%Y-%m-%d)"
+        echo "# fingerprint <sample> <sha256>: osslsigncode \"Calculated DigitalSignature\" for the sample with its"
+        echo "#   signature (and extended stream) removed: osslsigncode remove-signature, sign the bare package with a"
+        echo "#   throw-away certificate, osslsigncode verify. It is the digest of the contents; it does not depend on"
+        echo "#   the sector size or on where the signature is."
+        echo "# entries <sample> <count> <signature size|none>: gsf list entries below the root, and the size gsf"
+        echo "#   reports for the DigitalSignature stream."
+        echo "# file <sample> <kind>: whether file(1) reports an installer."
+        echo "# stored-digest / stored-ex <sample> <sha256>: osslsigncode \"Current DigitalSignature\" and"
+        echo "#   \"Current MsiDigitalSignatureEx\", the values held in the signature of a signed sample (the"
+        echo "#   extended value covers the extended stream, so the digest of a package that has one differs"
+        echo "#   from its fingerprint)."
+        echo "# blob <name> <size> <sha256>: bytes written by make_cfb.py --blob <name> <size>."
+        echo "# Input SHA-256 of every sample follows."
+        for f in $msi_reference_samples; do
+            echo "# sample $f $(sha256sum "$here/$f" | cut -d' ' -f1)"
+        done
+        tiny_fp=
+        for f in $msi_reference_samples; do
+            if [ "$f" = "$legacy_sample" ]; then
+                # osslsigncode cannot read the file; the unsigned original is tiny.msi.
+                echo "# $f: osslsigncode cannot read this file; the value below is that of its unsigned original tiny.msi"
+                echo "fingerprint $f $tiny_fp"
+            else
+                fp=$(msi_fingerprint "$here/$f")
+                [ -n "$fp" ] || { echo "regenerate.sh: no fingerprint reported for $f" >&2; exit 1; }
+                [ "$f" != tiny.msi ] || tiny_fp=$fp
+                echo "fingerprint $f $fp"
+            fi
+            echo "entries $f $(msi_gsf_facts "$here/$f")"
+            echo "file $f $(msi_file_kind "$here/$f")"
+            case $f in
+                *osslsig*|two-neighbours.msi)
+                    echo "stored-digest $f $(msi_stored "$here/$f" DigitalSignature)"
+                    ex=$(msi_stored "$here/$f" MsiDigitalSignatureEx)
+                    [ -z "$ex" ] || echo "stored-ex $f $ex"
+                    ;;
+            esac
+        done
+        python3 "$here/make_cfb.py" --blob osslsig-large-unauth 6000 "$scratch/blob-large.bin"
+        python3 "$here/make_cfb.py" --blob legacy-fixed 1426 "$scratch/blob-legacy.bin"
+        echo "blob osslsig-large-unauth 6000 $(sha256sum "$scratch/blob-large.bin" | cut -d' ' -f1)"
+        echo "blob legacy-fixed 1426 $(sha256sum "$scratch/blob-legacy.bin" | cut -d' ' -f1)"
+    } >"$mr_out"
+}
+
+# Builds the installer samples derived from tiny.msi.
+build_msi() {
+    need osslsigncode openssl python3 x86_64-w64-mingw32-gcc gsf file sha256sum
+    bm_blob=$scratch/blob-large.bin
+    python3 "$here/make_cfb.py" --blob osslsig-large-unauth 6000 "$bm_blob"
+    python3 "$here/make_cfb.py" --convert "$here/tiny.msi" "$here/tiny-v4.msi"
+    python3 "$here/make_cfb.py" --nested "$here/tiny.msi" "$here/nested.msi"
+    python3 "$here/make_cfb.py" --extra-neighbours "$here/tiny.msi" "$scratch/extra.msi"
+    msi_sign "$here/tiny.msi" "$here/tiny-osslsig-small.msi"
+    msi_sign "$here/tiny.msi" "$here/tiny-osslsig-large.msi" -addUnauthenticatedBlob -blobFile "$bm_blob"
+    msi_sign "$here/tiny.msi" "$here/tiny-osslsig-dse.msi" -add-msi-dse
+    msi_sign "$here/nested.msi" "$here/nested-osslsig.msi"
+    msi_sign "$scratch/extra.msi" "$scratch/extra-signed.msi"
+    python3 "$here/make_cfb.py" --two-neighbours "$here/tiny.msi" "$scratch/extra-signed.msi" "$here/two-neighbours.msi"
+    # The lookup program: no C runtime, so it stays small.
+    x86_64-w64-mingw32-gcc -Os -s -nostdlib -fno-builtin -fno-asynchronous-unwind-tables \
+        -fno-unwind-tables -Wl,--gc-sections,--file-alignment,512,--no-insert-timestamp \
+        -Wl,-e,entry -o "$here/msi-open.exe" "$src/msi_open.c" -lole32 -luuid -lshell32 -lkernel32
+}
+
 if [ "${1:-}" = "--verify" ]; then
-    need osslsigncode openssl llvm-objdump llvm-otool llvm-lipo file python3
+    need osslsigncode openssl llvm-objdump llvm-otool llvm-lipo file python3 gsf
     status=0
     report() { # sample result detail
         printf '%-22s %-4s %s\n' "$1" "$2" "$3"
@@ -423,6 +593,63 @@ if [ "${1:-}" = "--verify" ]; then
     else
         echo "SKIPPED: pe-reference-digests.txt not recomputed, the file is absent"
     fi
+    # Installer samples: each is an installer to file(1), is listed by libgsf,
+    # and, when osslsigncode signed it, its stored and calculated digests agree.
+    # The synthetic ones are parsed by the independent reader of make_cfb.py
+    # (the listing, allocation tables and tree are checked); the legacy sample
+    # is damaged on purpose, and only file and gsf are asked about it.
+    for s in $msi_reference_samples; do
+        facts=$(msi_gsf_facts "$here/$s")
+        if [ "$(msi_file_kind "$here/$s")" = "MSI Installer" ] && grep -q 'SummaryInformation' "$scratch/msi-gsf.txt"; then
+            report "$s" ok "file reports an installer; gsf list lists ${facts% *} entries (signature: ${facts#* })" | cut -c 1-110
+        else
+            report "$s" FAIL "file or gsf list does not accept it"
+        fi
+        case $s in
+            *osslsig*|two-neighbours.msi)
+                osslsigncode verify -in "$here/$s" >"$scratch/verify.log" 2>&1 || true
+                cur=$(sed -n 's/^Current DigitalSignature *: *//p' "$scratch/verify.log" | head -n 1)
+                calc=$(sed -n 's/^Calculated DigitalSignature *: *//p' "$scratch/verify.log" | head -n 1)
+                if [ -n "$cur" ] && [ "$cur" = "$calc" ]; then
+                    report "$s" ok "osslsigncode: stored and calculated digests match"
+                else
+                    report "$s" FAIL "osslsigncode: digests differ or are missing"
+                fi
+                ;;
+        esac
+    done
+    for s in tiny-v4.msi nested.msi two-neighbours.msi; do
+        if out=$(python3 "$here/make_cfb.py" --check "$here/$s" 2>&1); then
+            report "$s" ok "make_cfb.py reader: $(printf '%s' "$out" | sed "s|$here/||; s/: ok\$//" | cut -c 1-90)"
+        else
+            report "$s" FAIL "make_cfb.py reader rejects it: $out"
+        fi
+    done
+    if python3 "$here/make_cfb.py" --check "$here/two-neighbours.msi" 2>&1 | grep -q 'signature entry with a left and a right neighbour, each with subtrees'; then
+        report two-neighbours.msi ok "the signature entry has neighbours on both sides, each with subtrees"
+    else
+        report two-neighbours.msi FAIL "the signature entry does not have two neighbours with subtrees"
+    fi
+    case $(file -b "$here/msi-open.exe") in
+        PE32+*console*) report msi-open.exe ok "file reports a PE32+ console program" ;;
+        *) report msi-open.exe FAIL "file does not report a PE32+ console program" ;;
+    esac
+
+    if [ -f "$here/msi-reference.txt" ]; then
+        derive_msi_reference "$scratch/msi-reference.txt"
+        # Comment lines hold the date, the tools and the hashes of the signed
+        # samples, which change with every signing; every other line must match.
+        # The signed-out lines come from the library, not from the tools: they
+        # are recorded by --signed-out and compared by test_MsiDigestReference.
+        if [ "$(grep -v -e '^#' -e '^signed-out ' "$here/msi-reference.txt")" = "$(grep -v -e '^#' -e '^signed-out ' "$scratch/msi-reference.txt")" ]; then
+            report msi-reference.txt ok "osslsigncode, file and gsf reproduce every recorded answer"
+        else
+            diff "$here/msi-reference.txt" "$scratch/msi-reference.txt" | grep -v -e '^[<>] #' -e '^[<>] signed-out ' || true
+            report msi-reference.txt FAIL "recorded answers differ from the tools"
+        fi
+    else
+        echo "SKIPPED: msi-reference.txt not recomputed, the file is absent"
+    fi
     exit "$status"
 fi
 
@@ -438,13 +665,71 @@ fi
 if [ "${1:-}" = "--macho" ] && [ $# -eq 1 ]; then
     need clang ld64.lld llvm-lipo
     build_macho
-    (cd "$here" && sha256sum $samples $dep_samples pe-reference-digests.txt macho-reference.txt >SHA256SUMS)
+    (cd "$here" && sha256sum $samples $msi_samples $legacy_sample $dep_samples pe-reference-digests.txt macho-reference.txt msi-reference.txt >SHA256SUMS)
     echo "regenerate.sh: rebuilt the Mach-O samples and rewrote SHA256SUMS."
     exit 0
 fi
 
+if [ "${1:-}" = "--msi" ] && [ $# -eq 1 ]; then
+    build_msi
+    derive_msi_reference "$here/msi-reference.txt"
+    (cd "$here" && sha256sum $samples $msi_samples $legacy_sample $dep_samples pe-reference-digests.txt macho-reference.txt msi-reference.txt >SHA256SUMS)
+    echo "regenerate.sh: rebuilt the installer samples, msi-open.exe and msi-reference.txt, and rewrote SHA256SUMS."
+    exit 0
+fi
+
+if [ "${1:-}" = "--signed-out" ] && [ $# -eq 2 ]; then
+    need osslsigncode sha256sum
+    so_dir=$2
+    [ -d "$so_dir" ] || { echo "regenerate.sh: $so_dir is not a folder" >&2; exit 1; }
+    so_new=$scratch/msi-reference-signed-out.txt
+    grep -v -e '^signed-out ' -e '^# signed-out ' "$here/msi-reference.txt" >"$so_new"
+    {
+        echo "# signed-out <sample> <blob> <sha256>: SHA-256 of the package libthe-seed writes when it signs <sample>"
+        echo "#   with the signature stream of the signed sample <blob>, recorded after osslsigncode read that exact"
+        echo "#   file (the signature it extracts equals the blob's, \"Current DigitalSignature\" equals"
+        echo "#   \"Calculated DigitalSignature\" equals the fingerprint of <sample>, no structure error)."
+    } >>"$so_new"
+    so_count=0
+    for so_file in "$so_dir"/*--*.msi; do
+        [ -f "$so_file" ] || continue
+        so_base=$(basename "$so_file" .msi)
+        so_sample=${so_base%%--*}
+        so_blob=${so_base#*--}
+        [ -f "$here/$so_sample" ] && [ -f "$here/$so_blob" ] || { echo "regenerate.sh: unknown sample or blob in $so_base" >&2; exit 1; }
+        so_fp=$(awk -v s="$so_sample" '$1 == "fingerprint" && $2 == s { print $3 }' "$here/msi-reference.txt")
+        [ -n "$so_fp" ] || { echo "regenerate.sh: no recorded fingerprint for $so_sample" >&2; exit 1; }
+        rm -f "$scratch/so-got.sig" "$scratch/so-want.sig"
+        osslsigncode extract-signature -in "$so_file" -out "$scratch/so-got.sig" >"$scratch/so-extract.log" 2>&1 ||
+            { cat "$scratch/so-extract.log" >&2; echo "regenerate.sh: osslsigncode cannot extract the signature of $so_base" >&2; exit 1; }
+        osslsigncode extract-signature -in "$here/$so_blob" -out "$scratch/so-want.sig" >/dev/null 2>&1 ||
+            { echo "regenerate.sh: osslsigncode cannot extract the signature of $so_blob" >&2; exit 1; }
+        cmp -s "$scratch/so-got.sig" "$scratch/so-want.sig" ||
+            { echo "regenerate.sh: the signature in $so_base differs from that of $so_blob" >&2; exit 1; }
+        osslsigncode verify -in "$so_file" >"$scratch/so-verify.log" 2>&1 || true
+        if grep -q -e "Failed to get a next" -e "Corrupted" -e "data error" -e "Failed to extract" "$scratch/so-verify.log"; then
+            cat "$scratch/so-verify.log" >&2
+            echo "regenerate.sh: osslsigncode reports a structure error for $so_base" >&2
+            exit 1
+        fi
+        so_cur=$(sed -n 's/^Current DigitalSignature *: *//p' "$scratch/so-verify.log" | head -n 1 | tr -d ' ' | tr 'A-F' 'a-f')
+        so_calc=$(sed -n 's/^Calculated DigitalSignature *: *//p' "$scratch/so-verify.log" | head -n 1 | tr -d ' ' | tr 'A-F' 'a-f')
+        if [ "$so_cur" != "$so_calc" ] || [ "$so_calc" != "$so_fp" ]; then
+            echo "regenerate.sh: $so_base: current $so_cur, calculated $so_calc, recorded fingerprint $so_fp" >&2
+            exit 1
+        fi
+        echo "signed-out $so_sample $so_blob $(sha256sum "$so_file" | cut -d' ' -f1)" >>"$so_new"
+        so_count=$((so_count + 1))
+    done
+    [ "$so_count" -gt 0 ] || { echo "regenerate.sh: no <sample>--<blob>.msi files in $so_dir" >&2; exit 1; }
+    cp "$so_new" "$here/msi-reference.txt"
+    (cd "$here" && sha256sum $samples $msi_samples $legacy_sample $dep_samples pe-reference-digests.txt macho-reference.txt msi-reference.txt >SHA256SUMS)
+    echo "regenerate.sh: recorded $so_count signed-out lines in msi-reference.txt and rewrote SHA256SUMS."
+    exit 0
+fi
+
 if [ $# -ne 0 ]; then
-    echo "usage: regenerate.sh [--macho | --verify | --reference FILE [SIGNED_FOLDER]]" >&2
+    echo "usage: regenerate.sh [--macho | --msi | --signed-out FOLDER | --verify | --reference FILE [SIGNED_FOLDER]]" >&2
     exit 2
 fi
 
@@ -498,7 +783,8 @@ cp "$scratch/pe/libbaz.dll" "$scratch/pe/libbar.dll" "$scratch/pe/libfoo.dll" \
     "$scratch/pe/appA.exe" "$scratch/pe/appB.exe" "$here/dep/"
 
 # Hashes of every sample, in the order of the contract.
-(cd "$here" && sha256sum $samples $dep_samples pe-reference-digests.txt macho-reference.txt >SHA256SUMS)
+(cd "$here" && sha256sum $samples $msi_samples $legacy_sample $dep_samples pe-reference-digests.txt macho-reference.txt msi-reference.txt >SHA256SUMS)
 
 echo "regenerate.sh: rebuilt the samples and rewrote SHA256SUMS."
+echo "tiny.msi has a new creation time: run regenerate.sh --msi to rebuild the samples made from it."
 echo "Update PROVENANCE.md (tool versions, commands, sizes) and run regenerate.sh --verify."

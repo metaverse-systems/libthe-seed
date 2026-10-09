@@ -23,7 +23,7 @@ seed_test_programs = test_NameParser test_LibraryLoader test_DependencyLister te
                  test_PeSigner test_MachOParser test_MachOSigner test_MsiSigner test_ResourcePak \
                  test_ComponentLoader test_SystemLoader test_PakLoader \
                  test_LoaderConcurrency test_JSONLoader test_BoundedBytes test_MalformedPe test_PeDigestReference test_PeRoundTrip test_MalformedElf test_MalformedMachO test_MachONoRoom test_MachOLayout test_MachOReference \
-                 test_MalformedMsi test_TruncatedSamples test_FuzzCorpus \
+                 test_MalformedMsi test_MsiDigestReference test_MsiSignatureSizes test_MsiLayouts test_MsiCheckSignature test_MsiPreservation test_MsiLarge test_MsiLiveTools test_TruncatedSamples test_FuzzCorpus \
                  test_FileReplace test_FileReplaceKill test_SignersUseReplace
 
 check_PROGRAMS = $(seed_test_programs)
@@ -113,6 +113,27 @@ test_MachOReference_LDADD = libcatch.la ../src/libthe-seed.la ${LIBECS_LIBS}
 test_MalformedMsi_SOURCES = test_MalformedMsi.cpp
 test_MalformedMsi_LDADD = libcatch.la ../src/libthe-seed.la ${LIBECS_LIBS}
 
+test_MsiDigestReference_SOURCES = test_MsiDigestReference.cpp
+test_MsiDigestReference_LDADD = libcatch.la ../src/libthe-seed.la ${LIBECS_LIBS}
+
+test_MsiSignatureSizes_SOURCES = test_MsiSignatureSizes.cpp
+test_MsiSignatureSizes_LDADD = libcatch.la ../src/libthe-seed.la ${LIBECS_LIBS}
+
+test_MsiLayouts_SOURCES = test_MsiLayouts.cpp
+test_MsiLayouts_LDADD = libcatch.la ../src/libthe-seed.la ${LIBECS_LIBS}
+
+test_MsiCheckSignature_SOURCES = test_MsiCheckSignature.cpp
+test_MsiCheckSignature_LDADD = libcatch.la ../src/libthe-seed.la ${LIBECS_LIBS}
+
+test_MsiPreservation_SOURCES = test_MsiPreservation.cpp
+test_MsiPreservation_LDADD = libcatch.la ../src/libthe-seed.la ${LIBECS_LIBS}
+
+test_MsiLarge_SOURCES = test_MsiLarge.cpp
+test_MsiLarge_LDADD = libcatch.la ../src/libthe-seed.la ${LIBECS_LIBS}
+
+test_MsiLiveTools_SOURCES = test_MsiLiveTools.cpp
+test_MsiLiveTools_LDADD = libcatch.la ../src/libthe-seed.la ${LIBECS_LIBS}
+
 test_TruncatedSamples_SOURCES = test_TruncatedSamples.cpp fuzz/FuzzTargets.cpp
 test_TruncatedSamples_LDADD = libcatch.la ../src/libthe-seed.la ${LIBECS_LIBS}
 
@@ -139,10 +160,12 @@ test_JSONLoader_SOURCES = test_JSONLoader.cpp
 test_JSONLoader_LDADD = libcatch.la ../src/libthe-seed.la ${LIBECS_LIBS}
 test_JSONLoader_LDFLAGS = $(AM_LDFLAGS) -pthread
 
-EXTRA_DIST = TestPaths.hpp MachOReference.hpp MachOSigningSupport.hpp HeapCounter.hpp MalformedInput.hpp ReplaceTestSupport.hpp \
+EXTRA_DIST = TestPaths.hpp CfbReference.hpp MsiTestSupport.hpp ToolSupport.hpp MachOReference.hpp MachOSigningSupport.hpp HeapCounter.hpp MalformedInput.hpp ReplaceTestSupport.hpp \
              reference/reference-dump.cpp reference/compare-reference.sh \
              reference/make-generated-references.sh run-test.sh run-test-selftest.sh check-fixtures.sh \
              fuzz/FuzzTargets.hpp fuzz/FuzzTargets.cpp fuzz/fuzz_entry.cpp \
              fuzz/build-fuzzers.sh fuzz/run-fuzzers.sh \
              fuzz/corpus \
              known-gaps.txt fixtures
+# fixtures is distributed whole: the installer samples (*.msi), msi-reference.txt,
+# msi-open.exe, make_cfb.py and src/ are in it.

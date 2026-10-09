@@ -69,7 +69,10 @@ for target in elf pe macho superblob msi; do
         cp "$top"/tests/fixtures/tiny-macho-* "$corpus/"
         ;;
     msi)
-        cp "$top/tests/fixtures/tiny.msi" "$corpus/"
+        # Every installer sample: unsigned (versions 3 and 4), signed by
+        # another tool (small, large, extended stream), nested storages, the
+        # two-neighbour shape and the one signed by an earlier version.
+        cp "$top"/tests/fixtures/*.msi "$corpus/"
         ;;
     esac
     # Seeds that are built in code (two ELF images, a SuperBlob).

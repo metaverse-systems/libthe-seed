@@ -4,8 +4,11 @@
 // library; it must now be handled cleanly.
 
 #include "MalformedInput.hpp"
+#include "MsiTestSupport.hpp"
 
 #include "fuzz/FuzzTargets.hpp"
+
+#include <libthe-seed/MsiSigner.hpp>
 
 #include <algorithm>
 #include <cstdint>
@@ -107,7 +110,51 @@ TEST_CASE("corpus: superblob", "[FuzzCorpus]")
 
 TEST_CASE("corpus: msi", "[FuzzCorpus]")
 {
-    Replay(seedfuzz::FuzzMsi, seedtest::malformed::LoadSample("tiny.msi"));
+    for(const char *name : {"tiny.msi", "tiny-v4.msi", "tiny-osslsig-small.msi", "tiny-osslsig-large.msi",
+                            "tiny-osslsig-dse.msi", "nested.msi", "nested-osslsig.msi", "two-neighbours.msi",
+                            "legacy-the-seed-0.6.0.msi"})
+    {
+        INFO("sample " << name);
+        Replay(seedfuzz::FuzzMsi, seedtest::malformed::LoadSample(name));
+    }
     Replay(seedfuzz::FuzzMsi, Bytes{});
     ReplayCorpus("msi", seedfuzz::FuzzMsi);
+}
+
+TEST_CASE("corpus: msi packages the library writes", "[FuzzCorpus]")
+{
+    // The writer's own output is an input of every later operation: the
+    // samples and generated shapes (both sector sizes, nested storages,
+    // many entries, names that order differently) signed with a signature
+    // of each placement, and stripped again, replayed without mutation.
+    namespace cfb = seedtest::cfb;
+    seedtest::ScratchDir scratch("fuzz-corpus-msi");
+    const std::string path = scratch.File("written.msi");
+    std::vector<Bytes> inputs;
+    for(const char *name : {"tiny.msi", "tiny-v4.msi", "nested.msi", "tiny-osslsig-small.msi", "tiny-osslsig-large.msi",
+                            "tiny-osslsig-dse.msi", "nested-osslsig.msi", "two-neighbours.msi",
+                            "legacy-the-seed-0.6.0.msi"})
+    {
+        inputs.push_back(seedtest::malformed::LoadSample(name));
+    }
+    for(const auto &shape : cfb::shapes::All())
+    {
+        for(const unsigned version : {3u, 4u})
+        {
+            cfb::BuildOptions options;
+            options.version = version;
+            inputs.push_back(cfb::Build(shape.root, options));
+        }
+    }
+    for(const Bytes &input : inputs)
+    {
+        for(const std::size_t size : {100u, 4096u})
+        {
+            seedtest::malformed::WriteScratch(scratch, "written.msi", input);
+            MsiSigner::EmbedSignature(path, cfb::PatternBytes(size, 3));
+            Replay(seedfuzz::FuzzMsi, seedtest::malformed::ReadAll(path));
+            (void)MsiSigner::StripSignature(path);
+            Replay(seedfuzz::FuzzMsi, seedtest::malformed::ReadAll(path));
+        }
+    }
 }

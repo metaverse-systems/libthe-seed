@@ -21,6 +21,15 @@ Apple, so redistribution is permitted.
 | tiny.exe | x86_64-w64-mingw32-gcc | GCC 16-posix | `x86_64-w64-mingw32-gcc -Os -s -Wl,--gc-sections,--file-alignment,512,--no-insert-timestamp -o tiny.exe src/tiny.c` | src/tiny.c | MIT (project); mingw-w64 runtime public domain/ZPL | 13824 | ok: `file` reports PE32+ console x86-64; osslsigncode signed it and the stored and calculated digests match |
 | test.dll | x86_64-w64-mingw32-gcc | GCC 16-posix | `x86_64-w64-mingw32-gcc -Os -shared -s -Wl,--gc-sections,--file-alignment,512,--no-insert-timestamp -o test.dll src/test_dll.c` | src/test_dll.c | MIT (project); mingw-w64 runtime public domain/ZPL | 11264 | ok: `file` reports PE32+ DLL x86-64; `llvm-objdump -p` lists KERNEL32.dll and msvcrt.dll imports; osslsigncode digests match |
 | tiny.msi | wixl (msitools) | 0.106 | `cd src && wixl -o ../tiny.msi tiny.wxs` | src/tiny.wxs | MIT (project) | 10240 | ok: `file` reports MSI Installer; osslsigncode signed a copy and recomputed the digest |
+| tiny-v4.msi | make_cfb.py (SYNTHETIC) | Python 3.14.8 | `python3 make_cfb.py --convert tiny.msi tiny-v4.msi` | tiny.msi | MIT (project) | 24576 | ok: SYNTHETIC container (the same storages, streams, class identifiers, state bits and times as tiny.msi in 4,096-byte sectors, format version 4); `file` reports MSI Installer; osslsigncode signs a copy and its calculated digest equals the one for tiny.msi (it accepts version 4); the independent reader of `make_cfb.py --check` parses it; `gsf list` lists 19 entries |
+| tiny-osslsig-small.msi | osslsigncode | 2.14 | `osslsigncode sign -h sha256 -certs c.pem -key k.pem -in tiny.msi -out tiny-osslsig-small.msi` (throw-away RSA certificate (`openssl req -x509 -newkey rsa:2048 -nodes -subj /CN=sample-check -days 2`, key discarded)) | tiny.msi | MIT (project); the signature is made with a throw-away certificate | 12288 | ok: `file` reports MSI Installer; osslsigncode accepts the unsigned base, and stored and calculated digests match; `msi-open.exe` under Wine finds `\005DigitalSignature` by name and reads its 1,444 bytes (in the mini stream); `gsf list` lists 20 entries with a 1,444-byte DigitalSignature |
+| tiny-osslsig-large.msi | osslsigncode | 2.14 | `osslsigncode sign -h sha256 -certs c.pem -key k.pem -addUnauthenticatedBlob -blobFile blob.bin -in tiny.msi -out tiny-osslsig-large.msi`; blob.bin is `python3 make_cfb.py --blob osslsig-large-unauth 6000 blob.bin` | tiny.msi | MIT (project); the signature is made with a throw-away certificate | 18432 | ok: `file` reports MSI Installer; stored and calculated digests match; the signature stream is 7,473 bytes, well above the 4,096-byte cut-off, so it is in ordinary sectors; `msi-open.exe` under Wine reads it equal; `gsf list` lists 20 entries with a 7,473-byte DigitalSignature |
+| tiny-osslsig-dse.msi | osslsigncode | 2.14 | `osslsigncode sign -h sha256 -certs c.pem -key k.pem -add-msi-dse -in tiny.msi -out tiny-osslsig-dse.msi` | tiny.msi | MIT (project); the signature is made with a throw-away certificate | 12288 | ok: `file` reports MSI Installer; has a `\005MsiDigitalSignatureEx` stream; osslsigncode: stored and calculated digests and extended digests match (the stored digest differs from the content fingerprint because it covers the extended stream); `msi-open.exe` under Wine reads the signature equal; `gsf list` lists 21 entries |
+| nested.msi | make_cfb.py (SYNTHETIC) | Python 3.14.8 | `python3 make_cfb.py --nested tiny.msi nested.msi` | tiny.msi | MIT (project) | 17920 | ok: SYNTHETIC shape only: tiny.msi plus two storages one level deep with non-zero class identifiers, state bits and times, a case-only pair split over the two storages (`Inner` in one, `INNER` in the other, because two names that are equal by the format's ordering in one storage are refused), `a`/`B` (raw byte order differs from case-folded order), `Data`/`DataExtra` (prefix), a 5,000-byte stream and an empty one; `file` reports MSI Installer; osslsigncode signs a copy and verifies it (see nested-osslsig.msi); the independent reader of `make_cfb.py --check` parses it; `gsf list` lists 31 entries. Storages two deep are not stored: osslsigncode 2.14 writes them wrongly |
+| nested-osslsig.msi | osslsigncode | 2.14 | `osslsigncode sign -h sha256 -certs c.pem -key k.pem -in nested.msi -out nested-osslsig.msi` (throw-away RSA certificate (`openssl req -x509 -newkey rsa:2048 -nodes -subj /CN=sample-check -days 2`, key discarded)) | nested.msi | MIT (project); the signature is made with a throw-away certificate | 20480 | ok: `file` reports MSI Installer; stored and calculated digests match; `msi-open.exe` under Wine reads the signature equal; `gsf list` lists 32 entries with a 1,444-byte DigitalSignature |
+| two-neighbours.msi | make_cfb.py (SYNTHETIC) | Python 3.14.8 | `python3 make_cfb.py --extra-neighbours tiny.msi extra.msi`, `osslsigncode sign -h sha256 -certs c.pem -key k.pem -in extra.msi -out extra-signed.msi`, then `python3 make_cfb.py --two-neighbours tiny.msi extra-signed.msi two-neighbours.msi` | tiny.msi, osslsigncode's signature | MIT (project) | 15872 | ok: SYNTHETIC shape only (no signed sample osslsigncode wrote has the signature entry with both a left and a right neighbour, so this one is built): tiny.msi plus fourteen long-named streams, signed by osslsigncode, with the signature stream put at the top of the root's search tree; the independent reader of `make_cfb.py --check` reports the entry with a left and a right neighbour, each with subtrees; `file` reports MSI Installer; osslsigncode: stored and calculated digests match; `msi-open.exe` under Wine reads the signature equal; `gsf list` lists 34 entries |
+| legacy-the-seed-0.6.0.msi | libthe-seed 0.6.0 (LEGACY) | commit 6a70071 | `git archive 6a70071 src include external/picosha2.h`, extract, `g++ -std=c++20 -O1 -Iinclude -Isrc legacy_sign.cpp src/MsiSigner.cpp src/internal/FileIO.cpp -o legacy_sign`, then `cp tiny.msi legacy.msi && ./legacy_sign legacy.msi blob.bin`; `legacy_sign.cpp` calls `MsiSigner::EmbedSignature(argv[1], blob read from argv[2])`; blob.bin is `python3 make_cfb.py --blob legacy-fixed 1426 blob.bin` | tiny.msi | MIT (project) | 12288 | LEGACY, damaged on purpose: a package signed by the earlier version (1,426-byte signature written to ordinary sectors, entry not linked into the directory tree). `file` reports MSI Installer; `gsf list` warns that the small-block file has insufficient blocks and lists 19 entries (no DigitalSignature); osslsigncode reports "Failed to get a next mini sector address"; `msi-open.exe` under Wine opens the package and gets STG_E_FILENOTFOUND (0x80030002) for the stream. Built once, not rebuilt by `regenerate.sh` |
+| msi-open.exe | x86_64-w64-mingw32-gcc | GCC 16-posix | `x86_64-w64-mingw32-gcc -Os -s -nostdlib -fno-builtin -fno-asynchronous-unwind-tables -fno-unwind-tables -Wl,--gc-sections,--file-alignment,512,--no-insert-timestamp -Wl,-e,entry -o msi-open.exe src/msi_open.c -lole32 -luuid -lshell32 -lkernel32` | src/msi_open.c | MIT (project); no mingw-w64 runtime code (linked without the C runtime) | 4096 | ok: `file` reports PE32+ console x86-64; under Wine 10 it opens each signed sample above with `StgOpenStorageEx`, finds `\005DigitalSignature` by name with `OpenStream` and compares it with the stream bytes (exit status 0); on the legacy sample it exits with status 2 (stream not found) |
 | tiny-macho-x86_64 | clang + ld64.lld | 21.1.8 | `clang -target x86_64-apple-macos11 -Os -fno-unwind-tables -fno-asynchronous-unwind-tables -c -o macho-x86_64.o src/macho.c`, then `ld64.lld -arch x86_64 -platform_version macos 11.0 11.0 -e _main -no_adhoc_codesign -o tiny-macho-x86_64 macho-x86_64.o -Lsrc -lSystem` | src/macho.c, src/libSystem.tbd | MIT (project) | 4248 | ok: `file` reports Mach-O 64-bit x86_64 executable; `llvm-objdump --macho -f` parses it and `llvm-otool -l` shows LC_MAIN |
 | tiny-macho-arm64 | clang + ld64.lld | 21.1.8 | same as x86_64 with `arm64` in place of `x86_64`, output `tiny-macho-arm64` | src/macho.c, src/libSystem.tbd | MIT (project) | 16536 | ok: `file` reports Mach-O 64-bit arm64 executable; `llvm-objdump --macho -f` parses it and `llvm-otool -l` shows LC_MAIN |
 | tiny-macho-universal | llvm-lipo | 21.1.8 | `llvm-lipo -create tiny-macho-x86_64 tiny-macho-arm64 -output tiny-macho-universal` | the two thin files above | MIT (project) | 32920 | ok: `file` reports a universal binary with 2 architectures; `llvm-otool -f` lists 2 slices |
@@ -68,7 +77,12 @@ programs are never run. Flags used above:
 No sample has a delay-load import table, because the mingw-w64 linker cannot
 write one; tests build those bytes in code (see `src/dep/DELAYLOAD.txt`).
 
-Total size of the samples: 228848 bytes (budget 262144; raised from 131072 to make
+Total size of the samples: 367088 bytes (budget 393216; raised from 262144 for the
+nine files added for the installer signing work, 138240 bytes: tiny-v4.msi 24576,
+tiny-osslsig-small.msi 12288, tiny-osslsig-large.msi 18432, tiny-osslsig-dse.msi 12288,
+nested.msi 17920, nested-osslsig.msi 20480, two-neighbours.msi 15872,
+legacy-the-seed-0.6.0.msi 12288 and msi-open.exe 4096; earlier: 228848 bytes with budget
+262144, raised from 131072 to make
 room for the eight Mach-O samples added for the signing work, 116912 bytes, which
 together with the three existing ones are 170616 bytes; earlier: raised from 102400
 to 131072 for the ten `dep/` samples, 22840 bytes).
@@ -95,3 +109,37 @@ recomputed by `regenerate.sh --verify`. The Mach-O samples alone are rebuilt
 with `regenerate.sh --macho`, which leaves the Windows samples (and the
 installer, whose hash changes on every rebuild) untouched. The installer embeds its creation time, so
 rebuilding it changes its hash; rebuild only to replace a sample on purpose.
+
+## Installer samples
+
+The installer samples are all derived from `tiny.msi` (project-authored, MIT, from
+`src/tiny.wxs`) and none of them is a Microsoft package: the package used in the
+review of the earlier signing code is not redistributed. `msi-reference.txt` is not
+a sample. It records, for each installer sample, the fingerprint (osslsigncode's
+"Calculated DigitalSignature" for the sample with its signature removed), the entries
+and signature size `gsf list` shows, whether `file` reports an installer, the digests
+held in the signatures osslsigncode wrote, and the deterministic blobs used. It is
+written by `regenerate.sh --msi` and recomputed and compared by `regenerate.sh --verify`
+(tool versions and date are in its header). The signed samples are rewritten with a
+new signature (and new hashes) on every `--msi`; the recorded fingerprints do not change.
+
+SYNTHETIC (`make_cfb.py`) means the container was written by the script in this folder,
+not by an installer tool. Those samples give shapes the real tools do not write
+(sector size 4,096, nested storages, a signature entry with two neighbours); they are
+used for shape only and never as evidence of what real tools produce.
+
+- Version 4: osslsigncode 2.14 accepts `tiny-v4.msi` and calculates the same fingerprint
+  as for the version 3 original, so the sample is used with osslsigncode.
+- Fingerprint of the signed samples: the stable value is the one osslsigncode prints
+  as "Calculated DigitalSignature". The line "Calculated message digest" changes with
+  every signing and is not a fingerprint.
+- osslsigncode 2.14 rewrites packages with storages nested two deep wrongly (the output
+  loses the inner storage, and `verify` reports "no signature"), so `nested.msi` has
+  storages one level deep; deeper shapes are built by the tests.
+- No signed sample osslsigncode wrote has a signature entry with both a left and a right
+  neighbour (it puts the entry at the end of the root's sequence), hence
+  `two-neighbours.msi`.
+- The signature of the small sample is 1,444 bytes with this certificate (the size varies
+  by a few bytes with the certificate); the large one is 7,473 bytes, well above the
+  4,096-byte cut-off; "exactly at the threshold" sizes (4,095, 4,096, 4,097) are
+  produced at test time.

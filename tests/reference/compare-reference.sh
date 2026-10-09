@@ -2,6 +2,12 @@
 # Compares what two builds of libthe-seed do with a list of real files.
 #
 # Usage: compare-reference.sh <old build dir> <new build dir> <list file>
+#        compare-reference.sh <old build dir> <new build dir> --installer-samples
+#
+# --installer-samples compares the installer samples of tests/fixtures (every
+# *.msi, including the ones signed by other tools, the synthetic and the legacy
+# one) and msi-open.exe, instead of a list file; the list it used is kept as
+# installer-samples.txt beside the outputs.
 #
 # Each build directory is an out-of-tree libthe-seed build (configured and
 # made). reference-dump.cpp is compiled against each build's library, run on
@@ -25,9 +31,19 @@ fi
 
 old_build=$(cd "$1" && pwd)
 new_build=$(cd "$2" && pwd)
-list=$(cd "$(dirname "$3")" && pwd)/$(basename "$3")
 here=$(cd "$(dirname "$0")" && pwd)
 out=${REFERENCE_OUT:-$(pwd)}
+if [ "$3" = "--installer-samples" ]; then
+    list=$out/installer-samples.txt
+    {
+        echo "# installer samples of tests/fixtures"
+        for sample in "$here"/../fixtures/*.msi "$here"/../fixtures/msi-open.exe; do
+            [ -f "$sample" ] && echo "$(cd "$(dirname "$sample")" && pwd)/$(basename "$sample")"
+        done
+    } > "$list"
+else
+    list=$(cd "$(dirname "$3")" && pwd)/$(basename "$3")
+fi
 CXX=${CXX:-g++}
 PKG_CONFIG_PATH=${PKG_CONFIG_PATH:-}
 export PKG_CONFIG_PATH

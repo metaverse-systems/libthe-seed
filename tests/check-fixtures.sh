@@ -11,7 +11,10 @@
 here=$(cd "$(dirname "$0")" && pwd)
 dir=${1:-$here/fixtures}
 root=$(cd "$dir/../.." && pwd)
-budget=262144
+# 262144 bytes before the installer signing work; raised to 393216 for the nine
+# installer samples and the lookup program it adds (138752 bytes, see
+# fixtures/PROVENANCE.md).
+budget=393216
 fail=0
 
 bad() { # sample rule message
@@ -23,6 +26,8 @@ samples="tiny.exe test.dll tiny.msi tiny-macho-x86_64 tiny-macho-arm64 tiny-mach
 samples="$samples tiny-macho-arm64-adhoc tiny-macho-x86_64-adhoc tiny-macho-universal-adhoc"
 samples="$samples tiny-macho-x86_64-nospace tiny-macho-x86_64-exactfit tiny-macho-universal64"
 samples="$samples tiny-macho-dylib-arm64 tiny-macho-x86_64-data-after-sig"
+samples="$samples tiny-v4.msi tiny-osslsig-small.msi tiny-osslsig-large.msi tiny-osslsig-dse.msi"
+samples="$samples nested.msi nested-osslsig.msi two-neighbours.msi legacy-the-seed-0.6.0.msi msi-open.exe"
 samples="$samples dep/libbaz.so dep/libbar.so dep/libfoo.so dep/appA dep/appB"
 samples="$samples dep/libbaz.dll dep/libbar.dll dep/libfoo.dll dep/appA.exe dep/appB.exe"
 
@@ -48,7 +53,7 @@ for f in "$dir"/* "$dir"/.[!.]* "$dir"/dep/*; do
     [ -e "$f" ] || continue
     n=${f#"$dir"/}
     case $n in
-        SHA256SUMS|PROVENANCE.md|regenerate.sh|check_pages.py|src|dep) continue ;;
+        SHA256SUMS|PROVENANCE.md|regenerate.sh|check_pages.py|make_cfb.py|src|dep) continue ;;
     esac
     if [ ! -f "$sums" ] || ! grep -q "^[0-9a-f]*  $n\$" "$sums"; then
         bad "$n" 1 "file is not listed in SHA256SUMS"
@@ -91,7 +96,7 @@ for s in $samples; do
     f=$dir/$s
     [ -f "$f" ] || continue
     case $s in
-        tiny.exe|test.dll|dep/*.dll|dep/*.exe)
+        tiny.exe|test.dll|msi-open.exe|dep/*.dll|dep/*.exe)
             if [ "$(hex "$f" 0 2)" != 4d5a ]; then
                 bad "$s" 4 "does not begin with MZ"
                 continue
@@ -103,7 +108,7 @@ for s in $samples; do
         dep/*.so|dep/appA|dep/appB)
             [ "$(hex "$f" 0 4)" = 7f454c46 ] || bad "$s" 4 "does not begin with the ELF magic"
             ;;
-        tiny.msi)
+        *.msi)
             [ "$(hex "$f" 0 8)" = d0cf11e0a1b11ae1 ] || bad "$s" 4 "does not begin with the Compound File signature"
             ;;
         tiny-macho-universal64)

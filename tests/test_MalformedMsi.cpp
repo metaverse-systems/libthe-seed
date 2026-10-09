@@ -26,6 +26,14 @@
 //                        a message that says "loop" is accepted there too
 //   not the root         entry 0 is not the root storage
 //   unused               the tree reaches an entry whose type is 0
+//   disagrees            a stream's sector chain is longer than its size needs
+//                        (the message says "disagrees with its chain"); a chain
+//                        too short for the size still says "exceeds"
+//   too deep             storages nested more than the reader's depth limit
+//                        (a limit above 8 and below 1,000; the message says
+//                        "nested too deep"); "depth" is accepted too
+//   two entries named    two entries of one storage that the format's ordering
+//                        treats as the same name (the digest is refused)
 //   signature size       EmbedSignature: a signature that a version 3 file
 //                        cannot describe in its 32-bit stream size
 // Where two keywords are listed for a case, either one is accepted, because
@@ -35,13 +43,8 @@
 // (an unsigned file has no signature to extract, so ExtractSignature does not
 // look at an ordinary stream); the tests only impose a rejection on the
 // operations that must read the structure.
-//
-// Known gap: a signature the library embeds is written to
-// regular sectors but read back through the mini-stream when it is smaller
-// than the cutoff, so ExtractSignature returns other bytes. The "ok:" cases
-// record only what is stable (the signature is present and has its length);
-// the content is not checked.
 
+#include "CfbReference.hpp"
 #include "MalformedInput.hpp"
 
 #include <libthe-seed/MsiSigner.hpp>
@@ -65,6 +68,7 @@ namespace {
 using seedtest::malformed::Bytes;
 using seedtest::malformed::PatchLE;
 namespace sm = seedtest::malformed;
+namespace cfb = seedtest::cfb;
 
 constexpr const char *kFormat = "MSI";
 using Keywords = std::vector<std::string>;
@@ -425,7 +429,7 @@ TEST_CASE("ok: MSI sample answers as before", "[MalformedMsi][ok]")
     CHECK_FALSE(MsiSigner::HasEmbeddedSignature(path));
     CHECK_FALSE(MsiSigner::ExtractSignature(path).has_value());
     CHECK(MsiSigner::ComputeAuthenticodeDigest(path).digest ==
-          FromHex("505332678f7c31b101302e7b63d110a2c418e520203ddddf6c2ec15ef29585fc"));
+          FromHex("4244b8292b29b2397d1d45950372db7d46a7437544570f21386a58babae992b9"));
     sm::RequireUnchanged(path, original);
 }
 
@@ -447,15 +451,10 @@ TEST_CASE("ok: MSI embed then presence extract and strip", "[MalformedMsi][ok]")
 
     MsiSigner::EmbedSignature(path, signature);
 
-    // The presence check keeps answering true for a signature the library
-    // wrote, whichever sectors it went into.
     CHECK(MsiSigner::HasEmbeddedSignature(path));
-
-    // Known gap: the content comes back wrong while the signature is read
-    // through the mini-stream; only its presence and length are recorded.
     const auto extracted = MsiSigner::ExtractSignature(path);
     REQUIRE(extracted.has_value());
-    CHECK(extracted->size() == signature.size());
+    CHECK(*extracted == signature);
 
     MsiSigner::StripSignature(path);
     CHECK_FALSE(MsiSigner::HasEmbeddedSignature(path));
@@ -464,7 +463,7 @@ TEST_CASE("ok: MSI embed then presence extract and strip", "[MalformedMsi][ok]")
 
 TEST_CASE("ok: MSI signed copy has the digest of the unsigned file", "[MalformedMsi][ok]")
 {
-    CHECK(DigestOf(SignedTiny()) == FromHex("505332678f7c31b101302e7b63d110a2c418e520203ddddf6c2ec15ef29585fc"));
+    CHECK(DigestOf(SignedTiny()) == FromHex("4244b8292b29b2397d1d45950372db7d46a7437544570f21386a58babae992b9"));
 }
 
 TEST_CASE("ok: MSI childless root", "[MalformedMsi][ok]")
@@ -474,9 +473,11 @@ TEST_CASE("ok: MSI childless root", "[MalformedMsi][ok]")
     seedtest::ScratchDir scratch;
     const std::string path = sm::WriteScratch(scratch, "childless.msi", bytes);
 
-    // No stream is reachable: the digest is that of no data, not an error.
+    // No stream is reachable: the fingerprint is that of the root's class
+    // identifier alone (the independent value), never the hash of no data.
     const auto digest = MsiSigner::ComputeAuthenticodeDigest(path).digest;
-    CHECK(digest == FromHex("e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"));
+    CHECK(digest == FromHex(cfb::Fingerprint(bytes)));
+    CHECK(digest != FromHex("e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"));
     CHECK_FALSE(MsiSigner::HasEmbeddedSignature(path));
     CHECK_FALSE(MsiSigner::ExtractSignature(path).has_value());
 }
@@ -485,14 +486,14 @@ TEST_CASE("ok: MSI with bytes appended", "[MalformedMsi][ok]")
 {
     Bytes bytes = Tiny();
     bytes.insert(bytes.end(), {1, 2, 3});
-    CHECK(DigestOf(bytes) == FromHex("505332678f7c31b101302e7b63d110a2c418e520203ddddf6c2ec15ef29585fc"));
+    CHECK(DigestOf(bytes) == FromHex("4244b8292b29b2397d1d45950372db7d46a7437544570f21386a58babae992b9"));
 }
 
 TEST_CASE("ok: MSI with its sectors in another order", "[MalformedMsi][ok]")
 {
     // The helper used by the truncation cases must not change the contents.
-    CHECK(DigestOf(Reorder(Tiny(), OrderDirectoryLast())) == FromHex("505332678f7c31b101302e7b63d110a2c418e520203ddddf6c2ec15ef29585fc"));
-    CHECK(DigestOf(Reorder(Tiny(), OrderStreamLast())) == FromHex("505332678f7c31b101302e7b63d110a2c418e520203ddddf6c2ec15ef29585fc"));
+    CHECK(DigestOf(Reorder(Tiny(), OrderDirectoryLast())) == FromHex("4244b8292b29b2397d1d45950372db7d46a7437544570f21386a58babae992b9"));
+    CHECK(DigestOf(Reorder(Tiny(), OrderStreamLast())) == FromHex("4244b8292b29b2397d1d45950372db7d46a7437544570f21386a58babae992b9"));
 }
 
 // ── From the review ───────────────────────────────────────
@@ -852,4 +853,253 @@ TEST_CASE("edge: MSI oversized signature size check", "[MalformedMsi][edge]")
         kFormat, "signature size");
     // Version 4 stores a 64-bit stream size.
     CHECK_NOTHROW(seed::internal::CheckMsiSignatureSize(largest + 1, kVersion4));
+}
+
+// ── What the reader that parses the whole package adds ────
+
+namespace {
+
+const Keywords kDeepKeywords = {"too deep", "depth"};
+
+std::uint32_t IndexOfName(const Bytes &bytes, const std::u16string &name)
+{
+    const cfb::Package package(bytes);
+    for(std::uint32_t i = 0; i < package.Entries().size(); ++i)
+    {
+        if(package.Entries()[i].name == name)
+        {
+            return i;
+        }
+    }
+    FAIL("entry not found");
+    return 0;
+}
+
+// A package with a storage "Sub" holding three streams, built independently.
+Bytes SubPackage()
+{
+    cfb::BuildNode root = cfb::BuildNode::Storage(u"Root Entry");
+    root.Add(cfb::BuildNode::Stream(u"top", cfb::PatternBytes(100, 1)));
+    cfb::BuildNode &sub = root.Add(cfb::BuildNode::Storage(u"Sub"));
+    sub.Add(cfb::BuildNode::Stream(u"x", cfb::PatternBytes(70, 2)));
+    sub.Add(cfb::BuildNode::Stream(u"y", cfb::PatternBytes(80, 3)));
+    sub.Add(cfb::BuildNode::Stream(u"z", cfb::PatternBytes(90, 4)));
+    return cfb::Build(root);
+}
+
+// A package with a signature stream of this size beside one more stream.
+Bytes SignedBuilt(std::size_t signature_size)
+{
+    cfb::BuildNode root = cfb::BuildNode::Storage(u"Root Entry");
+    root.Add(cfb::BuildNode::Stream(u"top", cfb::PatternBytes(100, 1)));
+    root.Add(cfb::BuildNode::Stream(cfb::SignatureName(), cfb::PatternBytes(signature_size, 9)));
+    return cfb::Build(root);
+}
+
+} // namespace
+
+TEST_CASE("edge: MSI stream chain longer than its size", "[MalformedMsi][edge][chain]")
+{
+    // 1621 bytes need 26 mini sectors; the size now says 1500 (24 sectors).
+    Bytes mini = Tiny();
+    PatchEntry<std::uint32_t>(mini, kMiniStreamEntry, kEntSize, 1500);
+    RequireOpsRejected(mini, {"disagrees"}, kDigest);
+
+    // 5000 bytes need ten ordinary sectors; the size now says 4200 (nine).
+    cfb::BuildNode root = cfb::BuildNode::Storage(u"Root Entry");
+    root.Add(cfb::BuildNode::Stream(u"Big", cfb::PatternBytes(5000, 5)));
+    root.Add(cfb::BuildNode::Stream(u"Small", cfb::PatternBytes(50, 6)));
+    Bytes ordinary = cfb::Build(root);
+    PatchEntry<std::uint32_t>(ordinary, IndexOfName(ordinary, u"Big"), kEntSize, 4200);
+    RequireOpsRejected(ordinary, {"disagrees"}, kDigest);
+}
+
+TEST_CASE("edge: MSI signature chain longer than its size", "[MalformedMsi][edge][chain]")
+{
+    // Ordinary sectors: ten sectors for 5000 bytes, size now 4200.
+    Bytes large = SignedBuilt(5000);
+    PatchEntry<std::uint32_t>(large, IndexOfName(large, cfb::SignatureName()), kEntSize, 4200);
+    RequireOpsRejected(large, {"disagrees"}, kPresence | kExtract);
+
+    // Mini stream: two mini sectors for 100 bytes, size now 60.
+    Bytes small = SignedBuilt(100);
+    PatchEntry<std::uint32_t>(small, IndexOfName(small, cfb::SignatureName()), kEntSize, 60);
+    RequireOpsRejected(small, {"disagrees"}, kPresence | kExtract);
+}
+
+TEST_CASE("edge: MSI mini-stream cutoff other than 4096", "[MalformedMsi][edge][cutoff]")
+{
+    for(const std::uint32_t cutoff : {0u, 1u, 4095u, 4097u, 8192u, 0xFFFFFFFFu})
+    {
+        INFO("cutoff " << cutoff);
+        Bytes bytes = Tiny();
+        PatchLE<std::uint32_t>(bytes, kHdrCutoff, cutoff);
+        RequireOpsRejected(bytes, {"mini-stream cutoff"}, kAllOps);
+
+        Bytes v4 = sm::LoadSample("tiny-v4.msi");
+        PatchLE<std::uint32_t>(v4, kHdrCutoff, cutoff);
+        RequireOpsRejected(v4, {"mini-stream cutoff"}, kAllOps);
+    }
+}
+
+TEST_CASE("edge: MSI storages nested too deep", "[MalformedMsi][edge][depth]")
+{
+    // 1,000 storages, each inside the one before and holding one stream.
+    cfb::BuildNode root = cfb::BuildNode::Storage(u"Root Entry");
+    std::vector<cfb::BuildNode *> chain{&root};
+    for(int level = 0; level < 1000; ++level)
+    {
+        cfb::BuildNode &parent = *chain.back();
+        parent.Add(cfb::BuildNode::Stream(u"s", cfb::PatternBytes(10, 1)));
+        parent.Add(cfb::BuildNode::Storage(u"d"));
+        chain.push_back(&parent.children.back());
+    }
+    RequireOpsRejected(cfb::Build(root), kDeepKeywords, kReadOps);
+}
+
+TEST_CASE("ok: MSI storages nested four deep", "[MalformedMsi][ok][depth]")
+{
+    const Bytes bytes = cfb::Build(cfb::shapes::Nested());
+    seedtest::ScratchDir scratch;
+    const std::string path = sm::WriteScratch(scratch, "nested.msi", bytes);
+    CHECK(MsiSigner::ComputeAuthenticodeDigest(path).digest == FromHex(cfb::Fingerprint(bytes)));
+    CHECK_FALSE(MsiSigner::HasEmbeddedSignature(path));
+    CHECK_FALSE(MsiSigner::ExtractSignature(path).has_value());
+    sm::RequireUnchanged(path, bytes);
+}
+
+TEST_CASE("edge: MSI sibling cycle inside a nested storage", "[MalformedMsi][edge][depth]")
+{
+    const Bytes base = SubPackage();
+    const std::uint32_t x = IndexOfName(base, u"x");
+    const std::uint32_t y = IndexOfName(base, u"y");
+    const std::uint32_t z = IndexOfName(base, u"z");
+
+    // Every entry of Sub points at another one of Sub as its sibling.
+    Bytes self = base;
+    PatchEntry<std::uint32_t>(self, y, kEntRight, y);
+    RequireOpsRejected(self, kLoopKeywords, kReadOps);
+
+    Bytes cycle = base;
+    PatchEntry<std::uint32_t>(cycle, x, kEntLeft, y);
+    PatchEntry<std::uint32_t>(cycle, y, kEntLeft, x);
+    RequireOpsRejected(cycle, kLoopKeywords, kReadOps);
+
+    Bytes three = base;
+    PatchEntry<std::uint32_t>(three, x, kEntRight, y);
+    PatchEntry<std::uint32_t>(three, y, kEntRight, z);
+    PatchEntry<std::uint32_t>(three, z, kEntRight, x);
+    RequireOpsRejected(three, kLoopKeywords, kReadOps);
+}
+
+TEST_CASE("edge: MSI nested storage reached twice", "[MalformedMsi][edge][depth]")
+{
+    const Bytes base = SubPackage();
+    const std::uint32_t sub = IndexOfName(base, u"Sub");
+    const std::uint32_t top = IndexOfName(base, u"top");
+    const std::uint32_t x = IndexOfName(base, u"x");
+
+    // A child of Sub that links back to Sub as its own child.
+    Bytes back = base;
+    PatchEntry<std::uint8_t>(back, x, kEntType, kTypeStorage);
+    PatchEntry<std::uint32_t>(back, x, kEntChild, sub);
+    RequireOpsRejected(back, kLoopKeywords, kReadOps);
+
+    // Two storages that share one child tree.
+    Bytes shared = base;
+    PatchEntry<std::uint8_t>(shared, top, kEntType, kTypeStorage);
+    PatchEntry<std::uint32_t>(shared, top, kEntChild,
+                              sm::detail::GetLE<std::uint32_t>(shared, EntryOffset(shared, sub) + kEntChild));
+    RequireOpsRejected(shared, kLoopKeywords, kReadOps);
+}
+
+TEST_CASE("edge: MSI mini stream smaller than its chains", "[MalformedMsi][edge][chain]")
+{
+    // The root says its mini stream holds two mini sectors; streams use 26.
+    Bytes container = Tiny();
+    PatchEntry<std::uint32_t>(container, 0, kEntSize, 128);
+    RequireOpsRejected(container, {"past the end", "exceeds"}, kDigest);
+
+    // A chain link to a mini sector the mini-FAT has no entry for.
+    Bytes link = Tiny();
+    PatchMiniFat(link, 1, 0x00FFFFFFu);
+    RequireOpsRejected(link, {"past the end"}, kDigest);
+}
+
+TEST_CASE("edge: MSI two entries with the same name in one storage", "[MalformedMsi][edge][duplicate]")
+{
+    // The second stream takes the name of the first: the digest is refused
+    // because the format cannot tell them apart.
+    Bytes bytes = Tiny();
+    const std::uint64_t first = EntryOffset(bytes, kMiniStreamEntry);
+    const std::uint64_t second = EntryOffset(bytes, kOtherMiniEntry);
+    for(std::uint64_t i = 0; i < 66; ++i)
+    {
+        bytes[second + i] = bytes[first + i];
+    }
+    RequireOpsRejected(bytes, {"two entries named"}, kDigest);
+}
+
+TEST_CASE("ok: MSI case-only names in different storages", "[MalformedMsi][ok][duplicate]")
+{
+    // The same name in two storages, and names that differ in case only in
+    // two storages, are different entries.
+    cfb::BuildNode root = cfb::BuildNode::Storage(u"Root Entry");
+    root.Add(cfb::BuildNode::Stream(u"Inner", cfb::PatternBytes(30, 1)));
+    cfb::BuildNode &one = root.Add(cfb::BuildNode::Storage(u"One"));
+    one.Add(cfb::BuildNode::Stream(u"inner", cfb::PatternBytes(31, 2)));
+    cfb::BuildNode &two = root.Add(cfb::BuildNode::Storage(u"Two"));
+    two.Add(cfb::BuildNode::Stream(u"INNER", cfb::PatternBytes(32, 3)));
+    two.Add(cfb::BuildNode::Stream(u"inner2", cfb::PatternBytes(33, 4)));
+    const Bytes bytes = cfb::Build(root);
+    CHECK(DigestOf(bytes) == FromHex(cfb::Fingerprint(bytes)));
+}
+
+TEST_CASE("ok: MSI signature of size zero is an existing signature to replace", "[MalformedMsi][ok][signature]")
+{
+    for(const std::uint32_t start : {kEndOfChain, 0u})
+    {
+        INFO("start sector " << start);
+        Bytes bytes = SignedBuilt(100);
+        const std::uint32_t entry = IndexOfName(bytes, cfb::SignatureName());
+        PatchEntry<std::uint32_t>(bytes, entry, kEntSize, 0);
+        PatchEntry<std::uint32_t>(bytes, entry, kEntStart, start);
+        seedtest::ScratchDir scratch;
+        const std::string path = sm::WriteScratch(scratch, "empty-signature.msi", bytes);
+
+        // Reading: an empty signature is no signature, and not a malformed package.
+        CHECK_FALSE(MsiSigner::HasEmbeddedSignature(path));
+        CHECK_FALSE(MsiSigner::ExtractSignature(path).has_value());
+        CHECK(MsiSigner::ComputeAuthenticodeDigest(path).digest == FromHex(cfb::Fingerprint(bytes)));
+
+        // Signing replaces it; stripping removes it.
+        const Bytes blob = cfb::PatternBytes(1426, 7);
+        MsiSigner::EmbedSignature(path, blob);
+        const auto extracted = MsiSigner::ExtractSignature(path);
+        REQUIRE(extracted.has_value());
+        CHECK(*extracted == blob);
+        MsiSigner::StripSignature(path);
+        CHECK_FALSE(MsiSigner::HasEmbeddedSignature(path));
+    }
+}
+
+TEST_CASE("ok: MSI signature chain that ends at once is replaced and stripped", "[MalformedMsi][ok][signature]")
+{
+    // The entry says 100 bytes and its chain is empty. Reading it is refused
+    // (nothing to read); replacing and stripping never read it.
+    Bytes bytes = SignedBuilt(100);
+    PatchEntry<std::uint32_t>(bytes, IndexOfName(bytes, cfb::SignatureName()), kEntStart, kEndOfChain);
+    RequireOpsRejected(bytes, {"exceeds", "past the end"}, kPresence | kExtract);
+
+    seedtest::ScratchDir scratch;
+    const std::string path = sm::WriteScratch(scratch, "end-of-chain.msi", bytes);
+    const Bytes blob = cfb::PatternBytes(1426, 8);
+    MsiSigner::EmbedSignature(path, blob);
+    const auto extracted = MsiSigner::ExtractSignature(path);
+    REQUIRE(extracted.has_value());
+    CHECK(*extracted == blob);
+
+    const std::string path2 = sm::WriteScratch(scratch, "end-of-chain-2.msi", bytes);
+    MsiSigner::StripSignature(path2);
+    CHECK_FALSE(MsiSigner::HasEmbeddedSignature(path2));
 }
