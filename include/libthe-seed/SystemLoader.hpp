@@ -1,11 +1,14 @@
 #pragma once
 
-#include <map>
 #include <memory>
-#include <shared_mutex>
 #include <string>
 #include <vector>
 #include <libecs-cpp/ecs.hpp>
+
+namespace seed::internal
+{
+template <typename Creator> class PluginCache;
+}
 
 /**
  * @brief Loads system plugins by name.
@@ -14,6 +17,15 @@
  * pinned, so systems, creators returned by Get and anything else made from the
  * plugin stay valid and destructible after this loader is destroyed. The
  * plugin's code stays loaded until the process ends.
+ *
+ * Threads: every method is safe to call from several threads at once. A plugin
+ * is loaded once per loader: concurrent requests for one name wait for the same
+ * load and get the same result, and names that resolve to one file share one
+ * open. A failed load is reported to every waiting request and is not
+ * remembered; the next request tries again. No loader lock is held while the
+ * file system is searched or a plugin is opened. A plugin's static initialiser
+ * must not load through the same loader. A request made after PathAdd or
+ * DevelopmentPathsEnable returned uses the new setting.
  */
 class SystemLoader
 {
@@ -57,9 +69,5 @@ class SystemLoader
     std::vector<std::string> SearchPathsGet(const std::string &name) const;
 
   private:
-    std::vector<std::string> paths;
-    bool development_paths = false;
-    std::map<std::string, SystemCreator> entries;
-    std::map<std::string, std::string> files;
-    mutable std::shared_mutex mutex;
+    std::unique_ptr<seed::internal::PluginCache<SystemCreator>> cache;
 };

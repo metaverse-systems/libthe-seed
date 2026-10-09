@@ -23,6 +23,7 @@ noinst_HEADERS = \
 	NameParser.hpp \
 	internal/FileIO.hpp \
 	internal/PluginSearch.hpp \
+	internal/PluginCache.hpp \
 	internal/FileReplaceHooks.hpp \
 	internal/MachODefs.hpp \
 	internal/MachOLayout.hpp \
