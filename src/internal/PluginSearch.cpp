@@ -11,6 +11,7 @@
 
 #include <atomic>
 #include <system_error>
+#include <utility>
 
 namespace seed::internal
 {
@@ -117,14 +118,42 @@ std::string PakFileName(const std::string &library)
     return library + ".pak";
 }
 
-SearchResult SearchFirst(const std::vector<std::string> &locations, const std::string &file_name)
+std::vector<std::string> DevelopmentLocations(const std::string &org, const std::string &library, bool pak)
+{
+    std::vector<std::string> result;
+    const std::string suffix = pak ? "" : "/src/.libs";
+    result.push_back("../../" + library + suffix);
+    if(!org.empty())
+    {
+        result.push_back("../node_modules/" + org + "/" + library + suffix);
+    }
+    return result;
+}
+
+std::vector<std::string> SearchListBuild(const std::vector<std::string> &configured, bool development,
+                                         const std::string &org, const std::string &library, bool pak,
+                                         size_t &configured_count)
+{
+    std::vector<std::string> list = configured;
+    configured_count = list.size();
+    if(development)
+    {
+        for(std::string &location : DevelopmentLocations(org, library, pak))
+        {
+            list.push_back(std::move(location));
+        }
+    }
+    return list;
+}
+
+SearchResult SearchFirst(const std::vector<std::string> &locations, const std::string &file_name, size_t configured_count)
 {
     namespace fs = std::filesystem;
 
     SearchResult result;
-    for(const std::string &location : locations)
+    for(size_t i = 0; i < locations.size(); ++i)
     {
-        result.locations.push_back({location, false, LoadError::LocationState::NotReached});
+        result.locations.push_back({locations[i], i >= configured_count, LoadError::LocationState::NotReached});
     }
 
     for(size_t i = 0; i < locations.size(); ++i)
@@ -172,11 +201,11 @@ void NotLoadableThrow(const SearchResult &result, const std::string &name,
     throw LoadError(LoadError::Reason::NotLoadable, name, result.file.string(), result.locations, reason, kind);
 }
 
-void *PluginOpen(const std::vector<std::string> &locations, const std::string &library,
+void *PluginOpen(const std::vector<std::string> &locations, size_t configured_count, const std::string &library,
                  const std::string &name, const std::string &kind, SearchResult &result)
 {
     const std::string file_name = PluginFileName(library);
-    result = SearchFirst(locations, file_name);
+    result = SearchFirst(locations, file_name, configured_count);
     if(!result.found)
     {
         NotFoundThrow(result, name, file_name, kind);

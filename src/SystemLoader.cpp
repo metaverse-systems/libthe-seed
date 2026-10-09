@@ -37,10 +37,14 @@ SystemLoader::SystemCreator SystemLoader::Get(const std::string &name)
     if (it != this->entries.end())
         return it->second;
 
-    // Only the configured locations are searched, in the order they were
-    // added; the first one holding the file decides.
+    // The configured locations in the order they were added, then the
+    // development locations if enabled; the first one holding the file
+    // decides. The setting is snapshotted here, under the lock.
+    size_t configured_count = 0;
+    std::vector<std::string> locations = seed::internal::SearchListBuild(
+        this->paths, this->development_paths, parsed.org, parsed.library, false, configured_count);
     seed::internal::SearchResult search;
-    void *handle = seed::internal::PluginOpen(this->paths, parsed.library, name, "system plugin", search);
+    void *handle = seed::internal::PluginOpen(locations, configured_count, parsed.library, name, "system plugin", search);
 
     std::string error;
     void *ptr = seed::internal::SymbolFind(handle, "create_system", error);
@@ -63,4 +67,26 @@ std::vector<std::string> SystemLoader::PathsGet() const
 {
     std::shared_lock lock(this->mutex);
     return this->paths;
+}
+
+void SystemLoader::DevelopmentPathsEnable(bool enabled)
+{
+    std::unique_lock lock(this->mutex);
+    this->development_paths = enabled;
+}
+
+bool SystemLoader::DevelopmentPathsEnabled() const
+{
+    std::shared_lock lock(this->mutex);
+    return this->development_paths;
+}
+
+std::vector<std::string> SystemLoader::SearchPathsGet(const std::string &name) const
+{
+    NameParser parsed(name, "system plugin");
+
+    std::shared_lock lock(this->mutex);
+    size_t configured_count = 0;
+    return seed::internal::SearchListBuild(this->paths, this->development_paths, parsed.org, parsed.library,
+                                           false, configured_count);
 }

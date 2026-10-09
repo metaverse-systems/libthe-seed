@@ -37,7 +37,7 @@ void LibraryLoader::Load()
     // and function pointers stay valid after this loader is gone. Only the
     // added locations are searched and the first one holding the file decides.
     seed::internal::SearchResult search;
-    void *lib = seed::internal::PluginOpen(this->paths, this->name, this->name, "library", search);
+    void *lib = seed::internal::PluginOpen(this->paths, this->paths.size(), this->name, this->name, "library", search);
     this->library_handle.reset(lib);
 }
 

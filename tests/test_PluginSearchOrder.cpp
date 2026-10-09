@@ -353,3 +353,360 @@ TEST_CASE("The first of several pak locations holding the file wins", "[PluginSe
     auto resources = loader.Load("searchpak");
     REQUIRE(resources.at("item")->Data == Bytes(3));
 }
+
+// Development locations are the relative directories of a the-seed development tree. They are
+// searched only when a loader asks for them, and then only after every configured location. The
+// scratch tree used below has the working directory "<scratch>/tree/project", so
+// "../../<library>/src/.libs" is the directory "<scratch>/<library>/src/.libs" and
+// "../node_modules/<org>/<library>/src/.libs" is under "<scratch>/tree/node_modules".
+
+namespace
+{
+    const std::string developmentComponent = "../../testmodule/src/.libs";
+    const std::string developmentSystem = "../../testsystem/src/.libs";
+    const std::string developmentOrganisation = "../node_modules/org/testmodule/src/.libs";
+    const std::string developmentPak = "../../searchpak";
+    const std::string developmentPakOrganisation = "../node_modules/org/searchpak";
+
+    // The working directory of the development tree used by these cases.
+    fs::path ProjectOf(const ScratchDir &scratch)
+    {
+        fs::path project = scratch.Path() / "tree" / "project";
+        fs::create_directories(project);
+        return project;
+    }
+
+    // The directory the relative development location resolves to from the project directory.
+    fs::path DevelopmentDirOf(const ScratchDir &scratch, const std::string &relative)
+    {
+        return (ProjectOf(scratch) / relative).lexically_normal();
+    }
+}
+
+TEST_CASE("A plugin only in a development location loads with the opt-in and not without", "[PluginSearchOrder]")
+{
+    ScratchDir scratch;
+    fs::path project = ProjectOf(scratch);
+    fs::path directory = DevelopmentDirOf(scratch, developmentComponent);
+    CopyModule(scratch, "testmodulealt", directory, "testmodule");
+    fs::create_directories(scratch.Path() / "conf");
+    WorkingDirectoryGuard guard(project);
+    const std::string conf = (scratch.Path() / "conf").string();
+
+    SECTION("component without the opt-in")
+    {
+        ComponentLoader loader;
+        loader.PathAdd(conf);
+        REQUIRE(!loader.DevelopmentPathsEnabled());
+        LoadError error = LoadErrorOf([&] { loader.Create("testmodule"); });
+        REQUIRE(error.ReasonGet() == LoadError::Reason::NotFound);
+    }
+
+    SECTION("component with the opt-in")
+    {
+        ComponentLoader loader;
+        loader.PathAdd(conf);
+        loader.DevelopmentPathsEnable();
+        REQUIRE(loader.DevelopmentPathsEnabled());
+        REQUIRE(VariantOf(loader) == 2);
+    }
+
+    SECTION("component with no configured location at all")
+    {
+        ComponentLoader loader;
+        loader.DevelopmentPathsEnable();
+        REQUIRE(VariantOf(loader) == 2);
+    }
+
+    SECTION("the opt-in can be turned off again")
+    {
+        ComponentLoader loader;
+        loader.DevelopmentPathsEnable();
+        loader.DevelopmentPathsEnable(false);
+        REQUIRE(!loader.DevelopmentPathsEnabled());
+        REQUIRE_THROWS_AS(loader.Create("testmodule"), LoadError);
+    }
+
+    SECTION("organisation names use the dependency directory")
+    {
+        fs::path organisation = DevelopmentDirOf(scratch, developmentOrganisation);
+        CopyModule(scratch, "testmodule", organisation, "testmodule");
+        fs::remove_all(directory);
+
+        ComponentLoader loader;
+        loader.DevelopmentPathsEnable();
+        REQUIRE(VariantOf(loader, "org/testmodule") == 1);
+        REQUIRE_THROWS_AS(loader.Create("testmodule"), LoadError);
+    }
+}
+
+#ifndef _WIN32
+TEST_CASE("A system only in a development location loads with the opt-in and not without", "[PluginSearchOrder]")
+{
+    ScratchDir scratch;
+    fs::path project = ProjectOf(scratch);
+    fs::path file = CopyModule(scratch, "testsystem", DevelopmentDirOf(scratch, developmentSystem), "testsystem");
+    WorkingDirectoryGuard guard(project);
+
+    SystemLoader without;
+    REQUIRE(!without.DevelopmentPathsEnabled());
+    REQUIRE_THROWS_AS(without.Get("testsystem"), LoadError);
+
+    SystemLoader with;
+    with.DevelopmentPathsEnable();
+    REQUIRE(with.DevelopmentPathsEnabled());
+    SystemLoader::SystemCreator creator = with.Get("testsystem");
+    REQUIRE(creator != nullptr);
+    REQUIRE(fs::equivalent(FileOf(reinterpret_cast<void *>(creator)), file));
+}
+#endif
+
+TEST_CASE("With the opt-in a configured location beats a development location", "[PluginSearchOrder]")
+{
+    ScratchDir scratch;
+    fs::path project = ProjectOf(scratch);
+    CopyModule(scratch, "testmodulealt", DevelopmentDirOf(scratch, developmentComponent), "testmodule");
+    CopyModule(scratch, "testmodule", "conf", "testmodule");
+    WorkingDirectoryGuard guard(project);
+
+    ComponentLoader loader;
+    loader.PathAdd((scratch.Path() / "conf").string());
+    loader.DevelopmentPathsEnable();
+    for(int attempt = 0; attempt < 3; ++attempt)
+    {
+        REQUIRE(VariantOf(loader) == 1);
+    }
+
+#ifndef _WIN32
+    fs::path system = CopyModule(scratch, "testsystem", DevelopmentDirOf(scratch, developmentSystem), "testsystem");
+    CopyModule(scratch, "testsystem", "conf", "testsystem");
+    SystemLoader systems;
+    systems.PathAdd((scratch.Path() / "conf").string());
+    systems.DevelopmentPathsEnable();
+    SystemLoader::SystemCreator creator = systems.Get("testsystem");
+    REQUIRE(creator != nullptr);
+    REQUIRE(!fs::equivalent(FileOf(reinterpret_cast<void *>(creator)), system));
+#endif
+}
+
+TEST_CASE("Without the opt-in no development location appears in the error", "[PluginSearchOrder]")
+{
+    ScratchDir scratch;
+    fs::create_directories(scratch.Path() / "conf");
+    WorkingDirectoryGuard guard(ProjectOf(scratch));
+    const std::string conf = (scratch.Path() / "conf").string();
+
+    ComponentLoader loader;
+    loader.PathAdd(conf);
+    LoadError error = LoadErrorOf([&] { loader.Create("testmodule"); });
+    REQUIRE(error.ReasonGet() == LoadError::Reason::NotFound);
+    REQUIRE(error.LocationsGet().size() == 1);
+    for(const auto &location : error.LocationsGet())
+    {
+        REQUIRE(!location.development);
+    }
+    REQUIRE(Mentions(error, conf));
+    REQUIRE(!Mentions(error, developmentComponent));
+    REQUIRE(!Mentions(error, "development location,"));
+    REQUIRE(Mentions(error, "development locations are off"));
+
+    ComponentLoader bare;
+    LoadError none = LoadErrorOf([&] { bare.Create("testmodule"); });
+    REQUIRE(none.LocationsGet().empty());
+    REQUIRE(Mentions(none, "development locations are off"));
+}
+
+TEST_CASE("With the opt-in the error lists configured then development locations in search order", "[PluginSearchOrder]")
+{
+    ScratchDir scratch;
+    fs::create_directories(scratch.Path() / "one");
+    WorkingDirectoryGuard guard(ProjectOf(scratch));
+    const std::string one = (scratch.Path() / "one").string();
+    const std::string two = (scratch.Path() / "two").string();
+
+    SECTION("plain name")
+    {
+        ComponentLoader loader;
+        loader.PathAdd(one);
+        loader.PathAdd(two);
+        loader.DevelopmentPathsEnable();
+        LoadError error = LoadErrorOf([&] { loader.Create("testmodule"); });
+        REQUIRE(error.ReasonGet() == LoadError::Reason::NotFound);
+
+        const auto &locations = error.LocationsGet();
+        REQUIRE(locations.size() == 3);
+        REQUIRE(locations[0].path == one);
+        REQUIRE(!locations[0].development);
+        REQUIRE(locations[0].state == LoadError::LocationState::Searched);
+        REQUIRE(locations[1].path == two);
+        REQUIRE(!locations[1].development);
+        REQUIRE(locations[1].state == LoadError::LocationState::Missing);
+        REQUIRE(locations[2].path == developmentComponent);
+        REQUIRE(locations[2].development);
+        REQUIRE(locations[2].state == LoadError::LocationState::Missing);
+
+        const std::string text = error.what();
+        REQUIRE(text.find(one) < text.find(two));
+        REQUIRE(text.find(two) < text.find(developmentComponent));
+        REQUIRE(Mentions(error, "development location, "));
+        REQUIRE(!Mentions(error, "development locations are off"));
+    }
+
+    SECTION("organisation name")
+    {
+        ComponentLoader loader;
+        loader.PathAdd(one);
+        loader.DevelopmentPathsEnable();
+        LoadError error = LoadErrorOf([&] { loader.Create("org/testmodule"); });
+        const auto &locations = error.LocationsGet();
+        REQUIRE(locations.size() == 3);
+        REQUIRE(locations[0].path == one);
+        REQUIRE(locations[1].path == "../../testmodule/src/.libs");
+        REQUIRE(locations[2].path == developmentOrganisation);
+        REQUIRE(locations[1].development);
+        REQUIRE(locations[2].development);
+    }
+}
+
+TEST_CASE("SearchPathsGet returns the lookup order, validates the name and does not touch the file system", "[PluginSearchOrder]")
+{
+    // None of these locations exists, and the working directory is not a development tree.
+    ComponentLoader loader;
+    loader.PathAdd("/does/not/exist/one");
+    loader.PathAdd("relative/two");
+
+    SECTION("without the opt-in only configured locations")
+    {
+        REQUIRE(loader.SearchPathsGet("testmodule") ==
+                std::vector<std::string>{"/does/not/exist/one", "relative/two"});
+        REQUIRE(loader.SearchPathsGet("org/testmodule") == loader.SearchPathsGet("testmodule"));
+    }
+
+    SECTION("with the opt-in configured first, then development")
+    {
+        loader.DevelopmentPathsEnable();
+        REQUIRE(loader.SearchPathsGet("testmodule") ==
+                std::vector<std::string>{"/does/not/exist/one", "relative/two", developmentComponent});
+        REQUIRE(loader.SearchPathsGet("org/testmodule") ==
+                std::vector<std::string>{"/does/not/exist/one", "relative/two", developmentComponent,
+                                         developmentOrganisation});
+        REQUIRE(loader.SearchPathsGet("testmodule").back() != ".");
+    }
+
+    SECTION("an invalid name is an InvalidName error")
+    {
+        for(const char *bad : {"", "..", "a/../b", "a\\b", "c:x", "a/b/c", "/a"})
+        {
+            LoadError error = LoadErrorOf([&] { loader.SearchPathsGet(bad); });
+            REQUIRE(error.ReasonGet() == LoadError::Reason::InvalidName);
+        }
+    }
+
+    SECTION("with no locations at all")
+    {
+        ComponentLoader bare;
+        REQUIRE(bare.SearchPathsGet("testmodule").empty());
+        bare.DevelopmentPathsEnable();
+        REQUIRE(bare.SearchPathsGet("testmodule") == std::vector<std::string>{developmentComponent});
+    }
+
+    SECTION("the same for systems")
+    {
+        SystemLoader systems;
+        systems.PathAdd("/does/not/exist/one");
+        REQUIRE(systems.SearchPathsGet("testsystem") == std::vector<std::string>{"/does/not/exist/one"});
+        systems.DevelopmentPathsEnable();
+        REQUIRE(!systems.SearchPathsGet("testsystem").empty());
+        REQUIRE(systems.SearchPathsGet("testsystem").back() == developmentSystem);
+        REQUIRE(systems.SearchPathsGet("org/testsystem").back() ==
+                "../node_modules/org/testsystem/src/.libs");
+        REQUIRE_THROWS_AS(systems.SearchPathsGet("a\\b"), LoadError);
+    }
+}
+
+TEST_CASE("A pak only in a development location loads with the opt-in and not without", "[PluginSearchOrder]")
+{
+    ScratchDir scratch;
+    fs::path project = ProjectOf(scratch);
+    seedtest::WritePak(DevelopmentDirOf(scratch, developmentPak), "searchpak", {{"item", Bytes(5)}});
+    seedtest::WritePak(scratch.Path() / "conf", "otherpak", {{"item", Bytes(6)}});
+    WorkingDirectoryGuard guard(project);
+    const std::string conf = (scratch.Path() / "conf").string();
+
+    SECTION("without the opt-in")
+    {
+        PakLoader loader;
+        loader.PathAdd(conf);
+        REQUIRE(!loader.DevelopmentPathsEnabled());
+        LoadError error = LoadErrorOf([&] { loader.Load("searchpak"); });
+        REQUIRE(error.ReasonGet() == LoadError::Reason::NotFound);
+        REQUIRE(error.LocationsGet().size() == 1);
+        REQUIRE(!Mentions(error, developmentPak));
+        REQUIRE(Mentions(error, "development locations are off"));
+    }
+
+    SECTION("with the opt-in")
+    {
+        PakLoader loader;
+        loader.PathAdd(conf);
+        loader.DevelopmentPathsEnable();
+        REQUIRE(loader.DevelopmentPathsEnabled());
+        auto resources = loader.Load("searchpak");
+        REQUIRE(resources.at("item")->Data == Bytes(5));
+    }
+
+    SECTION("organisation names use the dependency directory")
+    {
+        seedtest::WritePak(DevelopmentDirOf(scratch, developmentPakOrganisation), "searchpak", {{"item", Bytes(7)}});
+        fs::remove_all(DevelopmentDirOf(scratch, developmentPak));
+
+        PakLoader loader;
+        loader.DevelopmentPathsEnable();
+        REQUIRE(loader.Load("org/searchpak").at("item")->Data == Bytes(7));
+        REQUIRE_THROWS_AS(loader.Load("searchpak"), LoadError);
+    }
+}
+
+TEST_CASE("With the opt-in a configured pak beats a development pak", "[PluginSearchOrder]")
+{
+    ScratchDir scratch;
+    fs::path project = ProjectOf(scratch);
+    seedtest::WritePak(DevelopmentDirOf(scratch, developmentPak), "searchpak", {{"item", Bytes(5)}});
+    seedtest::WritePak(scratch.Path() / "conf", "searchpak", {{"item", Bytes(8)}});
+    WorkingDirectoryGuard guard(project);
+
+    PakLoader loader;
+    loader.PathAdd((scratch.Path() / "conf").string());
+    loader.DevelopmentPathsEnable();
+    REQUIRE(loader.Load("searchpak").at("item")->Data == Bytes(8));
+}
+
+TEST_CASE("Pak search paths and error list development locations after configured ones", "[PluginSearchOrder]")
+{
+    ScratchDir scratch;
+    fs::create_directories(scratch.Path() / "conf");
+    WorkingDirectoryGuard guard(ProjectOf(scratch));
+    const std::string conf = (scratch.Path() / "conf").string();
+
+    PakLoader loader;
+    loader.PathAdd(conf);
+    REQUIRE(loader.SearchPathsGet("searchpak") == std::vector<std::string>{conf});
+
+    loader.DevelopmentPathsEnable();
+    REQUIRE(loader.SearchPathsGet("searchpak") == std::vector<std::string>{conf, developmentPak});
+    REQUIRE(loader.SearchPathsGet("org/searchpak") ==
+            std::vector<std::string>{conf, developmentPak, developmentPakOrganisation});
+    REQUIRE_THROWS_AS(loader.SearchPathsGet("../searchpak"), LoadError);
+
+    LoadError error = LoadErrorOf([&] { loader.Load("org/searchpak"); });
+    REQUIRE(error.ReasonGet() == LoadError::Reason::NotFound);
+    const auto &locations = error.LocationsGet();
+    REQUIRE(locations.size() == 3);
+    REQUIRE(locations[0].path == conf);
+    REQUIRE(!locations[0].development);
+    REQUIRE(locations[1].path == developmentPak);
+    REQUIRE(locations[1].development);
+    REQUIRE(locations[2].path == developmentPakOrganisation);
+    REQUIRE(locations[2].development);
+    REQUIRE(!Mentions(error, "development locations are off"));
+}

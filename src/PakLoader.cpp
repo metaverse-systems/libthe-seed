@@ -9,16 +9,16 @@
 
 PakLoader::PakLoader() = default;
 
-// Opens the pak named `pak_name` from the first configured location that holds
+// Opens the pak named `pak_name` from the first location in `locations` that holds
 // <library>.pak. A pak that is present but refused by ResourcePak ends the
 // search; later locations are not tried.
-static std::shared_ptr<ResourcePak> LoadPak(const std::vector<std::string> &locations, const std::string &pak_name)
+static std::shared_ptr<ResourcePak> LoadPak(const std::vector<std::string> &locations, size_t configured_count, const std::string &pak_name)
 {
     constexpr const char *kind = "resource pak";
     NameParser parsed(pak_name, kind);
 
     const std::string file_name = seed::internal::PakFileName(parsed.library);
-    seed::internal::SearchResult search = seed::internal::SearchFirst(locations, file_name);
+    seed::internal::SearchResult search = seed::internal::SearchFirst(locations, file_name, configured_count);
     if (!search.found)
         seed::internal::NotFoundThrow(search, pak_name, file_name, kind);
 
@@ -34,13 +34,10 @@ static std::shared_ptr<ResourcePak> LoadPak(const std::vector<std::string> &loca
 
 std::unordered_map<std::string, std::shared_ptr<ecs::Resource>> PakLoader::Load(const std::string &pak_name)
 {
-    std::vector<std::string> search_paths;
-    {
-        std::shared_lock lock(this->mutex);
-        search_paths = this->paths;
-    }
+    size_t configured_count = 0;
+    std::vector<std::string> search_paths = this->SearchPathsGet(pak_name, configured_count);
 
-    auto pak = LoadPak(search_paths, pak_name);
+    auto pak = LoadPak(search_paths, configured_count, pak_name);
     std::vector<std::string> resource_names = pak->ResourceNames();
     std::unordered_map<std::string, std::shared_ptr<ecs::Resource>> resources;
     for (const auto &resource_name : resource_names)
@@ -53,13 +50,10 @@ std::unordered_map<std::string, std::shared_ptr<ecs::Resource>> PakLoader::Load(
 
 std::unordered_map<std::string, std::shared_ptr<ecs::Resource>> PakLoader::Load(const std::string &pak_name, const std::vector<std::string> &resource_names)
 {
-    std::vector<std::string> search_paths;
-    {
-        std::shared_lock lock(this->mutex);
-        search_paths = this->paths;
-    }
+    size_t configured_count = 0;
+    std::vector<std::string> search_paths = this->SearchPathsGet(pak_name, configured_count);
 
-    auto pak = LoadPak(search_paths, pak_name);
+    auto pak = LoadPak(search_paths, configured_count, pak_name);
     std::vector<std::string> available_resource_names = pak->ResourceNames();
     std::unordered_map<std::string, std::shared_ptr<ecs::Resource>> resources;
     for (const auto &available_name : available_resource_names)
@@ -83,4 +77,33 @@ std::vector<std::string> PakLoader::PathsGet() const
 {
     std::shared_lock lock(this->mutex);
     return this->paths;
+}
+
+void PakLoader::DevelopmentPathsEnable(bool enabled)
+{
+    std::unique_lock lock(this->mutex);
+    this->development_paths = enabled;
+}
+
+bool PakLoader::DevelopmentPathsEnabled() const
+{
+    std::shared_lock lock(this->mutex);
+    return this->development_paths;
+}
+
+std::vector<std::string> PakLoader::SearchPathsGet(const std::string &pak_name) const
+{
+    size_t configured_count = 0;
+    return this->SearchPathsGet(pak_name, configured_count);
+}
+
+// Validates the name, then builds the list from one snapshot of the paths and
+// the setting taken under a single lock.
+std::vector<std::string> PakLoader::SearchPathsGet(const std::string &pak_name, size_t &configured_count) const
+{
+    NameParser parsed(pak_name, "resource pak");
+
+    std::shared_lock lock(this->mutex);
+    return seed::internal::SearchListBuild(this->paths, this->development_paths, parsed.org, parsed.library,
+                                           true, configured_count);
 }

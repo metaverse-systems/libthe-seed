@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <cstddef>
 #include <filesystem>
 #include <string>
 #include <vector>
@@ -31,12 +32,29 @@ struct SearchResult
     std::vector<LoadError::Location> locations;
 };
 
+// The relative development locations for a plugin library (`pak` false) or a
+// resource pak (`pak` true), in search order. `org` is empty for a plain name;
+// the node_modules location is only present for an `org/library` name. The
+// working directory is never part of the list.
+std::vector<std::string> DevelopmentLocations(const std::string &org, const std::string &library, bool pak);
+
+// The full ordered search list for one lookup: `configured` first, then, only
+// when `development` is true, the development locations. Does not touch the
+// file system. `configured_count` receives the number of leading entries that
+// are configured locations.
+std::vector<std::string> SearchListBuild(const std::vector<std::string> &configured, bool development,
+                                         const std::string &org, const std::string &library, bool pak,
+                                         size_t &configured_count);
+
 // Looks for `file_name` in `locations` in order. The first location holding a
 // regular file of that name decides; later locations are not looked at.
 // Relative locations are resolved against the working directory at the time
 // of the call. Nothing is searched but the given locations. Never throws for
 // a missing location or file.
-SearchResult SearchFirst(const std::vector<std::string> &locations, const std::string &file_name);
+// Entries from index `configured_count` on are reported as development
+// locations.
+SearchResult SearchFirst(const std::vector<std::string> &locations, const std::string &file_name,
+                         size_t configured_count = static_cast<size_t>(-1));
 
 // Throws LoadError (NotFound) for a search that found nothing.
 [[noreturn]] void NotFoundThrow(const SearchResult &result, const std::string &name,
@@ -52,7 +70,7 @@ SearchResult SearchFirst(const std::vector<std::string> &locations, const std::s
 // error messages. Throws LoadError: NotFound when no location holds the file,
 // NotLoadable when the deciding file cannot be opened (no later location is
 // tried). On success `result` describes the search.
-void *PluginOpen(const std::vector<std::string> &locations, const std::string &library,
+void *PluginOpen(const std::vector<std::string> &locations, size_t configured_count, const std::string &library,
                  const std::string &name, const std::string &kind, SearchResult &result);
 
 // Address of `symbol` in an opened plugin, or nullptr with the platform's
