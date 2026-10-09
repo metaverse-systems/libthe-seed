@@ -4,7 +4,7 @@
 #   run-test.sh <program>
 #
 # Environment:
-#   SEED_SANITIZER         none or address
+#   SEED_SANITIZER         none, address or thread
 #   SEED_KNOWN_GAPS_FILE   path to the known-gap list
 #   SEED_TEST_PROGRAMS     space separated basenames of the test programs
 
@@ -15,9 +15,9 @@ if [ $# -lt 1 ]; then
     exit 99
 fi
 case "${SEED_SANITIZER:-}" in
-none | address) ;;
+none | address | thread) ;;
 *)
-    echo "run-test.sh: SEED_SANITIZER must be none or address, got '${SEED_SANITIZER:-}'" >&2
+    echo "run-test.sh: SEED_SANITIZER must be none, address or thread, got '${SEED_SANITIZER:-}'" >&2
     exit 99
     ;;
 esac
@@ -68,7 +68,7 @@ BEGIN {
     count++
     f[count] = trim(rest)
     if (count != 6) { bad("expected 6 fields, found " count); next }
-    if (f[1] != "all" && f[1] != "address") { bad("variant must be all or address, got " f[1]); next }
+    if (f[1] != "all" && f[1] != "address" && f[1] != "thread") { bad("variant must be all, address or thread, got " f[1]); next }
     if (!(f[2] in known)) { bad("program not in the test program list: " f[2]); next }
     if (f[3] == "") { bad("empty test case"); next }
     if (f[4] == "") { bad("empty signature"); next }
@@ -78,7 +78,7 @@ BEGIN {
     key = f[1] SUBSEP f[2] SUBSEP f[3]
     if (key in seen) { bad("duplicate entry for " f[2] " \"" f[3] "\" (" f[1] ")"); next }
     seen[key] = 1
-    if (f[2] == prog && (f[1] == "all" || (f[1] == "address" && san == "address")))
+    if (f[2] == prog && (f[1] == "all" || (f[1] == "address" && san == "address") || (f[1] == "thread" && san == "thread")))
         printf "%s\t%s\t%s\t%s\n", f[3], f[4], f[5], f[6] >> entries
 }
 END { exit failed ? 1 : 0 }

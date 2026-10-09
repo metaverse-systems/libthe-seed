@@ -33,7 +33,7 @@ SystemLoader::SystemCreator SystemLoader::Get(const std::string &name)
     if (it != creators_.end())
         return it->second;
 
-    auto parsed = NameParser(name);
+    auto parsed = NameParser(name, "system plugin");
     auto lib = std::make_unique<LibraryLoader>(parsed.library);
 
     lib->PathAdd("./");

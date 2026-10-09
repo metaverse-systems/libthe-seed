@@ -69,6 +69,24 @@ inline std::string ModuleDir()
     return detail::MustExist(std::filesystem::path(MODULE_DIR)).string();
 }
 
+// File name of a plugin built from the given library name (for example
+// "testmodule"), as the platform loads it.
+inline std::string PluginFileName(const std::string &name)
+{
+#ifdef _WIN32
+    return "lib" + name + "-0.dll";
+#else
+    return "lib" + name + ".so";
+#endif
+}
+
+// Absolute path of a built test plugin: "testmodule", "testmodulealt" or
+// "testsystem". Fails the running test, naming the file, when it is absent.
+inline std::string PluginPath(const std::string &name)
+{
+    return detail::MustExist(std::filesystem::path(MODULE_DIR) / PluginFileName(name)).string();
+}
+
 // A uniquely named directory that is removed, with its contents, when the
 // object goes out of scope. Tests write every file they create inside it.
 class ScratchDir

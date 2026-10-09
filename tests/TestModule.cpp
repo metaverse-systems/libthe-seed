@@ -1,10 +1,19 @@
 #include <libecs-cpp/ecs.hpp>
 #include <libecs-cpp/json.hpp>
 
+#include <atomic>
+#include <cstdint>
+
+#ifndef TEST_MODULE_VARIANT
+#define TEST_MODULE_VARIANT 1
+#endif
+
 namespace
 {
     /*! A component that a test loads from a shared module. Its configuration can set the value it
-     *  carries and, for the tests of rejected components, the type it reports. */
+     *  carries and, for the tests of rejected components, the type it reports. The configuration key
+     *  "counter" holds the address of a std::atomic<int> that the destructor increments. The exported
+     *  configuration reports which build of the module the component came from. */
     class ModuleComponent : public ecs::Component
     {
       public:
@@ -17,16 +26,28 @@ namespace
         {
             this->Type = config.value("type", std::string("TestModule"));
             this->Value = config.value("value", 0);
+            this->Counter = reinterpret_cast<std::atomic<int> *>(
+                static_cast<std::uintptr_t>(config.value("counter", static_cast<std::uint64_t>(0))));
+        }
+
+        ~ModuleComponent() override
+        {
+            if(this->Counter != nullptr)
+            {
+                ++*this->Counter;
+            }
         }
 
         nlohmann::json Export() const override
         {
             nlohmann::json config;
             config["value"] = this->Value;
+            config["variant"] = TEST_MODULE_VARIANT;
             return config;
         }
 
         int Value = 0;
+        std::atomic<int> *Counter = nullptr;
     };
 }
 

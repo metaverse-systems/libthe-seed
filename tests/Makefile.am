@@ -15,11 +15,12 @@ AM_TESTS_ENVIRONMENT = \
     SEED_FIXTURES_DIR='$(abs_srcdir)/fixtures'; export SEED_FIXTURES_DIR; \
     SEED_TESTS_SRCDIR='$(abs_srcdir)'; export SEED_TESTS_SRCDIR; \
     ASAN_OPTIONS='halt_on_error=1:detect_leaks=1:abort_on_error=0:print_summary=1'; export ASAN_OPTIONS; \
-    UBSAN_OPTIONS='halt_on_error=1:print_stacktrace=1:print_summary=1'; export UBSAN_OPTIONS;
+    UBSAN_OPTIONS='halt_on_error=1:print_stacktrace=1:print_summary=1'; export UBSAN_OPTIONS; \
+    TSAN_OPTIONS='halt_on_error=1:second_deadlock_stack=1:print_summary=1'; export TSAN_OPTIONS;
 
 # Bare program names: run-test.sh compares them with known-gaps.txt, and
 # check_PROGRAMS gets $(EXEEXT) appended when cross-compiling for Windows.
-seed_test_programs = test_NameParser test_LibraryLoader test_DependencyLister test_DependencyAttribution test_DependencyReporting \
+seed_test_programs = test_NameParser test_LoadError test_LibraryLoader test_DependencyLister test_DependencyAttribution test_DependencyReporting \
                  test_PeSigner test_MachOParser test_MachOSigner test_MsiSigner test_ResourcePak \
                  test_ComponentLoader test_SystemLoader test_PakLoader \
                  test_LoaderConcurrency test_JSONLoader test_BoundedBytes test_MalformedPe test_PeDigestReference test_PeRoundTrip test_MalformedElf test_MalformedMachO test_MachONoRoom test_MachOLayout test_MachOReference \
@@ -36,12 +37,15 @@ else
 TESTS = $(seed_test_programs) run-test-selftest.sh check-fixtures.sh
 endif
 
-check_LTLIBRARIES = libtestmodule.la libcatch.la
+check_LTLIBRARIES = libtestmodule.la libtestmodulealt.la libtestsystem.la libcatch.la
 
 libcatch_la_SOURCES = ../external/Catch2/extras/catch_amalgamated.cpp
 
 test_NameParser_SOURCES = test_NameParser.cpp
 test_NameParser_LDADD = libcatch.la ../src/libthe-seed.la ${LIBECS_LIBS}
+
+test_LoadError_SOURCES = test_LoadError.cpp
+test_LoadError_LDADD = libcatch.la ../src/libthe-seed.la ${LIBECS_LIBS}
 
 test_LibraryLoader_SOURCES = test_LibraryLoader.cpp
 test_LibraryLoader_LDADD = libcatch.la ../src/libthe-seed.la ${LIBECS_LIBS}
@@ -156,11 +160,21 @@ libtestmodule_la_CXXFLAGS = -std=c++20 ${LIBECS_CFLAGS} $(SANITIZER_CXXFLAGS)
 libtestmodule_la_LDFLAGS = -no-undefined -rpath /nowhere -version-info 0:0:0 $(SANITIZER_LDFLAGS)
 libtestmodule_la_LIBADD = ${LIBECS_LIBS}
 
+libtestmodulealt_la_SOURCES = TestModule.cpp
+libtestmodulealt_la_CXXFLAGS = -std=c++20 ${LIBECS_CFLAGS} $(SANITIZER_CXXFLAGS) -DTEST_MODULE_VARIANT=2
+libtestmodulealt_la_LDFLAGS = -no-undefined -rpath /nowhere -version-info 0:0:0 $(SANITIZER_LDFLAGS)
+libtestmodulealt_la_LIBADD = ${LIBECS_LIBS}
+
+libtestsystem_la_SOURCES = TestSystemModule.cpp
+libtestsystem_la_CXXFLAGS = -std=c++20 ${LIBECS_CFLAGS} $(SANITIZER_CXXFLAGS)
+libtestsystem_la_LDFLAGS = -no-undefined -rpath /nowhere -version-info 0:0:0 $(SANITIZER_LDFLAGS)
+libtestsystem_la_LIBADD = ${LIBECS_LIBS}
+
 test_JSONLoader_SOURCES = test_JSONLoader.cpp
 test_JSONLoader_LDADD = libcatch.la ../src/libthe-seed.la ${LIBECS_LIBS}
 test_JSONLoader_LDFLAGS = $(AM_LDFLAGS) -pthread
 
-EXTRA_DIST = TestPaths.hpp CfbReference.hpp MsiTestSupport.hpp ToolSupport.hpp MachOReference.hpp MachOSigningSupport.hpp HeapCounter.hpp MalformedInput.hpp ReplaceTestSupport.hpp \
+EXTRA_DIST = TestPaths.hpp LoaderTestSupport.hpp CfbReference.hpp MsiTestSupport.hpp ToolSupport.hpp MachOReference.hpp MachOSigningSupport.hpp HeapCounter.hpp MalformedInput.hpp ReplaceTestSupport.hpp \
              reference/reference-dump.cpp reference/compare-reference.sh \
              reference/make-generated-references.sh run-test.sh run-test-selftest.sh check-fixtures.sh \
              fuzz/FuzzTargets.hpp fuzz/FuzzTargets.cpp fuzz/fuzz_entry.cpp \

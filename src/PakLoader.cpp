@@ -27,7 +27,7 @@ static std::shared_ptr<ResourcePak> LoadPak(const std::vector<std::string> &sear
 
 std::unordered_map<std::string, std::shared_ptr<ecs::Resource>> PakLoader::Load(const std::string &pak_name)
 {
-    auto parsed = NameParser(pak_name);
+    auto parsed = NameParser(pak_name, "resource pak");
 
     std::vector<std::string> search_paths;
     search_paths.push_back(".");
@@ -57,7 +57,7 @@ std::unordered_map<std::string, std::shared_ptr<ecs::Resource>> PakLoader::Load(
 
 std::unordered_map<std::string, std::shared_ptr<ecs::Resource>> PakLoader::Load(const std::string &pak_name, const std::vector<std::string> &resource_names)
 {
-    auto parsed = NameParser(pak_name);
+    auto parsed = NameParser(pak_name, "resource pak");
 
     std::vector<std::string> search_paths;
     search_paths.push_back(".");
