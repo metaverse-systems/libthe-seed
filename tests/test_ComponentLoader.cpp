@@ -1,5 +1,7 @@
 #include <catch_amalgamated.hpp>
 #include <libthe-seed/ComponentLoader.hpp>
+#include <libthe-seed/LoadError.hpp>
+#include <stdexcept>
 
 TEST_CASE("ComponentLoader instance isolation", "[ComponentLoader]") {
     SECTION("Default construction creates empty state") {
@@ -40,6 +42,7 @@ TEST_CASE("ComponentLoader Create error handling", "[ComponentLoader]") {
         ComponentLoader loader;
         loader.PathAdd("/nonexistent/path");
         REQUIRE_THROWS_AS(loader.Create("nonexistent/component"), std::runtime_error);
+        REQUIRE_THROWS_AS(loader.Create("nonexistent/component"), LoadError);
     }
 
     SECTION("Create with data throws runtime_error for nonexistent component") {
@@ -47,6 +50,7 @@ TEST_CASE("ComponentLoader Create error handling", "[ComponentLoader]") {
         loader.PathAdd("/nonexistent/path");
         int data = 42;
         REQUIRE_THROWS_AS(loader.Create("nonexistent/component", &data), std::runtime_error);
+        REQUIRE_THROWS_AS(loader.Create("nonexistent/component", &data), LoadError);
     }
 }
 
@@ -55,10 +59,11 @@ TEST_CASE("ComponentLoader Get error handling", "[ComponentLoader]") {
         ComponentLoader loader;
         loader.PathAdd("/nonexistent/path");
         REQUIRE_THROWS_AS(loader.Get("nonexistent/component"), std::runtime_error);
+        REQUIRE_THROWS_AS(loader.Get("nonexistent/component"), LoadError);
     }
 }
 
-TEST_CASE("ComponentLoader destruction releases cached handles", "[ComponentLoader]") {
+TEST_CASE("ComponentLoader destruction completes and unloads nothing", "[ComponentLoader]") {
     SECTION("Destruction completes without error") {
         auto loader = std::make_unique<ComponentLoader>();
         loader->PathAdd("/some/path");

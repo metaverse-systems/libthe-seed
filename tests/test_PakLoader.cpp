@@ -1,5 +1,7 @@
 #include <catch_amalgamated.hpp>
 #include <libthe-seed/PakLoader.hpp>
+#include <libthe-seed/LoadError.hpp>
+#include <stdexcept>
 
 TEST_CASE("PakLoader instance isolation", "[PakLoader]") {
     SECTION("Default construction creates empty state") {
@@ -40,6 +42,7 @@ TEST_CASE("PakLoader Load error handling", "[PakLoader]") {
         PakLoader loader;
         loader.PathAdd("/nonexistent/path");
         REQUIRE_THROWS_AS(loader.Load("nonexistent/pak"), std::runtime_error);
+        REQUIRE_THROWS_AS(loader.Load("nonexistent/pak"), LoadError);
     }
 
     SECTION("Filtered Load throws runtime_error for nonexistent pak") {
@@ -47,10 +50,11 @@ TEST_CASE("PakLoader Load error handling", "[PakLoader]") {
         loader.PathAdd("/nonexistent/path");
         std::vector<std::string> names = {"resource1"};
         REQUIRE_THROWS_AS(loader.Load("nonexistent/pak", names), std::runtime_error);
+        REQUIRE_THROWS_AS(loader.Load("nonexistent/pak", names), LoadError);
     }
 }
 
-TEST_CASE("PakLoader destruction releases paths", "[PakLoader]") {
+TEST_CASE("PakLoader destruction completes", "[PakLoader]") {
     SECTION("Destruction completes without error") {
         auto loader = std::make_unique<PakLoader>();
         loader->PathAdd("/some/path");

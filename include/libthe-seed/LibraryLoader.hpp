@@ -56,6 +56,14 @@ class LibraryLoader
      * @param path Path to add.
      */
     void PathAdd(const std::string &path);
+    /**
+     * @brief The locations added with PathAdd, in the order they were added.
+     *
+     * Returns the locations themselves, whether or not they exist or hold the
+     * library, and never throws. Earlier versions returned the library files
+     * found and threw when there were none. The working directory is searched
+     * only if it was added.
+     */
     std::vector<std::string> PathsGet();
     const std::string name;
     static const std::string GetLastErrorAsString();

@@ -29,6 +29,6 @@ class PakLoader
     std::vector<std::string> PathsGet() const;
 
   private:
-    std::vector<std::string> paths_;
-    mutable std::shared_mutex mutex_;
+    std::vector<std::string> paths;
+    mutable std::shared_mutex mutex;
 };

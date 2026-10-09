@@ -10,6 +10,7 @@
 #include "PluginSearch.hpp"
 
 #include <atomic>
+#include <system_error>
 
 namespace seed::internal
 {
@@ -93,6 +94,122 @@ std::uint64_t PluginOpenCallCount()
 void ResetPluginOpenCallCount()
 {
     open_calls.store(0, std::memory_order_relaxed);
+}
+
+} // namespace seed::internal
+
+namespace seed::internal
+{
+
+std::string PluginFileName(const std::string &library)
+{
+#ifdef _WIN32
+    return "lib" + library + "-0.dll";
+#elif defined(__APPLE__)
+    return "lib" + library + ".dylib";
+#else
+    return "lib" + library + ".so";
+#endif
+}
+
+std::string PakFileName(const std::string &library)
+{
+    return library + ".pak";
+}
+
+SearchResult SearchFirst(const std::vector<std::string> &locations, const std::string &file_name)
+{
+    namespace fs = std::filesystem;
+
+    SearchResult result;
+    for(const std::string &location : locations)
+    {
+        result.locations.push_back({location, false, LoadError::LocationState::NotReached});
+    }
+
+    for(size_t i = 0; i < locations.size(); ++i)
+    {
+        LoadError::Location &entry = result.locations[i];
+        std::error_code ec;
+        fs::path directory = fs::absolute(fs::path(locations[i]), ec);
+        if(ec || !fs::is_directory(directory, ec))
+        {
+            entry.state = LoadError::LocationState::Missing;
+            continue;
+        }
+
+        fs::path candidate = directory / file_name;
+        std::error_code file_ec;
+        if(!fs::is_regular_file(candidate, file_ec))
+        {
+            entry.state = LoadError::LocationState::Searched;
+            continue;
+        }
+
+        entry.state = LoadError::LocationState::Found;
+        result.found = true;
+        result.file = candidate.lexically_normal();
+        std::error_code canonical_ec;
+        result.identity = fs::canonical(candidate, canonical_ec);
+        if(canonical_ec)
+        {
+            result.identity = result.file;
+        }
+        break;
+    }
+    return result;
+}
+
+void NotFoundThrow(const SearchResult &result, const std::string &name,
+                   const std::string &file_name, const std::string &kind)
+{
+    throw LoadError(LoadError::Reason::NotFound, name, file_name, result.locations, "", kind);
+}
+
+void NotLoadableThrow(const SearchResult &result, const std::string &name,
+                      const std::string &reason, const std::string &kind)
+{
+    throw LoadError(LoadError::Reason::NotLoadable, name, result.file.string(), result.locations, reason, kind);
+}
+
+void *PluginOpen(const std::vector<std::string> &locations, const std::string &library,
+                 const std::string &name, const std::string &kind, SearchResult &result)
+{
+    const std::string file_name = PluginFileName(library);
+    result = SearchFirst(locations, file_name);
+    if(!result.found)
+    {
+        NotFoundThrow(result, name, file_name, kind);
+    }
+
+    std::string error;
+    void *handle = OpenPinned(result.file, error);
+    if(handle == nullptr)
+    {
+        NotLoadableThrow(result, name, error, kind);
+    }
+    return handle;
+}
+
+void *SymbolFind(void *handle, const std::string &symbol, std::string &error)
+{
+    error.clear();
+#ifdef _WIN32
+    void *address = reinterpret_cast<void *>(GetProcAddress(static_cast<HMODULE>(handle), symbol.c_str()));
+    if(address == nullptr)
+    {
+        error = PlatformMessage(GetLastError());
+    }
+#else
+    dlerror();
+    void *address = dlsym(handle, symbol.c_str());
+    if(address == nullptr)
+    {
+        const char *message = dlerror();
+        error = message != nullptr ? message : "";
+    }
+#endif
+    return address;
 }
 
 } // namespace seed::internal

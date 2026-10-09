@@ -1,5 +1,7 @@
 #include <catch_amalgamated.hpp>
 #include <libthe-seed/SystemLoader.hpp>
+#include <libthe-seed/LoadError.hpp>
+#include <stdexcept>
 
 TEST_CASE("SystemLoader instance isolation", "[SystemLoader]") {
     SECTION("Default construction creates empty state") {
@@ -40,6 +42,7 @@ TEST_CASE("SystemLoader Create error handling", "[SystemLoader]") {
         SystemLoader loader;
         loader.PathAdd("/nonexistent/path");
         REQUIRE_THROWS_AS(loader.Create("nonexistent/system"), std::runtime_error);
+        REQUIRE_THROWS_AS(loader.Create("nonexistent/system"), LoadError);
     }
 
     SECTION("Create with data throws runtime_error for nonexistent system") {
@@ -47,6 +50,7 @@ TEST_CASE("SystemLoader Create error handling", "[SystemLoader]") {
         loader.PathAdd("/nonexistent/path");
         int data = 42;
         REQUIRE_THROWS_AS(loader.Create("nonexistent/system", &data), std::runtime_error);
+        REQUIRE_THROWS_AS(loader.Create("nonexistent/system", &data), LoadError);
     }
 }
 
@@ -55,10 +59,11 @@ TEST_CASE("SystemLoader Get error handling", "[SystemLoader]") {
         SystemLoader loader;
         loader.PathAdd("/nonexistent/path");
         REQUIRE_THROWS_AS(loader.Get("nonexistent/system"), std::runtime_error);
+        REQUIRE_THROWS_AS(loader.Get("nonexistent/system"), LoadError);
     }
 }
 
-TEST_CASE("SystemLoader destruction releases cached handles", "[SystemLoader]") {
+TEST_CASE("SystemLoader destruction completes and unloads nothing", "[SystemLoader]") {
     SECTION("Destruction completes without error") {
         auto loader = std::make_unique<SystemLoader>();
         loader->PathAdd("/some/path");

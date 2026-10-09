@@ -7,8 +7,6 @@
 #include <vector>
 #include <libecs-cpp/ecs.hpp>
 
-class LibraryLoader;
-
 /**
  * @brief Loads component plugins by name.
  *
@@ -39,8 +37,7 @@ class ComponentLoader
     std::vector<std::string> PathsGet() const;
 
   private:
-    std::vector<std::string> paths_;
-    std::map<std::string, std::unique_ptr<LibraryLoader>> cache_;
-    std::map<std::string, ComponentCreator> creators_;
-    mutable std::shared_mutex mutex_;
+    std::vector<std::string> paths;
+    std::map<std::string, ComponentCreator> entries;
+    mutable std::shared_mutex mutex;
 };
