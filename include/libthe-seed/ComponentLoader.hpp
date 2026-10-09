@@ -9,6 +9,14 @@
 
 class LibraryLoader;
 
+/**
+ * @brief Loads component plugins by name.
+ *
+ * Lifetime: no teardown order is required. Every plugin the loader opens is
+ * pinned, so components, creators returned by Get and anything else made from
+ * the plugin stay valid and destructible after this loader is destroyed. The
+ * plugin's code stays loaded until the process ends.
+ */
 class ComponentLoader
 {
   public:

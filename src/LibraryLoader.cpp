@@ -6,6 +6,8 @@
 
 #include <libthe-seed/LibraryLoader.hpp>
 
+#include "internal/PluginSearch.hpp"
+
 #include <filesystem>
 
 void LibraryLoader::PathAdd(const std::string &path)
@@ -62,14 +64,13 @@ void LibraryLoader::Load()
 
     for(const auto &path : search_paths)
     {
-#ifdef _WIN32
-        HMODULE lib = LoadLibrary(path.c_str());
-#else
-        void *lib = dlopen(path.c_str(), RTLD_LAZY);
-#endif
+        // Plugins are pinned: the platform never unmaps their code, so objects
+        // and function pointers stay valid after this loader is gone.
+        std::string open_error;
+        void *lib = seed::internal::OpenPinned(std::filesystem::absolute(path), open_error);
         if(lib == nullptr)
         {
-            error = LibraryLoader::GetLastErrorAsString();
+            error = open_error;
         }
         else
         {

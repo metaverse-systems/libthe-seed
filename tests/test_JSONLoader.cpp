@@ -8,8 +8,8 @@
 
 namespace
 {
-    /*! The loader comes first so that it is destroyed after the world: the components' code lives in
-     *  the module the loader keeps open. */
+    /*! The manager is declared before the loader, as in the readme, so the loader is destroyed first
+     *  and the components are destroyed after it. Plugin code stays loaded, so this order is safe. */
     struct Scene
     {
         Scene()
@@ -29,8 +29,8 @@ namespace
             return scene.dump();
         }
 
-        ComponentLoader loader;
         ecs::Manager manager;
+        ComponentLoader loader;
         ecs::Container *world = nullptr;
     };
 }

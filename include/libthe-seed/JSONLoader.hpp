@@ -6,6 +6,15 @@
 
 class ComponentLoader;
 
+/**
+ * @brief Builds a container from a JSON scene, creating components through a
+ *        ComponentLoader.
+ *
+ * Lifetime: no teardown order is required. The components of a scene come from
+ * pinned plugins, so they stay valid and destructible after this loader and the
+ * ComponentLoader are destroyed, whether the container is destroyed before or
+ * after them.
+ */
 class JSONLoader
 {
   public:

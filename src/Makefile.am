@@ -22,6 +22,7 @@ noinst_HEADERS = \
 	internal/PeCertificate.hpp \
 	NameParser.hpp \
 	internal/FileIO.hpp \
+	internal/PluginSearch.hpp \
 	internal/FileReplaceHooks.hpp \
 	internal/MachODefs.hpp \
 	internal/MachOLayout.hpp \
@@ -51,6 +52,7 @@ libthe_seed_la_SOURCES = LoadError.cpp \
 		MachOSigner.cpp \
 		MsiSigner.cpp \
 		internal/FileIO.cpp \
+		internal/PluginSearch.cpp \
 		internal/MachOLayout.cpp \
 		internal/CfbReader.cpp \
 		internal/CfbWriter.cpp \

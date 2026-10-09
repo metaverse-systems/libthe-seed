@@ -27,6 +27,11 @@ struct LibraryDeleter
 /**
  * @brief Loads functions from dynamic libraries.
  *        (.so, .dll, .dylib)
+ *
+ * Every library the loader opens is pinned: the platform never unmaps its
+ * code, so function pointers returned by FunctionGet and objects made by them
+ * stay valid after this loader is destroyed. The code stays loaded until the
+ * process ends.
  * 
  */
 class LibraryLoader
