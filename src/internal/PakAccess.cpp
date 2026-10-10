@@ -83,7 +83,17 @@ void PakEntryRead(const PakFile &file, const PakEntry &entry, ecs::Resource &res
     }
     if(entry.size > 0)
     {
-        file.ReadAt(entry.offset, resource.Data.data(), entry.size);
+        try
+        {
+            file.ReadAt(entry.offset, resource.Data.data(), entry.size);
+        }
+        catch(const PakShortRead &error)
+        {
+            throw PakDamaged("file is shorter than its description: expected " + std::to_string(error.ExpectedGet()) +
+                             " bytes of resource \"" + entry.name + "\" at offset " +
+                             std::to_string(error.OffsetGet()) + ", got " + std::to_string(error.GotGet()) +
+                             " (was it changed while being read?)");
+        }
     }
 }
 

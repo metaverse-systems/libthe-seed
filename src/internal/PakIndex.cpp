@@ -156,21 +156,21 @@ std::shared_ptr<const PakIndex> PakIndexRead(PakFile &file)
     index->stamp = file.Stamp();
     const std::uint64_t file_size = index->stamp.size;
 
-    // R1
+    // The description line.
     std::uint64_t description_end = 0;
     const std::string line = DescriptionRead(file, file_size, description_end);
 
-    // R2
+    // The description is JSON of limited depth.
     parse_count.fetch_add(1, std::memory_order_relaxed);
     const nlohmann::json description = DescriptionParse(line);
 
-    // R3
+    // The top level is an object.
     if(!description.is_object())
     {
         throw PakDamaged("description is not a JSON object");
     }
 
-    // R4, R5
+    // headerSize is a digit string and matches the description's end.
     const std::uint64_t header_size = HeaderSizeRead(description);
     if(header_size != description_end)
     {
@@ -178,7 +178,7 @@ std::shared_ptr<const PakIndex> PakIndexRead(PakFile &file)
                          " does not match the description's end at byte " + std::to_string(description_end));
     }
 
-    // R6
+    // resources is an array.
     const auto resources = description.find("resources");
     if(resources == description.end())
     {
@@ -189,7 +189,7 @@ std::shared_ptr<const PakIndex> PakIndexRead(PakFile &file)
         throw PakDamaged("\"resources\" is not an array");
     }
 
-    // R7 to R10, resource by resource
+    // Each resource: shape, unique name, sizes that do not overflow.
     index->entries.reserve(resources->size());
     std::uint64_t running = header_size;
     std::size_t position = 0;
@@ -234,7 +234,7 @@ std::shared_ptr<const PakIndex> PakIndexRead(PakFile &file)
         ++position;
     }
 
-    // R11
+    // The sizes explain the whole file.
     if(running > file_size)
     {
         throw PakDamaged("the description claims " + std::to_string(running) + " bytes but the file holds " +

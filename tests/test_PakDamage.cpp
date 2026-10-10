@@ -157,7 +157,7 @@ namespace
     }
 }
 
-TEST_CASE("Damage R1: the description line must end within 64 MiB", "[PakDamage]")
+TEST_CASE("Damage: the description line must end within 64 MiB", "[PakDamage]")
 {
     SECTION("A zero-length file")
     {
@@ -186,7 +186,7 @@ TEST_CASE("Damage R1: the description line must end within 64 MiB", "[PakDamage]
     }
 }
 
-TEST_CASE("Damage R2: the description must be JSON nested at most 64 levels", "[PakDamage]")
+TEST_CASE("Damage: the description must be JSON nested at most 64 levels", "[PakDamage]")
 {
     const std::vector<std::uint8_t> sound = seedtest::PakBytes(SampleSpec());
     const std::string invalid = "description is not valid JSON: ";
@@ -224,7 +224,7 @@ TEST_CASE("Damage R2: the description must be JSON nested at most 64 levels", "[
     }
 }
 
-TEST_CASE("Damage R3: the top level must be an object", "[PakDamage]")
+TEST_CASE("Damage: the top level must be an object", "[PakDamage]")
 {
     const std::vector<std::uint8_t> sound = seedtest::PakBytes(SampleSpec());
 
@@ -235,7 +235,7 @@ TEST_CASE("Damage R3: the top level must be an object", "[PakDamage]")
     }
 }
 
-TEST_CASE("Damage R4: headerSize must be a string of digits that fits 64 bits", "[PakDamage]")
+TEST_CASE("Damage: headerSize must be a string of digits that fits 64 bits", "[PakDamage]")
 {
     const std::vector<std::uint8_t> sound = seedtest::PakBytes(SampleSpec());
 
@@ -269,7 +269,7 @@ TEST_CASE("Damage R4: headerSize must be a string of digits that fits 64 bits", 
     }
 }
 
-TEST_CASE("Damage R5: headerSize must match the end of the description", "[PakDamage]")
+TEST_CASE("Damage: headerSize must match the end of the description", "[PakDamage]")
 {
     const std::vector<std::uint8_t> sound = seedtest::PakBytes(SampleSpec());
     const std::string end = std::to_string(DescriptionLength(sound));
@@ -299,7 +299,7 @@ TEST_CASE("Damage R5: headerSize must match the end of the description", "[PakDa
     }
 }
 
-TEST_CASE("Damage R6: resources must be an array", "[PakDamage]")
+TEST_CASE("Damage: resources must be an array", "[PakDamage]")
 {
     const std::vector<std::uint8_t> sound = seedtest::PakBytes(SampleSpec());
 
@@ -320,7 +320,7 @@ TEST_CASE("Damage R6: resources must be an array", "[PakDamage]")
     }
 }
 
-TEST_CASE("Damage R7: each resource is an object with a string name", "[PakDamage]")
+TEST_CASE("Damage: each resource is an object with a string name", "[PakDamage]")
 {
     const std::vector<std::uint8_t> sound = seedtest::PakBytes(SampleSpec());
 
@@ -344,7 +344,7 @@ TEST_CASE("Damage R7: each resource is an object with a string name", "[PakDamag
     }
 }
 
-TEST_CASE("Damage R8: each size is a non-negative integer that fits 64 bits", "[PakDamage]")
+TEST_CASE("Damage: each size is a non-negative integer that fits 64 bits", "[PakDamage]")
 {
     const std::vector<std::uint8_t> sound = seedtest::PakBytes(SampleSpec());
 
@@ -366,14 +366,14 @@ TEST_CASE("Damage R8: each size is a non-negative integer that fits 64 bits", "[
     }
 }
 
-TEST_CASE("Damage R9: names are unique", "[PakDamage]")
+TEST_CASE("Damage: names are unique", "[PakDamage]")
 {
     const std::vector<std::uint8_t> sound = seedtest::PakBytes(SampleSpec());
 
     DamageCheck(seedtest::PakEntryDuplicate(sound, 0), "resource \"alpha\" appears more than once");
 }
 
-TEST_CASE("Damage R10: running offsets do not overflow", "[PakDamage]")
+TEST_CASE("Damage: running offsets do not overflow", "[PakDamage]")
 {
     seedtest::PakSpec one;
     one.name = "org/one";
@@ -398,7 +398,7 @@ TEST_CASE("Damage R10: running offsets do not overflow", "[PakDamage]")
     }
 }
 
-TEST_CASE("Damage R11: the sizes explain the whole file", "[PakDamage]")
+TEST_CASE("Damage: the sizes explain the whole file", "[PakDamage]")
 {
     const std::vector<std::uint8_t> sound = seedtest::PakBytes(SampleSpec());
     const std::size_t total = sound.size();

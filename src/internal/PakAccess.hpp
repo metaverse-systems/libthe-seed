@@ -43,8 +43,9 @@ class PakNoMemory : public std::runtime_error
                                   bool missing_is_not_found);
 
 // Fills `resource` with the bytes of `entry`, allocated at exactly the
-// entry's size and read straight into place. Throws the exceptions of
-// PakFile::ReadAt or PakNoMemory.
+// entry's size and read straight into place. Throws PakNoMemory, PakDamaged
+// when the file ends before the resource does (it was changed after it was
+// checked) and the other exceptions of PakFile::ReadAt.
 void PakEntryRead(const PakFile &file, const PakEntry &entry, ecs::Resource &resource);
 
 } // namespace seed::internal

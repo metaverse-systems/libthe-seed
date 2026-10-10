@@ -5,6 +5,7 @@
 #include "PakTestSupport.hpp"
 #include "TestPaths.hpp"
 
+#include "internal/PakAccess.hpp"
 #include "internal/PakFile.hpp"
 #include "internal/PakIndex.hpp"
 
@@ -366,7 +367,7 @@ TEST_CASE("PakIndexRead accepts the edge cases the format allows", "[PakIndex]")
     }
 }
 
-TEST_CASE("PakIndexRead R1: the description line must end within 64 MiB", "[PakIndex]")
+TEST_CASE("PakIndexRead: the description line must end within 64 MiB", "[PakIndex]")
 {
     SECTION("No newline in a small file")
     {
@@ -387,7 +388,7 @@ TEST_CASE("PakIndexRead R1: the description line must end within 64 MiB", "[PakI
     }
 }
 
-TEST_CASE("PakIndexRead R2: the description must be JSON, nested at most 64 levels", "[PakIndex]")
+TEST_CASE("PakIndexRead: the description must be JSON, nested at most 64 levels", "[PakIndex]")
 {
     const std::vector<std::uint8_t> sound = seedtest::PakBytes(SampleSpec());
 
@@ -431,7 +432,7 @@ TEST_CASE("PakIndexRead R2: the description must be JSON, nested at most 64 leve
     }
 }
 
-TEST_CASE("PakIndexRead R3: the top level must be an object", "[PakIndex]")
+TEST_CASE("PakIndexRead: the top level must be an object", "[PakIndex]")
 {
     const std::vector<std::uint8_t> sound = seedtest::PakBytes(SampleSpec());
 
@@ -443,7 +444,7 @@ TEST_CASE("PakIndexRead R3: the top level must be an object", "[PakIndex]")
     }
 }
 
-TEST_CASE("PakIndexRead R4: headerSize must be a string of digits that fits 64 bits", "[PakIndex]")
+TEST_CASE("PakIndexRead: headerSize must be a string of digits that fits 64 bits", "[PakIndex]")
 {
     const std::vector<std::uint8_t> sound = seedtest::PakBytes(SampleSpec());
 
@@ -473,7 +474,7 @@ TEST_CASE("PakIndexRead R4: headerSize must be a string of digits that fits 64 b
     }
 }
 
-TEST_CASE("PakIndexRead R5: headerSize must match the end of the description", "[PakIndex]")
+TEST_CASE("PakIndexRead: headerSize must match the end of the description", "[PakIndex]")
 {
     const std::vector<std::uint8_t> sound = seedtest::PakBytes(SampleSpec());
     const std::string end = std::to_string(DescriptionLength(sound));
@@ -504,7 +505,7 @@ TEST_CASE("PakIndexRead R5: headerSize must match the end of the description", "
     }
 }
 
-TEST_CASE("PakIndexRead R6: resources must be an array", "[PakIndex]")
+TEST_CASE("PakIndexRead: resources must be an array", "[PakIndex]")
 {
     const std::vector<std::uint8_t> sound = seedtest::PakBytes(SampleSpec());
 
@@ -526,7 +527,7 @@ TEST_CASE("PakIndexRead R6: resources must be an array", "[PakIndex]")
     }
 }
 
-TEST_CASE("PakIndexRead R7: each resource is an object with a string name", "[PakIndex]")
+TEST_CASE("PakIndexRead: each resource is an object with a string name", "[PakIndex]")
 {
     const std::vector<std::uint8_t> sound = seedtest::PakBytes(SampleSpec());
 
@@ -552,7 +553,7 @@ TEST_CASE("PakIndexRead R7: each resource is an object with a string name", "[Pa
     }
 }
 
-TEST_CASE("PakIndexRead R8: each size is a non-negative integer that fits 64 bits", "[PakIndex]")
+TEST_CASE("PakIndexRead: each size is a non-negative integer that fits 64 bits", "[PakIndex]")
 {
     const std::vector<std::uint8_t> sound = seedtest::PakBytes(SampleSpec());
 
@@ -575,7 +576,7 @@ TEST_CASE("PakIndexRead R8: each size is a non-negative integer that fits 64 bit
     }
 }
 
-TEST_CASE("PakIndexRead R9: names are unique", "[PakIndex]")
+TEST_CASE("PakIndexRead: names are unique", "[PakIndex]")
 {
     const std::vector<std::uint8_t> sound = seedtest::PakBytes(SampleSpec());
 
@@ -583,7 +584,7 @@ TEST_CASE("PakIndexRead R9: names are unique", "[PakIndex]")
     REQUIRE(DamageDetail(seedtest::PakEntryDuplicate(sound, 1)) == "resource \"empty\" appears more than once");
 }
 
-TEST_CASE("PakIndexRead R10: running offsets do not overflow", "[PakIndex]")
+TEST_CASE("PakIndexRead: running offsets do not overflow", "[PakIndex]")
 {
     seedtest::PakSpec one;
     one.name = "org/one";
@@ -611,7 +612,7 @@ TEST_CASE("PakIndexRead R10: running offsets do not overflow", "[PakIndex]")
     }
 }
 
-TEST_CASE("PakIndexRead R11: the sizes explain the whole file", "[PakIndex]")
+TEST_CASE("PakIndexRead: the sizes explain the whole file", "[PakIndex]")
 {
     const std::vector<std::uint8_t> sound = seedtest::PakBytes(SampleSpec());
     const std::size_t total = sound.size();
@@ -655,14 +656,14 @@ TEST_CASE("PakIndexRead reports the first rule broken, then the first resource",
 {
     const std::vector<std::uint8_t> sound = seedtest::PakBytes(SampleSpec());
 
-    SECTION("R5 before R11")
+    SECTION("A wrong description length before a wrong file length")
     {
         const std::vector<std::uint8_t> bytes =
             seedtest::PakTruncate(seedtest::PakHeaderSizeSet(sound, "\"0000000001\""), 5);
         REQUIRE(Contains(DamageDetail(bytes), "stated description length 1 "));
     }
 
-    SECTION("R8 before R11")
+    SECTION("A bad size before a wrong file length")
     {
         REQUIRE(DamageDetail(seedtest::PakAppend(
                     seedtest::PakDescriptionReplace(sound, unmarked + "[{\"name\":\"x\",\"size\":-1}]}", true), 4)) ==
@@ -674,5 +675,30 @@ TEST_CASE("PakIndexRead reports the first rule broken, then the first resource",
         REQUIRE(DamageDetail(seedtest::PakDescriptionReplace(
                     sound, unmarked + "[{\"name\":\"a\",\"size\":0},{\"name\":\"b\"},{\"name\":\"c\"}]}", true)) ==
                 "resource \"b\" has no \"size\"");
+    }
+}
+
+TEST_CASE("PakEntryRead reports a file that shrank after it was checked as damaged", "[PakIndex]")
+{
+    seedtest::ScratchDir scratch;
+    const std::filesystem::path path = seedtest::WritePakFile(scratch.Path(), "sample.pak", SampleSpec());
+
+    PakFile file = PakFile::Open(path);
+    const auto index = PakIndexRead(file);
+    const PakEntry &beta = index->entries[index->by_name.at("beta")];
+
+    std::filesystem::resize_file(path, beta.offset + 10);
+
+    ecs::Resource resource;
+    try
+    {
+        PakEntryRead(file, beta, resource);
+        FAIL("a read past the end did not throw");
+    }
+    catch(const PakDamaged &error)
+    {
+        REQUIRE(std::string(error.what()) ==
+                "file is shorter than its description: expected 37 bytes of resource \"beta\" at offset " +
+                    std::to_string(beta.offset) + ", got 10 (was it changed while being read?)");
     }
 }
