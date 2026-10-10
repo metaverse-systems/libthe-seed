@@ -23,6 +23,8 @@ noinst_HEADERS = \
 	NameParser.hpp \
 	internal/FileIO.hpp \
 	internal/PluginSearch.hpp \
+	internal/PakFile.hpp \
+	internal/PakIndex.hpp \
 	internal/PluginCache.hpp \
 	internal/FileReplaceHooks.hpp \
 	internal/MachODefs.hpp \
@@ -54,6 +56,8 @@ libthe_seed_la_SOURCES = LoadError.cpp \
 		MsiSigner.cpp \
 		internal/FileIO.cpp \
 		internal/PluginSearch.cpp \
+		internal/PakFile.cpp \
+		internal/PakIndex.cpp \
 		internal/MachOLayout.cpp \
 		internal/CfbReader.cpp \
 		internal/CfbWriter.cpp \

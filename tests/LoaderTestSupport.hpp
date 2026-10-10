@@ -1,5 +1,6 @@
 #pragma once
 
+#include "PakTestSupport.hpp"
 #include "TestPaths.hpp"
 
 #include <libecs-cpp/json.hpp>
@@ -75,42 +76,20 @@ inline std::filesystem::path WriteDamagedModule(const std::filesystem::path &dir
     return path;
 }
 
-// Writes `dir/<name>.pak` holding the given resources (name and bytes).
-// Returns its path.
+// Writes `dir/<name>.pak` holding the given resources (name and bytes), laid
+// out exactly as the-seed's resource pak writer lays them out. Returns its
+// path.
 inline std::filesystem::path WritePak(
     const std::filesystem::path &dir, const std::string &name,
     const std::vector<std::pair<std::string, std::vector<std::uint8_t>>> &resources)
 {
-    nlohmann::json header;
-    header["resources"] = nlohmann::json::array();
+    PakSpec spec;
+    spec.name = name;
     for(const auto &resource : resources)
     {
-        nlohmann::json entry;
-        entry["name"] = resource.first;
-        entry["size"] = resource.second.size();
-        header["resources"].push_back(entry);
+        spec.resources.push_back({resource.first, resource.second, ""});
     }
-
-    // The header size is part of the header and its digit count can change the
-    // length, so iterate until it is stable.
-    header["headerSize"] = 0;
-    std::string raw = header.dump();
-    for(int i = 0; i < 5; ++i)
-    {
-        header["headerSize"] = std::to_string(raw.size() + 1);
-        raw = header.dump();
-    }
-
-    std::filesystem::create_directories(dir);
-    std::filesystem::path path = dir / (name + ".pak");
-    std::ofstream out(path, std::ios::binary);
-    out << raw << '\n';
-    for(const auto &resource : resources)
-    {
-        out.write(reinterpret_cast<const char *>(resource.second.data()),
-                  static_cast<std::streamsize>(resource.second.size()));
-    }
-    return path;
+    return WritePakFile(dir, name + ".pak", spec);
 }
 
 }

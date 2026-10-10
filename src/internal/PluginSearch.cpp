@@ -34,6 +34,10 @@ std::wstring PathKey(const std::wstring &path)
     return key;
 }
 
+#endif
+} // namespace
+
+#ifdef _WIN32
 std::string PlatformMessage(DWORD id)
 {
     if(id == 0) return {};
@@ -54,7 +58,6 @@ std::string PlatformMessage(DWORD id)
     return message;
 }
 #endif
-} // namespace
 
 void *OpenPinned(const std::filesystem::path &absolute_path, std::string &error)
 {
@@ -181,12 +184,30 @@ SearchResult SearchFirst(const std::vector<std::string> &locations, const std::s
         result.locations.push_back({locations[i], i >= configured_count, LoadError::LocationState::NotReached});
     }
 
+    // A path that is absent, or has a file where a folder should be, is
+    // simply not there. Any other failure to examine it keeps the system's
+    // text and the search goes on with the next location.
+    auto absent = [](const std::error_code &code) {
+        return code == std::errc::no_such_file_or_directory || code == std::errc::not_a_directory;
+    };
+
     for(size_t i = 0; i < locations.size(); ++i)
     {
         LoadError::Location &entry = result.locations[i];
         std::error_code ec;
         fs::path directory = fs::absolute(fs::path(locations[i]), ec);
-        if(ec || !fs::is_directory(directory, ec))
+        fs::file_status directory_status;
+        if(!ec)
+        {
+            directory_status = fs::status(directory, ec);
+        }
+        if(ec && !absent(ec))
+        {
+            entry.state = LoadError::LocationState::Unreadable;
+            entry.reason = ec.message();
+            continue;
+        }
+        if(ec || !fs::is_directory(directory_status))
         {
             entry.state = LoadError::LocationState::Missing;
             continue;
@@ -194,7 +215,14 @@ SearchResult SearchFirst(const std::vector<std::string> &locations, const std::s
 
         fs::path candidate = directory / file_name;
         std::error_code file_ec;
-        if(!fs::is_regular_file(candidate, file_ec))
+        fs::file_status file_status = fs::status(candidate, file_ec);
+        if(file_ec && !absent(file_ec))
+        {
+            entry.state = LoadError::LocationState::Unreadable;
+            entry.reason = file_ec.message();
+            continue;
+        }
+        if(file_ec || !fs::is_regular_file(file_status))
         {
             entry.state = LoadError::LocationState::Searched;
             continue;

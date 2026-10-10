@@ -66,13 +66,15 @@ namespace
             case LoadError::LocationState::Missing: return "does not exist";
             case LoadError::LocationState::Found: return "found";
             case LoadError::LocationState::NotReached: return "not reached";
+            case LoadError::LocationState::Unreadable: return "could not be examined";
         }
         return "searched";
     }
 
     std::string Message(LoadError::Reason reason, const std::string &name, const std::string &file,
                         const std::vector<LoadError::Location> &locations,
-                        const std::string &detail, const std::string &kind)
+                        const std::string &detail, const std::string &kind,
+                        const std::vector<std::string> &missing)
     {
         const std::string reasonText = Trim(detail);
         std::string message;
@@ -88,7 +90,14 @@ namespace
                 message = Subject(kind, name) + " not found: ";
                 if(locations.empty())
                 {
-                    message += "no locations are configured";
+                    if(reasonText.empty())
+                    {
+                        message += "no locations are configured";
+                    }
+                    else
+                    {
+                        message += file + ": " + reasonText;
+                    }
                 }
                 else
                 {
@@ -103,6 +112,10 @@ namespace
                         message += "development location, ";
                     }
                     message += std::string(StateText(location.state)) + ": " + location.path;
+                    if(location.state == LoadError::LocationState::Unreadable && !location.reason.empty())
+                    {
+                        message += ": " + location.reason;
+                    }
                 }
                 break;
             }
@@ -148,6 +161,16 @@ namespace
             case LoadError::Reason::SceneComponentFailed:
                 message = "scene file " + Quoted(file) + ": " + reasonText;
                 break;
+
+            case LoadError::Reason::ResourceMissing:
+            {
+                message = Subject(kind, name) + ": " + file + " does not contain ";
+                for(size_t i = 0; i < missing.size(); ++i)
+                {
+                    message += (i == 0 ? "" : ", ") + Quoted(Escaped(missing[i]));
+                }
+                break;
+            }
         }
 
         return Trim(message);
@@ -155,14 +178,16 @@ namespace
 }
 
 LoadError::LoadError(Reason reason, std::string name, std::string file,
-                     std::vector<Location> locations, std::string detail, std::string kind)
-    : std::runtime_error(Message(reason, name, file, locations, detail, kind)),
+                     std::vector<Location> locations, std::string detail, std::string kind,
+                     std::vector<std::string> missing)
+    : std::runtime_error(Message(reason, name, file, locations, detail, kind, missing)),
       reason(reason),
       name(std::move(name)),
       file(std::move(file)),
       locations(std::move(locations)),
       detail(std::move(detail)),
-      kind(std::move(kind))
+      kind(std::move(kind)),
+      missing(std::move(missing))
 {
 }
 
@@ -194,4 +219,9 @@ const std::string &LoadError::DetailGet() const
 const std::string &LoadError::KindGet() const
 {
     return this->kind;
+}
+
+const std::vector<std::string> &LoadError::MissingGet() const
+{
+    return this->missing;
 }

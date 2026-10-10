@@ -23,7 +23,8 @@ class LoadError : public std::runtime_error
         NoObject,
         SceneUnopenable,
         SceneNotUnderstood,
-        SceneComponentFailed
+        SceneComponentFailed,
+        ResourceMissing
     };
 
     enum class LocationState
@@ -31,7 +32,8 @@ class LoadError : public std::runtime_error
         Searched,
         Missing,
         Found,
-        NotReached
+        NotReached,
+        Unreadable
     };
 
     struct Location
@@ -39,16 +41,19 @@ class LoadError : public std::runtime_error
         std::string path;
         bool development;
         LocationState state;
+        // The system's text for an Unreadable location; empty otherwise.
+        std::string reason = "";
     };
 
     /**
      * kind describes what was being loaded ("component plugin",
      * "system plugin", "library", "resource pak") and is used in the message
-     * only; it may be empty.
+     * only; it may be empty. missing lists the names a ResourceMissing error
+     * could not find, in request order; it is empty for every other reason.
      */
     LoadError(Reason reason, std::string name, std::string file,
               std::vector<Location> locations, std::string detail,
-              std::string kind = "");
+              std::string kind = "", std::vector<std::string> missing = {});
 
     Reason ReasonGet() const;
     const std::string &NameGet() const;
@@ -56,6 +61,7 @@ class LoadError : public std::runtime_error
     const std::vector<Location> &LocationsGet() const;
     const std::string &DetailGet() const;
     const std::string &KindGet() const;
+    const std::vector<std::string> &MissingGet() const;
 
   private:
     Reason reason;
@@ -64,4 +70,5 @@ class LoadError : public std::runtime_error
     std::vector<Location> locations;
     std::string detail;
     std::string kind;
+    std::vector<std::string> missing;
 };
