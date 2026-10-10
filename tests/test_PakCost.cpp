@@ -83,7 +83,7 @@ TEST_CASE("a request reads and holds only what it asks for", "[PakCost]")
     PakLoader loader;
     loader.PathAdd(pak.scratch.Path().string());
 
-    // SC-001: one 1 KiB resource of 256 MiB.
+    // One 1 KiB resource of 256 MiB.
     {
         ResetPakBytesReadCount();
         ResetPakDescriptionParseCount();
@@ -109,7 +109,7 @@ TEST_CASE("a request reads and holds only what it asks for", "[PakCost]")
         CHECK(PakDescriptionParseCount() == 1);
     }
 
-    // SC-002: a second resource through the same loader.
+    // A second resource through the same loader.
     {
         ResetPakBytesReadCount();
         auto resources = loader.Load("cost", {seedtest::LargePakResourceName(1)});
@@ -123,7 +123,7 @@ TEST_CASE("a request reads and holds only what it asks for", "[PakCost]")
         CHECK(PakDescriptionParseCount() == 1);
     }
 
-    // SC-003: every resource by name, the heap grows by about what is returned.
+    // Every resource by name, the heap grows by about what is returned.
     for(std::size_t i = 0; i < seedtest::LargePakResourceCount; ++i)
     {
         const std::string name = seedtest::LargePakResourceName(i);
@@ -142,7 +142,7 @@ TEST_CASE("a request reads and holds only what it asks for", "[PakCost]")
     }
     CHECK(PakDescriptionParseCount() == 1);
 
-    // SC-003: every resource at once.
+    // Every resource at once.
     {
         ResetPakBytesReadCount();
         std::size_t growth = 0;
