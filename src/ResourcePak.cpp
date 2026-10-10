@@ -62,8 +62,8 @@ ecs::Resource ResourcePak::Load(const std::string &name)
         auto found = index->by_name.find(name);
         if(found == index->by_name.end())
         {
-            throw LoadError(LoadError::Reason::ResourceMissing, this->filename, this->filename, {}, "",
-                            PakKind, {name});
+            throw LoadError(LoadError::Reason::ResourceMissing, this->filename, this->filename, {},
+                            "does not contain \"" + name + "\"", PakKind, {name});
         }
 
         ecs::Resource resource;

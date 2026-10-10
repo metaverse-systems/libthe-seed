@@ -252,3 +252,174 @@ TEST_CASE("PakLoader loads a pak with no resources", "[PakLoader]")
     REQUIRE(loader.Load("nothing").empty());
     REQUIRE(loader.Load("nothing", {}).empty());
 }
+
+TEST_CASE("PakLoader reports requested resources that the pak does not contain", "[PakLoader]")
+{
+    using namespace seed::internal;
+    seedtest::ScratchDir scratch;
+    const std::filesystem::path file = seedtest::WritePak(
+        scratch.Path(), "missing", {{"a", Pattern(40, 1)}, {"b", Pattern(300000, 2)}});
+
+    PakLoader loader;
+    loader.PathAdd(scratch.Path().string());
+
+    // Runs the request and returns the error, failing when it does not throw.
+    auto errorGet = [&](const std::vector<std::string> &names) {
+        try
+        {
+            loader.Load("missing", names);
+        }
+        catch(const LoadError &error)
+        {
+            return error;
+        }
+        catch(...)
+        {
+            FAIL("an exception other than LoadError escaped");
+        }
+        FAIL("Load did not throw");
+        throw std::logic_error("unreachable");
+    };
+
+    SECTION("A missing name fails the request with ResourceMissing")
+    {
+        const LoadError error = errorGet({"a", "c"});
+        REQUIRE(error.ReasonGet() == LoadError::Reason::ResourceMissing);
+        REQUIRE(error.NameGet() == "missing");
+        REQUIRE(error.MissingGet() == std::vector<std::string>{"c"});
+    }
+
+    SECTION("The error names the absolute pak file and no locations")
+    {
+        const LoadError error = errorGet({"a", "c"});
+        REQUIRE(std::filesystem::path(error.FileGet()).is_absolute());
+        REQUIRE(std::filesystem::equivalent(error.FileGet(), file));
+        REQUIRE(error.LocationsGet().empty());
+    }
+
+    SECTION("The message lists the pak, the file and the missing names")
+    {
+        const LoadError error = errorGet({"a", "c"});
+        REQUIRE(error.DetailGet() == "does not contain \"c\"");
+        REQUIRE(std::string(error.what()) ==
+                "resource pak \"missing\": " + error.FileGet() + " does not contain \"c\"");
+    }
+
+    SECTION("Several missing names are listed in request order, each once")
+    {
+        const LoadError error = errorGet({"c", "d", "c"});
+        REQUIRE(error.MissingGet() == std::vector<std::string>{"c", "d"});
+        REQUIRE(error.DetailGet() == "does not contain \"c\", \"d\"");
+    }
+
+    SECTION("Missing names are reported with the present ones left out")
+    {
+        const LoadError error = errorGet({"d", "a", "c", "b"});
+        REQUIRE(error.MissingGet() == std::vector<std::string>{"d", "c"});
+    }
+
+    SECTION("A missing name reads no resource bytes")
+    {
+        loader.Load("missing", {"a"});
+        ResetPakBytesReadCount();
+        errorGet({"b", "c"});
+        REQUIRE(PakBytesReadCount() == 0);
+    }
+
+    SECTION("A first request that names a missing resource reads only the description")
+    {
+        ResetPakBytesReadCount();
+        errorGet({"b", "c"});
+        const std::uint64_t read = PakBytesReadCount();
+        REQUIRE(read > 0);
+        REQUIRE(read < 70000);
+    }
+
+    SECTION("The same names can be requested again once they exist")
+    {
+        errorGet({"c"});
+        auto resources = loader.Load("missing", {"a", "b"});
+        REQUIRE(resources.size() == 2);
+        REQUIRE(resources.at("a")->Data == Pattern(40, 1));
+        REQUIRE(resources.at("b")->Data == Pattern(300000, 2));
+    }
+
+    SECTION("Naming every resource returns every resource")
+    {
+        auto resources = loader.Load("missing", {"a", "b"});
+        REQUIRE(resources.size() == 2);
+        REQUIRE(resources.at("a")->Data == Pattern(40, 1));
+        REQUIRE(resources.at("b")->Data == Pattern(300000, 2));
+    }
+
+    SECTION("A name given twice returns the resource once")
+    {
+        auto resources = loader.Load("missing", {"a", "a"});
+        REQUIRE(resources.size() == 1);
+        REQUIRE(resources.at("a")->Data == Pattern(40, 1));
+    }
+
+    SECTION("An empty list returns an empty map")
+    {
+        REQUIRE(loader.Load("missing", {}).empty());
+    }
+}
+
+TEST_CASE("PakLoader reports a name missing from a pak with no resources", "[PakLoader]")
+{
+    seedtest::ScratchDir scratch;
+    seedtest::WritePak(scratch.Path(), "hollow", {});
+    PakLoader loader;
+    loader.PathAdd(scratch.Path().string());
+
+    try
+    {
+        loader.Load("hollow", {"x"});
+        FAIL("Load did not throw");
+    }
+    catch(const LoadError &error)
+    {
+        REQUIRE(error.ReasonGet() == LoadError::Reason::ResourceMissing);
+        REQUIRE(error.MissingGet() == std::vector<std::string>{"x"});
+    }
+}
+
+TEST_CASE("PakLoader validates the pak before an empty list returns", "[PakLoader]")
+{
+    seedtest::ScratchDir scratch;
+
+    SECTION("A damaged pak still reports damaged")
+    {
+        const std::filesystem::path file = seedtest::WritePak(scratch.Path(), "broken", {{"a", {1, 2, 3}}});
+        auto bytes = seedtest::PakBytes({"broken", {{"a", {1, 2, 3}, ""}}});
+        seedtest::WriteBytes(file, seedtest::PakTruncate(bytes, 2));
+
+        PakLoader loader;
+        loader.PathAdd(scratch.Path().string());
+        try
+        {
+            loader.Load("broken", {});
+            FAIL("Load did not throw");
+        }
+        catch(const LoadError &error)
+        {
+            REQUIRE(error.ReasonGet() == LoadError::Reason::NotLoadable);
+            REQUIRE(error.DetailGet().rfind("damaged: ", 0) == 0);
+        }
+    }
+
+    SECTION("An absent pak is still not found")
+    {
+        PakLoader loader;
+        loader.PathAdd(scratch.Path().string());
+        try
+        {
+            loader.Load("nowhere", {});
+            FAIL("Load did not throw");
+        }
+        catch(const LoadError &error)
+        {
+            REQUIRE(error.ReasonGet() == LoadError::Reason::NotFound);
+        }
+    }
+}

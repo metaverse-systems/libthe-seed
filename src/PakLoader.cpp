@@ -49,14 +49,43 @@ PakLoader::Request(const std::string &pak_name, const std::vector<std::string> *
         auto index = this->IndexGet(search.identity.string(), file);
 
         std::unordered_map<std::string, std::shared_ptr<ecs::Resource>> resources;
-        for (const PakEntry &entry : index->entries)
+        if (resource_names == nullptr)
         {
-            if (resource_names != nullptr &&
-                std::find(resource_names->begin(), resource_names->end(), entry.name) == resource_names->end())
+            for (const PakEntry &entry : index->entries)
+            {
+                auto resource = std::make_shared<ecs::Resource>();
+                PakEntryRead(file, entry, *resource);
+                resources[entry.name] = std::move(resource);
+            }
+            return resources;
+        }
+
+        // Each requested name once, in request order. Every absent name is
+        // collected before any resource is read.
+        std::vector<std::string> wanted;
+        std::vector<std::string> missing;
+        for (const std::string &name : *resource_names)
+        {
+            if (std::find(wanted.begin(), wanted.end(), name) != wanted.end())
                 continue;
+            wanted.push_back(name);
+            if (index->by_name.find(name) == index->by_name.end())
+                missing.push_back(name);
+        }
+        if (!missing.empty())
+        {
+            std::string detail = "does not contain ";
+            for (size_t i = 0; i < missing.size(); ++i)
+                detail += (i == 0 ? "" : ", ") + ("\"" + missing[i] + "\"");
+            throw LoadError(LoadError::Reason::ResourceMissing, pak_name, search.file.string(), {}, detail,
+                            PakKind, missing);
+        }
+
+        for (const std::string &name : wanted)
+        {
             auto resource = std::make_shared<ecs::Resource>();
-            PakEntryRead(file, entry, *resource);
-            resources[entry.name] = std::move(resource);
+            PakEntryRead(file, index->entries[index->by_name.at(name)], *resource);
+            resources[name] = std::move(resource);
         }
         return resources;
     }

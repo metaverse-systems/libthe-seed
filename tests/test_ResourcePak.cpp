@@ -362,3 +362,54 @@ TEST_CASE("ResourcePak reports a pak damaged after it was opened", "[ResourcePak
         REQUIRE_FALSE(world->ResourceGet("zeta"));
     }
 }
+
+TEST_CASE("ResourcePak reports an unknown resource name", "[ResourcePak]")
+{
+    seedtest::ScratchDir scratch;
+    const std::string pakPath = createTestPak(scratch.Path().string(), "known", {1, 2, 3});
+    ResourcePak pak(pakPath);
+
+    auto check = [&](const LoadError &error) {
+        REQUIRE(error.ReasonGet() == LoadError::Reason::ResourceMissing);
+        REQUIRE(error.FileGet() == pakPath);
+        REQUIRE(error.MissingGet() == std::vector<std::string>{"unknown"});
+        REQUIRE(error.LocationsGet().empty());
+        REQUIRE(std::string(error.what()).find("does not contain \"unknown\"") != std::string::npos);
+    };
+
+    SECTION("Load(name) throws ResourceMissing")
+    {
+        try
+        {
+            pak.Load("unknown");
+            FAIL("Load did not throw");
+        }
+        catch(const LoadError &error)
+        {
+            check(error);
+        }
+    }
+
+    SECTION("Load(container, name) throws ResourceMissing and adds nothing")
+    {
+        ecs::Manager manager;
+        auto *world = manager.Container("world");
+        try
+        {
+            pak.Load(world, "unknown");
+            FAIL("Load did not throw");
+        }
+        catch(const LoadError &error)
+        {
+            check(error);
+        }
+        REQUIRE_FALSE(world->ResourceGet("unknown"));
+        REQUIRE_FALSE(world->ResourceGet("known"));
+    }
+
+    SECTION("A known name still loads afterwards")
+    {
+        REQUIRE_THROWS_AS(pak.Load("unknown"), LoadError);
+        REQUIRE(pak.Load("known").Data == std::vector<uint8_t>{1, 2, 3});
+    }
+}
