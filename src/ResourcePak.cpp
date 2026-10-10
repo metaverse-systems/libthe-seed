@@ -19,7 +19,9 @@ namespace
 {
     // The current description of the file open as `file`: the remembered one
     // when the file is the version it was validated from, otherwise a freshly
-    // validated one, which replaces it.
+    // validated one, which replaces it. The mutex is held while a changed
+    // file is validated, so threads and copies that meet the same new version
+    // validate it once; reading resources happens without it.
     std::shared_ptr<const PakIndex> IndexFor(std::mutex &mutex, std::shared_ptr<const PakIndex> &remembered,
                                              PakFile &file)
     {

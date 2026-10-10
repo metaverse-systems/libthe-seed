@@ -7,12 +7,22 @@
 #include <shared_mutex>
 #include <stdexcept>
 #include <algorithm>
+#include <exception>
+#include <future>
 
 PakLoader::PakLoader() = default;
 
 using namespace seed::internal;
 
-std::shared_ptr<const PakIndex> PakLoader::IndexGet(const std::string &identity, PakFile &file)
+// A validation under way: the version of the file it is for and its outcome.
+struct PakLoader::InFlight
+{
+    PakStamp stamp;
+    std::shared_future<Outcome> future;
+};
+
+std::shared_ptr<const PakIndex> PakLoader::IndexGet(const std::string &identity, PakFile &file, const std::string &pak_name,
+                    const std::string &file_name, const std::vector<LoadError::Location> &locations)
 {
     const PakStamp stamp = file.Stamp();
     {
@@ -24,11 +34,79 @@ std::shared_ptr<const PakIndex> PakLoader::IndexGet(const std::string &identity,
         }
     }
 
-    // No lock is held while the description is read.
-    std::shared_ptr<const PakIndex> index = PakIndexRead(file);
-    std::unique_lock lock(this->mutex);
-    this->remembered[identity] = index;
-    return index;
+    // One thread validates a given version of the file; the others wait for
+    // its outcome. No lock is held while the description is read or awaited.
+    std::shared_future<Outcome> future;
+    std::promise<Outcome> promise;
+    bool owner = false;
+    {
+        std::unique_lock lock(this->mutex);
+        auto found = this->remembered.find(identity);
+        if(found != this->remembered.end() && found->second->stamp == stamp)
+        {
+            return found->second;
+        }
+
+        auto flying = this->in_flight.find(identity);
+        if(flying != this->in_flight.end() && flying->second->stamp == stamp)
+        {
+            future = flying->second->future;
+        }
+        else
+        {
+            future = promise.get_future().share();
+            this->in_flight[identity] = std::make_shared<InFlight>(InFlight{stamp, future});
+            owner = true;
+        }
+    }
+
+    Outcome outcome;
+    if(owner)
+    {
+        try
+        {
+            outcome.index = PakIndexRead(file);
+        }
+        catch(...)
+        {
+            // Reduced to plain values so that every waiter throws an error of
+            // its own and no exception object is shared between threads.
+            outcome.failed = true;
+            try
+            {
+                PakFailureThrow(pak_name, file_name, locations, false);
+            }
+            catch(const LoadError &error)
+            {
+                outcome.reason = error.ReasonGet();
+                outcome.detail = error.DetailGet();
+            }
+        }
+
+        {
+            std::unique_lock lock(this->mutex);
+            if(outcome.index)
+            {
+                this->remembered[identity] = outcome.index;
+            }
+            auto flying = this->in_flight.find(identity);
+            if(flying != this->in_flight.end() && flying->second->stamp == stamp)
+            {
+                this->in_flight.erase(flying);
+            }
+        }
+        promise.set_value(outcome);
+    }
+    else
+    {
+        outcome = future.get();
+    }
+
+    if(outcome.failed)
+    {
+        throw LoadError(outcome.reason, pak_name, file_name, locations, outcome.detail, PakKind);
+    }
+    return outcome.index;
 }
 
 std::unordered_map<std::string, std::shared_ptr<ecs::Resource>>
@@ -46,7 +124,7 @@ PakLoader::Request(const std::string &pak_name, const std::vector<std::string> *
     try
     {
         PakFile file = PakFile::Open(search.file);
-        auto index = this->IndexGet(search.identity.string(), file);
+        auto index = this->IndexGet(search.identity.string(), file, pak_name, search.file.string(), search.locations);
 
         std::unordered_map<std::string, std::shared_ptr<ecs::Resource>> resources;
         if (resource_names == nullptr)

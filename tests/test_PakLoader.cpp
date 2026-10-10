@@ -423,3 +423,121 @@ TEST_CASE("PakLoader validates the pak before an empty list returns", "[PakLoade
         }
     }
 }
+
+TEST_CASE("PakLoader picks up a pak that is replaced, rewritten or removed", "[PakLoader]")
+{
+    using namespace seed::internal;
+    seedtest::ScratchDir scratch;
+    const std::filesystem::path location = scratch.Path() / "location";
+    const std::filesystem::path stage = scratch.Path() / "stage";
+    const std::vector<std::pair<std::string, std::vector<std::uint8_t>>> first = {
+        {"a", Pattern(40, 1)}, {"b", Pattern(9000, 2)}};
+    const std::vector<std::pair<std::string, std::vector<std::uint8_t>>> second = {
+        {"a", Pattern(55, 77)}, {"b", Pattern(12000, 78)}};
+    const std::filesystem::path file = seedtest::WritePak(location, "changing", first);
+
+    PakLoader loader;
+    loader.PathAdd(location.string());
+
+    SECTION("A pak replaced by rename is returned new by the next request")
+    {
+        auto before = loader.Load("changing");
+        const std::vector<std::uint8_t> before_a = before.at("a")->Data;
+        const ecs::Resource *before_a_address = before.at("a").get();
+
+        std::filesystem::rename(seedtest::WritePak(stage, "changing", second), file);
+
+        auto after = loader.Load("changing");
+        REQUIRE(after.at("a")->Data == second[0].second);
+        REQUIRE(after.at("b")->Data == second[1].second);
+        REQUIRE(after.at("a").get() != before_a_address);
+
+        // What was returned before is unchanged: same bytes, same objects.
+        REQUIRE(before.at("a").get() == before_a_address);
+        REQUIRE(before.at("a")->Data == before_a);
+        REQUIRE(before.at("b")->Data == first[1].second);
+    }
+
+    SECTION("A pak replaced by a damaged one is reported damaged, and a later sound one loads")
+    {
+        loader.Load("changing");
+        auto bytes = seedtest::PakBytes({"changing", {{"a", second[0].second, ""}, {"b", second[1].second, ""}}});
+        seedtest::WriteBytes(stage / "changing.pak", seedtest::PakTruncate(bytes, 4));
+        std::filesystem::rename(stage / "changing.pak", file);
+
+        for(int attempt = 0; attempt < 2; ++attempt)
+        {
+            INFO("attempt " << attempt);
+            try
+            {
+                loader.Load("changing");
+                FAIL("Load did not throw");
+            }
+            catch(const LoadError &error)
+            {
+                REQUIRE(error.ReasonGet() == LoadError::Reason::NotLoadable);
+                REQUIRE(error.DetailGet().rfind("damaged: ", 0) == 0);
+            }
+        }
+
+        std::filesystem::rename(seedtest::WritePak(stage, "changing", second), file);
+        auto resources = loader.Load("changing");
+        REQUIRE(resources.at("a")->Data == second[0].second);
+        REQUIRE(resources.at("b")->Data == second[1].second);
+    }
+
+    SECTION("A pak deleted after a request is not found")
+    {
+        loader.Load("changing");
+        std::filesystem::remove(file);
+        try
+        {
+            loader.Load("changing");
+            FAIL("Load did not throw");
+        }
+        catch(const LoadError &error)
+        {
+            REQUIRE(error.ReasonGet() == LoadError::Reason::NotFound);
+        }
+    }
+
+    SECTION("A pak deleted after a request is found again where a later copy exists")
+    {
+        const std::filesystem::path later = scratch.Path() / "later";
+        seedtest::WritePak(later, "changing", second);
+        loader.PathAdd(later.string());
+
+        REQUIRE(loader.Load("changing").at("a")->Data == first[0].second);
+        std::filesystem::remove(file);
+        REQUIRE(loader.Load("changing").at("a")->Data == second[0].second);
+    }
+
+    SECTION("A pak rewritten in place with a different size is validated again")
+    {
+        loader.Load("changing", {"a"});
+        ResetPakDescriptionParseCount();
+        loader.Load("changing", {"a"});
+        REQUIRE(PakDescriptionParseCount() == 0);
+
+        seedtest::WritePak(location, "changing", second);
+        REQUIRE(std::filesystem::file_size(file) != 0);
+        auto resources = loader.Load("changing");
+        REQUIRE(PakDescriptionParseCount() == 1);
+        REQUIRE(resources.at("a")->Data == second[0].second);
+        REQUIRE(resources.at("b")->Data == second[1].second);
+    }
+
+    SECTION("Deleting or renaming over the pak succeeds while the loader holds its description")
+    {
+        loader.Load("changing");
+        std::error_code ec;
+
+        std::filesystem::rename(seedtest::WritePak(stage, "changing", second), file, ec);
+        REQUIRE_FALSE(ec);
+        REQUIRE(loader.Load("changing").at("b")->Data == second[1].second);
+
+        REQUIRE(std::filesystem::remove(file, ec));
+        REQUIRE_FALSE(ec);
+        REQUIRE_FALSE(std::filesystem::exists(file));
+    }
+}

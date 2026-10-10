@@ -1,12 +1,14 @@
 #pragma once
 
 #include <map>
+#include <future>
 #include <memory>
 #include <shared_mutex>
 #include <string>
 #include <unordered_map>
 #include <vector>
 #include <libecs-cpp/ecs.hpp>
+#include <libthe-seed/LoadError.hpp>
 
 namespace seed::internal
 {
@@ -78,10 +80,24 @@ class PakLoader
     // the one kept for `identity` when it matches, otherwise one validated from
     // `file` and kept in its place. Failures are not kept.
     std::shared_ptr<const seed::internal::PakIndex> IndexGet(const std::string &identity,
-                                                              seed::internal::PakFile &file);
+                                                              seed::internal::PakFile &file, const std::string &pak_name,
+                                                              const std::string &file_name,
+                                                              const std::vector<LoadError::Location> &locations);
+
+    // The result of validating one version of a pak file, shared with waiters.
+    struct Outcome
+    {
+        std::shared_ptr<const seed::internal::PakIndex> index;
+        bool failed = false;
+        LoadError::Reason reason = LoadError::Reason::NotLoadable;
+        std::string detail;
+    };
+    struct InFlight;
 
     std::vector<std::string> paths;
     // Validated descriptions by canonical path of the pak file.
     std::map<std::string, std::shared_ptr<const seed::internal::PakIndex>> remembered;
+    // Validations under way by canonical path of the pak file.
+    std::map<std::string, std::shared_ptr<InFlight>> in_flight;
     mutable std::shared_mutex mutex;
 };
