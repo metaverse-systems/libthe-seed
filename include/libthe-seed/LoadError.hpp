@@ -10,6 +10,11 @@
  * followed by indented detail lines naming the plugin, the file and every
  * location that was searched. The accessors give the same facts in structured
  * form.
+ *
+ * ResourceMissing: a resource pak was found and is sound but lacks requested
+ * resources; MissingGet() lists them. A location the search could not examine
+ * (for a reason other than not existing) has LocationState::Unreadable and the
+ * system's text in Location::reason; this holds for every loader.
  */
 class LoadError : public std::runtime_error
 {

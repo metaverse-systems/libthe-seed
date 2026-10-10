@@ -8,7 +8,21 @@
 
 /**
  * @brief Loads resources (images, sounds, etc.) from .pak files.
- * 
+ *
+ * The constructor checks the pak's description (the list of resource names and
+ * sizes) and remembers it. Each Load opens the file, reads only the resource
+ * asked for and closes the file; if the file changed since the description was
+ * checked (identity, size or modification time), the new version is checked
+ * first, so the pak may be replaced or deleted by another program at any time.
+ *
+ * Errors: only LoadError leaves this class. NotFound for a missing file;
+ * NotLoadable for a damaged pak (DetailGet() starts with "damaged:") or one
+ * that could not be read (the system's text); ResourceMissing for a name the
+ * pak does not hold (MissingGet() lists it).
+ *
+ * Threads: one object may be used from several threads, and copies share the
+ * remembered description. Adding to an ecs::Container is limited to that
+ * container's thread, as libecs-cpp requires.
  */
 class ResourcePak
 {

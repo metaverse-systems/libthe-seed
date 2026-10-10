@@ -24,18 +24,35 @@ struct PakIndex;
  * cannot be read fails the load with LoadError (NotLoadable) and later
  * locations are not tried. The working directory is never searched unless the
  * application adds it with PathAdd. The development locations of a the-seed
- * source tree are searched after the configured ones. Failures are LoadError
- * (InvalidName, NotFound, NotLoadable).
+ * source tree are searched after the configured ones. A location that cannot
+ * be examined (permission denied) is listed with the system's text and the
+ * search goes on.
+ *
+ * Errors: only LoadError leaves this class. InvalidName; NotFound (no
+ * location holds the pak); NotLoadable (the pak is present but damaged, in
+ * which case DetailGet() starts with "damaged:", or could not be read, in
+ * which case it is the system's text); ResourceMissing, when a requested name
+ * is not in the pak: nothing is returned and MissingGet() lists every missing
+ * name in request order. Names listed twice are returned once.
  *
  * Cost: a request opens the pak, reads each requested resource straight into
  * its own ecs::Resource and closes the file. The pak's description (the list
  * of resource names and sizes) is read and checked once per version of the
  * file for the life of the loader and remembered; a later request finds the
  * file again, compares its identity, size and modification time, and reads the
- * description again only if they differ. No resource bytes are kept.
+ * description again only if they differ. No resource bytes are kept. A pak
+ * that fails is not remembered; the next request examines the file again.
+ * Unlike a plugin, which stays loaded until the process ends, a rebuilt pak is
+ * picked up by the next request.
  *
- * Threads: every method is safe to call from several threads at once. A
- * request made after PathAdd returned uses the new location.
+ * Files: the pak is opened for each request and closed before the request
+ * returns, so another program may replace or delete it at any time, on Linux
+ * and on Windows. A request sees the one version of the file it opened.
+ *
+ * Threads: every method is safe to call from several threads at once.
+ * Concurrent requests for one unchanged file check its description once and
+ * share the result. No lock is held while searching, opening, checking or
+ * reading. A request made after PathAdd returned uses the new location.
  */
 class PakLoader
 {

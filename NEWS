@@ -45,6 +45,38 @@ libthe-seed (unreleased)
   the test plugins with ThreadSanitizer. The README examples are compiled and
   run by test_ReadmeExamples.
 
+* Resource paks read only what is asked. PakLoader and ResourcePak read each
+  requested resource straight into its own resource, and read a pak's
+  description (names and sizes) once per version of the file, remembering it
+  for the life of the loader. The remembered description is checked against
+  the file's identity, size and modification time on every request, so a
+  rebuilt pak is picked up by the next request; failures are not remembered.
+  The pak is opened per request and closed, and may be replaced or deleted by
+  another program at any time.
+
+* A damaged pak is reported as damaged: NotLoadable with a detail that starts
+  with "damaged:" and says which rule of the format is broken (truncated,
+  trailing data, wrong sizes, duplicate names, bad headerSize, and so on).
+  Nothing but LoadError leaves PakLoader or ResourcePak.
+
+* Behaviour change: PakLoader::Load(pak, names) fails with the new
+  LoadError::Reason::ResourceMissing when a name is not in the pak, instead of
+  returning the smaller map. LoadError::MissingGet() lists every missing name.
+  Call ResourcePak(file).ResourceNames() first to ask what a pak holds.
+
+* ResourcePak errors are LoadError (they were std::runtime_error, nlohmann
+  exceptions, std::length_error or std::invalid_argument). The constructor no
+  longer reads the resources, and ResourceNames() is const.
+
+* LoadError::LocationState::Unreadable and LoadError::Location::reason: a
+  location that cannot be examined (permission denied) is listed with the
+  system's text and the search continues, for every loader, instead of the
+  location being listed as searched with no reason.
+
+* Paks now refused as damaged: a non-ASCII resource name, and a pak built
+  after a resource file changed size between add and build. Make them again.
+  The README states the pak format.
+
 * ABI: the private members of every loader changed. Rebuild programs against
   the new headers. No version change; the version is set when the work is
   released.
