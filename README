@@ -61,11 +61,11 @@ The sample executables, DLL, installer and Mach-O files in `tests/fixtures/` are
 
 ### Fuzzing
 
-`make check` replays the sample files and everything under `tests/fuzz/corpus/<target>/` through the same entry points the fuzzers use (`test_FuzzCorpus`), without mutation. To fuzz, `tests/fuzz/build-fuzzers.sh <build dir>` builds one libFuzzer program per target (`elf`, `pe`, `macho`, `superblob`, `msi`; needs `clang++` with libFuzzer), and `tests/fuzz/run-fuzzers.sh <seconds per target> [seed]` runs them one at a time. Run `tests/fuzz/run-fuzzers.sh 600` before a release. The hosted `fuzz (smoke)` check runs the same targets for 60 seconds each on every pull request and push to `master`. A finding is minimised and added to `tests/fuzz/corpus/<target>/` named by its SHA-1, a named test case is added to the matching `test_Malformed*` program, and then the library is fixed.
+`make check` replays the sample files and everything under `tests/fuzz/corpus/<target>/` through the same entry points the fuzzers use (`test_FuzzCorpus`), without mutation. To fuzz, `tests/fuzz/build-fuzzers.sh <build dir>` builds one libFuzzer program per target (`elf`, `pe`, `macho`, `superblob`, `msi`; needs `clang++` with libFuzzer), and `tests/fuzz/run-fuzzers.sh <seconds per target> [seed]` runs them one at a time. Run `tests/fuzz/run-fuzzers.sh 600` before a release. The hosted `fuzz (smoke)` check runs the same targets for 60 seconds each on every pull request and push to `main`. A finding is minimised and added to `tests/fuzz/corpus/<target>/` named by its SHA-1, a named test case is added to the matching `test_Malformed*` program, and then the library is fixed.
 
 ### Hosted checks
 
-The workflow in `.github/workflows/ci.yaml` runs `make check` for the plain and the address+undefined variants on every pull request and on pushes to `master`. It builds libecs-cpp from commit `bd84b5a5bee05bed2006fc9ef9dbbfe3e58f9f7e` (version 2.1.0). Update `LIBECS_CPP_REF` in the workflow when the required libecs-cpp changes.
+The workflow in `.github/workflows/ci.yaml` runs `make check` for the plain and the address+undefined variants on every pull request and on pushes to `main`. It builds libecs-cpp from commit `bd84b5a5bee05bed2006fc9ef9dbbfe3e58f9f7e` (version 2.1.0). Update `LIBECS_CPP_REF` in the workflow when the required libecs-cpp changes.
 
 ## Dependency listing
 
