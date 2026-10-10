@@ -51,16 +51,6 @@ std::vector<std::string> SystemLoader::PathsGet() const
     return this->cache->PathsGet();
 }
 
-void SystemLoader::DevelopmentPathsEnable(bool enabled)
-{
-    this->cache->DevelopmentPathsEnable(enabled);
-}
-
-bool SystemLoader::DevelopmentPathsEnabled() const
-{
-    return this->cache->DevelopmentPathsEnabled();
-}
-
 std::vector<std::string> SystemLoader::SearchPathsGet(const std::string &name) const
 {
     NameParser parsed(name, "system plugin");

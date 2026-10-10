@@ -38,13 +38,11 @@ struct SearchResult
 // working directory is never part of the list.
 std::vector<std::string> DevelopmentLocations(const std::string &org, const std::string &library, bool pak);
 
-// The full ordered search list for one lookup: `configured` first, then, only
-// when `development` is true, the development locations. Does not touch the
-// file system. `configured_count` receives the number of leading entries that
-// are configured locations.
-std::vector<std::string> SearchListBuild(const std::vector<std::string> &configured, bool development,
-                                         const std::string &org, const std::string &library, bool pak,
-                                         size_t &configured_count);
+// The full ordered search list for one lookup: `configured` first, then the
+// development locations. Does not touch the file system. `configured_count`
+// receives the number of leading entries that are configured locations.
+std::vector<std::string> SearchListBuild(const std::vector<std::string> &configured, const std::string &org,
+                                         const std::string &library, bool pak, size_t &configured_count);
 
 // Looks for `file_name` in `locations` in order. The first location holding a
 // regular file of that name decides; later locations are not looked at.

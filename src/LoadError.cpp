@@ -95,20 +95,14 @@ namespace
                     message += "no location holds " + file;
                 }
 
-                bool development = false;
                 for(const LoadError::Location &location : locations)
                 {
-                    development = development || location.development;
                     message += "\n  ";
                     if(location.development)
                     {
                         message += "development location, ";
                     }
                     message += std::string(StateText(location.state)) + ": " + location.path;
-                }
-                if(!development)
-                {
-                    message += "\ndevelopment locations are off for this loader";
                 }
                 break;
             }

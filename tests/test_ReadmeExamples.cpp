@@ -54,9 +54,6 @@ namespace
         // --- begin README text
         ComponentLoader loader;
         loader.PathAdd("/usr/lib/the-seed/components");
-#ifdef SEED_DEVELOPMENT
-        loader.DevelopmentPathsEnable();
-#endif
 
         for(const auto &location : loader.SearchPathsGet("org/my-component"))
         {
@@ -159,7 +156,9 @@ TEST_CASE("README not-found text for a loader with no locations", "[README]")
     catch(const LoadError &e)
     {
         const std::string text = e.what();
-        REQUIRE(text.find("component plugin \"org/my-component\" not found: no locations are configured") == 0);
-        REQUIRE(text.find("development locations are off for this loader") != std::string::npos);
+        REQUIRE(text.find("component plugin \"org/my-component\" not found: no location holds libmy-component") == 0);
+        REQUIRE(text.find("development location, ") != std::string::npos);
+        REQUIRE(text.find("../../my-component/src/.libs") != std::string::npos);
+        REQUIRE(text.find("../node_modules/org/my-component/src/.libs") != std::string::npos);
     }
 }

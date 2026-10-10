@@ -16,8 +16,8 @@
 #endif
 
 // Configured locations decide which file a loader opens: they are searched first, in the order they
-// were added, the working directory is searched only when it was added, and the first location that
-// holds the file decides. The cases run one after another and each works in its own scratch
+// were added, then the development locations of a the-seed source tree, the working directory is
+// searched only when it was added, and the first location that holds the file decides. The cases run one after another and each works in its own scratch
 // directory, so the plugin files they copy never collide.
 
 namespace
@@ -138,7 +138,10 @@ TEST_CASE("A plugin only in the working directory is not found", "[PluginSearchO
         REQUIRE(error.ReasonGet() == LoadError::Reason::NotFound);
         REQUIRE(Mentions(error, conf));
         REQUIRE(LocationFor(error, conf) != nullptr);
-        REQUIRE(error.LocationsGet().size() == 1);
+        // The configured location, then the one development location of a plain name.
+        REQUIRE(error.LocationsGet().size() == 2);
+        REQUIRE(!error.LocationsGet()[0].development);
+        REQUIRE(error.LocationsGet()[1].development);
     }
 
     SECTION("system")
@@ -148,7 +151,7 @@ TEST_CASE("A plugin only in the working directory is not found", "[PluginSearchO
         LoadError error = LoadErrorOf([&] { loader.Get("testsystem"); });
         REQUIRE(error.ReasonGet() == LoadError::Reason::NotFound);
         REQUIRE(Mentions(error, conf));
-        REQUIRE(error.LocationsGet().size() == 1);
+        REQUIRE(error.LocationsGet().size() == 2);
     }
 
     SECTION("no configured locations at all")
@@ -156,7 +159,8 @@ TEST_CASE("A plugin only in the working directory is not found", "[PluginSearchO
         ComponentLoader loader;
         LoadError error = LoadErrorOf([&] { loader.Create("testmodule"); });
         REQUIRE(error.ReasonGet() == LoadError::Reason::NotFound);
-        REQUIRE(error.LocationsGet().empty());
+        REQUIRE(error.LocationsGet().size() == 1);
+        REQUIRE(error.LocationsGet()[0].development);
     }
 }
 
@@ -259,7 +263,7 @@ TEST_CASE("A configured location that does not exist is skipped and listed as no
         loader.PathAdd(present);
         LoadError error = LoadErrorOf([&] { loader.Create("testmodule"); });
         REQUIRE(error.ReasonGet() == LoadError::Reason::NotFound);
-        REQUIRE(error.LocationsGet().size() == 2);
+        REQUIRE(error.LocationsGet().size() == 3);
 
         const LoadError::Location *missingLocation = LocationFor(error, missing);
         const LoadError::Location *presentLocation = LocationFor(error, present);
@@ -355,10 +359,10 @@ TEST_CASE("The first of several pak locations holding the file wins", "[PluginSe
 }
 
 // Development locations are the relative directories of a the-seed development tree. They are
-// searched only when a loader asks for them, and then only after every configured location. The
-// scratch tree used below has the working directory "<scratch>/tree/project", so
-// "../../<library>/src/.libs" is the directory "<scratch>/<library>/src/.libs" and
-// "../node_modules/<org>/<library>/src/.libs" is under "<scratch>/tree/node_modules".
+// always searched, after every configured location. The scratch tree used below has the working
+// directory "<scratch>/tree/project", so "../../<library>/src/.libs" is the directory
+// "<scratch>/<library>/src/.libs" and "../node_modules/<org>/<library>/src/.libs" is under
+// "<scratch>/tree/node_modules".
 
 namespace
 {
@@ -383,7 +387,7 @@ namespace
     }
 }
 
-TEST_CASE("A plugin only in a development location loads with the opt-in and not without", "[PluginSearchOrder]")
+TEST_CASE("A plugin only in a development location loads", "[PluginSearchOrder]")
 {
     ScratchDir scratch;
     fs::path project = ProjectOf(scratch);
@@ -393,38 +397,17 @@ TEST_CASE("A plugin only in a development location loads with the opt-in and not
     WorkingDirectoryGuard guard(project);
     const std::string conf = (scratch.Path() / "conf").string();
 
-    SECTION("component without the opt-in")
+    SECTION("component with a configured location that does not hold it")
     {
         ComponentLoader loader;
         loader.PathAdd(conf);
-        REQUIRE(!loader.DevelopmentPathsEnabled());
-        LoadError error = LoadErrorOf([&] { loader.Create("testmodule"); });
-        REQUIRE(error.ReasonGet() == LoadError::Reason::NotFound);
-    }
-
-    SECTION("component with the opt-in")
-    {
-        ComponentLoader loader;
-        loader.PathAdd(conf);
-        loader.DevelopmentPathsEnable();
-        REQUIRE(loader.DevelopmentPathsEnabled());
         REQUIRE(VariantOf(loader) == 2);
     }
 
     SECTION("component with no configured location at all")
     {
         ComponentLoader loader;
-        loader.DevelopmentPathsEnable();
         REQUIRE(VariantOf(loader) == 2);
-    }
-
-    SECTION("the opt-in can be turned off again")
-    {
-        ComponentLoader loader;
-        loader.DevelopmentPathsEnable();
-        loader.DevelopmentPathsEnable(false);
-        REQUIRE(!loader.DevelopmentPathsEnabled());
-        REQUIRE_THROWS_AS(loader.Create("testmodule"), LoadError);
     }
 
     SECTION("organisation names use the dependency directory")
@@ -434,34 +417,27 @@ TEST_CASE("A plugin only in a development location loads with the opt-in and not
         fs::remove_all(directory);
 
         ComponentLoader loader;
-        loader.DevelopmentPathsEnable();
         REQUIRE(VariantOf(loader, "org/testmodule") == 1);
         REQUIRE_THROWS_AS(loader.Create("testmodule"), LoadError);
     }
 }
 
 #ifndef _WIN32
-TEST_CASE("A system only in a development location loads with the opt-in and not without", "[PluginSearchOrder]")
+TEST_CASE("A system only in a development location loads", "[PluginSearchOrder]")
 {
     ScratchDir scratch;
     fs::path project = ProjectOf(scratch);
     fs::path file = CopyModule(scratch, "testsystem", DevelopmentDirOf(scratch, developmentSystem), "testsystem");
     WorkingDirectoryGuard guard(project);
 
-    SystemLoader without;
-    REQUIRE(!without.DevelopmentPathsEnabled());
-    REQUIRE_THROWS_AS(without.Get("testsystem"), LoadError);
-
-    SystemLoader with;
-    with.DevelopmentPathsEnable();
-    REQUIRE(with.DevelopmentPathsEnabled());
-    SystemLoader::SystemCreator creator = with.Get("testsystem");
+    SystemLoader loader;
+    SystemLoader::SystemCreator creator = loader.Get("testsystem");
     REQUIRE(creator != nullptr);
     REQUIRE(fs::equivalent(FileOf(reinterpret_cast<void *>(creator)), file));
 }
 #endif
 
-TEST_CASE("With the opt-in a configured location beats a development location", "[PluginSearchOrder]")
+TEST_CASE("A configured location beats a development location", "[PluginSearchOrder]")
 {
     ScratchDir scratch;
     fs::path project = ProjectOf(scratch);
@@ -471,7 +447,6 @@ TEST_CASE("With the opt-in a configured location beats a development location", 
 
     ComponentLoader loader;
     loader.PathAdd((scratch.Path() / "conf").string());
-    loader.DevelopmentPathsEnable();
     for(int attempt = 0; attempt < 3; ++attempt)
     {
         REQUIRE(VariantOf(loader) == 1);
@@ -482,41 +457,13 @@ TEST_CASE("With the opt-in a configured location beats a development location", 
     CopyModule(scratch, "testsystem", "conf", "testsystem");
     SystemLoader systems;
     systems.PathAdd((scratch.Path() / "conf").string());
-    systems.DevelopmentPathsEnable();
     SystemLoader::SystemCreator creator = systems.Get("testsystem");
     REQUIRE(creator != nullptr);
     REQUIRE(!fs::equivalent(FileOf(reinterpret_cast<void *>(creator)), system));
 #endif
 }
 
-TEST_CASE("Without the opt-in no development location appears in the error", "[PluginSearchOrder]")
-{
-    ScratchDir scratch;
-    fs::create_directories(scratch.Path() / "conf");
-    WorkingDirectoryGuard guard(ProjectOf(scratch));
-    const std::string conf = (scratch.Path() / "conf").string();
-
-    ComponentLoader loader;
-    loader.PathAdd(conf);
-    LoadError error = LoadErrorOf([&] { loader.Create("testmodule"); });
-    REQUIRE(error.ReasonGet() == LoadError::Reason::NotFound);
-    REQUIRE(error.LocationsGet().size() == 1);
-    for(const auto &location : error.LocationsGet())
-    {
-        REQUIRE(!location.development);
-    }
-    REQUIRE(Mentions(error, conf));
-    REQUIRE(!Mentions(error, developmentComponent));
-    REQUIRE(!Mentions(error, "development location,"));
-    REQUIRE(Mentions(error, "development locations are off"));
-
-    ComponentLoader bare;
-    LoadError none = LoadErrorOf([&] { bare.Create("testmodule"); });
-    REQUIRE(none.LocationsGet().empty());
-    REQUIRE(Mentions(none, "development locations are off"));
-}
-
-TEST_CASE("With the opt-in the error lists configured then development locations in search order", "[PluginSearchOrder]")
+TEST_CASE("The error lists configured then development locations in search order", "[PluginSearchOrder]")
 {
     ScratchDir scratch;
     fs::create_directories(scratch.Path() / "one");
@@ -529,7 +476,6 @@ TEST_CASE("With the opt-in the error lists configured then development locations
         ComponentLoader loader;
         loader.PathAdd(one);
         loader.PathAdd(two);
-        loader.DevelopmentPathsEnable();
         LoadError error = LoadErrorOf([&] { loader.Create("testmodule"); });
         REQUIRE(error.ReasonGet() == LoadError::Reason::NotFound);
 
@@ -549,14 +495,12 @@ TEST_CASE("With the opt-in the error lists configured then development locations
         REQUIRE(text.find(one) < text.find(two));
         REQUIRE(text.find(two) < text.find(developmentComponent));
         REQUIRE(Mentions(error, "development location, "));
-        REQUIRE(!Mentions(error, "development locations are off"));
     }
 
     SECTION("organisation name")
     {
         ComponentLoader loader;
         loader.PathAdd(one);
-        loader.DevelopmentPathsEnable();
         LoadError error = LoadErrorOf([&] { loader.Create("org/testmodule"); });
         const auto &locations = error.LocationsGet();
         REQUIRE(locations.size() == 3);
@@ -565,6 +509,16 @@ TEST_CASE("With the opt-in the error lists configured then development locations
         REQUIRE(locations[2].path == developmentOrganisation);
         REQUIRE(locations[1].development);
         REQUIRE(locations[2].development);
+    }
+
+    SECTION("no configured location")
+    {
+        ComponentLoader bare;
+        LoadError none = LoadErrorOf([&] { bare.Create("testmodule"); });
+        REQUIRE(none.LocationsGet().size() == 1);
+        REQUIRE(none.LocationsGet()[0].path == developmentComponent);
+        REQUIRE(none.LocationsGet()[0].development);
+        REQUIRE(!Mentions(none, "no locations are configured"));
     }
 }
 
@@ -575,16 +529,8 @@ TEST_CASE("SearchPathsGet returns the lookup order, validates the name and does 
     loader.PathAdd("/does/not/exist/one");
     loader.PathAdd("relative/two");
 
-    SECTION("without the opt-in only configured locations")
+    SECTION("configured first, then development")
     {
-        REQUIRE(loader.SearchPathsGet("testmodule") ==
-                std::vector<std::string>{"/does/not/exist/one", "relative/two"});
-        REQUIRE(loader.SearchPathsGet("org/testmodule") == loader.SearchPathsGet("testmodule"));
-    }
-
-    SECTION("with the opt-in configured first, then development")
-    {
-        loader.DevelopmentPathsEnable();
         REQUIRE(loader.SearchPathsGet("testmodule") ==
                 std::vector<std::string>{"/does/not/exist/one", "relative/two", developmentComponent});
         REQUIRE(loader.SearchPathsGet("org/testmodule") ==
@@ -602,29 +548,27 @@ TEST_CASE("SearchPathsGet returns the lookup order, validates the name and does 
         }
     }
 
-    SECTION("with no locations at all")
+    SECTION("with no configured locations at all")
     {
         ComponentLoader bare;
-        REQUIRE(bare.SearchPathsGet("testmodule").empty());
-        bare.DevelopmentPathsEnable();
         REQUIRE(bare.SearchPathsGet("testmodule") == std::vector<std::string>{developmentComponent});
+        REQUIRE(bare.SearchPathsGet("org/testmodule") ==
+                std::vector<std::string>{developmentComponent, developmentOrganisation});
     }
 
     SECTION("the same for systems")
     {
         SystemLoader systems;
         systems.PathAdd("/does/not/exist/one");
-        REQUIRE(systems.SearchPathsGet("testsystem") == std::vector<std::string>{"/does/not/exist/one"});
-        systems.DevelopmentPathsEnable();
-        REQUIRE(!systems.SearchPathsGet("testsystem").empty());
-        REQUIRE(systems.SearchPathsGet("testsystem").back() == developmentSystem);
+        REQUIRE(systems.SearchPathsGet("testsystem") ==
+                std::vector<std::string>{"/does/not/exist/one", developmentSystem});
         REQUIRE(systems.SearchPathsGet("org/testsystem").back() ==
                 "../node_modules/org/testsystem/src/.libs");
         REQUIRE_THROWS_AS(systems.SearchPathsGet("a\\b"), LoadError);
     }
 }
 
-TEST_CASE("A pak only in a development location loads with the opt-in and not without", "[PluginSearchOrder]")
+TEST_CASE("A pak only in a development location loads", "[PluginSearchOrder]")
 {
     ScratchDir scratch;
     fs::path project = ProjectOf(scratch);
@@ -633,26 +577,18 @@ TEST_CASE("A pak only in a development location loads with the opt-in and not wi
     WorkingDirectoryGuard guard(project);
     const std::string conf = (scratch.Path() / "conf").string();
 
-    SECTION("without the opt-in")
+    SECTION("with a configured location that does not hold it")
     {
         PakLoader loader;
         loader.PathAdd(conf);
-        REQUIRE(!loader.DevelopmentPathsEnabled());
-        LoadError error = LoadErrorOf([&] { loader.Load("searchpak"); });
-        REQUIRE(error.ReasonGet() == LoadError::Reason::NotFound);
-        REQUIRE(error.LocationsGet().size() == 1);
-        REQUIRE(!Mentions(error, developmentPak));
-        REQUIRE(Mentions(error, "development locations are off"));
-    }
-
-    SECTION("with the opt-in")
-    {
-        PakLoader loader;
-        loader.PathAdd(conf);
-        loader.DevelopmentPathsEnable();
-        REQUIRE(loader.DevelopmentPathsEnabled());
         auto resources = loader.Load("searchpak");
         REQUIRE(resources.at("item")->Data == Bytes(5));
+    }
+
+    SECTION("with no configured location at all")
+    {
+        PakLoader loader;
+        REQUIRE(loader.Load("searchpak").at("item")->Data == Bytes(5));
     }
 
     SECTION("organisation names use the dependency directory")
@@ -661,13 +597,12 @@ TEST_CASE("A pak only in a development location loads with the opt-in and not wi
         fs::remove_all(DevelopmentDirOf(scratch, developmentPak));
 
         PakLoader loader;
-        loader.DevelopmentPathsEnable();
         REQUIRE(loader.Load("org/searchpak").at("item")->Data == Bytes(7));
         REQUIRE_THROWS_AS(loader.Load("searchpak"), LoadError);
     }
 }
 
-TEST_CASE("With the opt-in a configured pak beats a development pak", "[PluginSearchOrder]")
+TEST_CASE("A configured pak beats a development pak", "[PluginSearchOrder]")
 {
     ScratchDir scratch;
     fs::path project = ProjectOf(scratch);
@@ -677,7 +612,6 @@ TEST_CASE("With the opt-in a configured pak beats a development pak", "[PluginSe
 
     PakLoader loader;
     loader.PathAdd((scratch.Path() / "conf").string());
-    loader.DevelopmentPathsEnable();
     REQUIRE(loader.Load("searchpak").at("item")->Data == Bytes(8));
 }
 
@@ -690,9 +624,6 @@ TEST_CASE("Pak search paths and error list development locations after configure
 
     PakLoader loader;
     loader.PathAdd(conf);
-    REQUIRE(loader.SearchPathsGet("searchpak") == std::vector<std::string>{conf});
-
-    loader.DevelopmentPathsEnable();
     REQUIRE(loader.SearchPathsGet("searchpak") == std::vector<std::string>{conf, developmentPak});
     REQUIRE(loader.SearchPathsGet("org/searchpak") ==
             std::vector<std::string>{conf, developmentPak, developmentPakOrganisation});
@@ -708,5 +639,4 @@ TEST_CASE("Pak search paths and error list development locations after configure
     REQUIRE(locations[1].development);
     REQUIRE(locations[2].path == developmentPakOrganisation);
     REQUIRE(locations[2].development);
-    REQUIRE(!Mentions(error, "development locations are off"));
 }

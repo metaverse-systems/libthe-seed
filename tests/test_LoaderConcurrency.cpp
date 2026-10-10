@@ -479,7 +479,6 @@ TEST_CASE("Names that resolve to different files stay apart", "[concurrency]")
     WorkingDirectoryGuard guard(project);
 
     ComponentLoader loader;
-    loader.DevelopmentPathsEnable();
     REQUIRE(loader.PathsGet().empty());
 
     SECTION("one after the other")

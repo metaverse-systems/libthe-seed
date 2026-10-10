@@ -81,16 +81,15 @@ template <typename Creator> class PluginCache
                     owner = true;
                     pending = promise.get_future().share();
                     this->in_flight.emplace(name, InFlight{pending, this->version});
-                    locations = SearchListBuild(this->paths, this->development_paths, org, library, false,
-                                                configured_count);
+                    locations = SearchListBuild(this->paths, org, library, false, configured_count);
                 }
             }
 
             if(!owner)
             {
-                // The running load started before a location was added or the
-                // development setting changed. Let it finish, then look again so
-                // this request sees the current settings.
+                // The running load started before a location was added. Let it
+                // finish, then look again so this request sees the current
+                // locations.
                 try
                 {
                     pending.wait();
@@ -141,24 +140,11 @@ template <typename Creator> class PluginCache
         return this->paths;
     }
 
-    void DevelopmentPathsEnable(bool enabled)
-    {
-        std::unique_lock lock(this->mutex);
-        this->development_paths = enabled;
-        ++this->version;
-    }
-
-    bool DevelopmentPathsEnabled() const
-    {
-        std::shared_lock lock(this->mutex);
-        return this->development_paths;
-    }
-
     std::vector<std::string> SearchPathsGet(const std::string &org, const std::string &library) const
     {
         std::shared_lock lock(this->mutex);
         size_t configured_count = 0;
-        return SearchListBuild(this->paths, this->development_paths, org, library, false, configured_count);
+        return SearchListBuild(this->paths, org, library, false, configured_count);
     }
 
   private:
@@ -252,7 +238,6 @@ template <typename Creator> class PluginCache
 
     mutable std::shared_mutex mutex;
     std::vector<std::string> paths;
-    bool development_paths = false;
     unsigned long long version = 0;
     std::map<std::string, Entry> entries;
     std::map<std::string, InFlight> in_flight;

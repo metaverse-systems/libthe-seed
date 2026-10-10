@@ -83,24 +83,31 @@ TEST_CASE("Not found lists every location with its state and the file name", "[P
     CHECK(Mentions(error, missing.string()));
     CHECK(Mentions(error, "does not exist: " + missing.string()));
     CHECK(Mentions(error, "searched: " + empty.string()));
-    REQUIRE(error.LocationsGet().size() == 2);
+    // The two configured locations, then the development location.
+    REQUIRE(error.LocationsGet().size() == 3);
     CHECK(error.LocationsGet()[0].state == LoadError::LocationState::Searched);
     CHECK(error.LocationsGet()[1].state == LoadError::LocationState::Missing);
+    CHECK(error.LocationsGet()[2].development);
 }
 
-TEST_CASE("Not found with no locations says none are configured", "[PluginLoadErrors]")
+TEST_CASE("Not found with no configured locations lists only the development locations", "[PluginLoadErrors]")
 {
     ComponentLoader components;
     LoadError error = LoadErrorOf([&] { components.Create("testmodule"); });
     CHECK(error.ReasonGet() == LoadError::Reason::NotFound);
-    CHECK(Mentions(error, "no locations are configured"));
+    CHECK(Mentions(error, "no location holds"));
     CHECK(Mentions(error, "testmodule"));
+    REQUIRE(error.LocationsGet().size() == 1);
+    CHECK(error.LocationsGet()[0].development);
+    CHECK(error.LocationsGet()[0].path == "../../testmodule/src/.libs");
 
     SystemLoader systems;
     error = LoadErrorOf([&] { systems.Create("testsystem"); });
     CHECK(error.ReasonGet() == LoadError::Reason::NotFound);
-    CHECK(Mentions(error, "no locations are configured"));
+    CHECK(Mentions(error, "no location holds"));
     CHECK(Mentions(error, "testsystem"));
+    REQUIRE(error.LocationsGet().size() == 1);
+    CHECK(error.LocationsGet()[0].development);
 }
 
 TEST_CASE("A damaged file names the absolute file and the platform text", "[PluginLoadErrors]")

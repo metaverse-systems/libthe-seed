@@ -13,9 +13,9 @@ libthe-seed (unreleased)
   ComponentLoader, SystemLoader, PakLoader and LibraryLoader.
 
 * Development locations (../../<library>/src/.libs and
-  ../node_modules/<org>/<library>/src/.libs) are searched only after
-  DevelopmentPathsEnable(). New: DevelopmentPathsEnabled() and
-  SearchPathsGet(name) on ComponentLoader, SystemLoader and PakLoader.
+  ../node_modules/<org>/<library>/src/.libs) are searched after the
+  configured locations instead of before them. New: SearchPathsGet(name) on
+  ComponentLoader, SystemLoader and PakLoader.
 
 * LoadError (new, installed, derives from std::runtime_error) reports every
   failure to load a plugin, resource pak or scene with a reason (InvalidName,

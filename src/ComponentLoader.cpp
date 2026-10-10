@@ -51,16 +51,6 @@ std::vector<std::string> ComponentLoader::PathsGet() const
     return this->cache->PathsGet();
 }
 
-void ComponentLoader::DevelopmentPathsEnable(bool enabled)
-{
-    this->cache->DevelopmentPathsEnable(enabled);
-}
-
-bool ComponentLoader::DevelopmentPathsEnabled() const
-{
-    return this->cache->DevelopmentPathsEnabled();
-}
-
 std::vector<std::string> ComponentLoader::SearchPathsGet(const std::string &name) const
 {
     NameParser parsed(name, "component plugin");

@@ -79,31 +79,18 @@ std::vector<std::string> PakLoader::PathsGet() const
     return this->paths;
 }
 
-void PakLoader::DevelopmentPathsEnable(bool enabled)
-{
-    std::unique_lock lock(this->mutex);
-    this->development_paths = enabled;
-}
-
-bool PakLoader::DevelopmentPathsEnabled() const
-{
-    std::shared_lock lock(this->mutex);
-    return this->development_paths;
-}
-
 std::vector<std::string> PakLoader::SearchPathsGet(const std::string &pak_name) const
 {
     size_t configured_count = 0;
     return this->SearchPathsGet(pak_name, configured_count);
 }
 
-// Validates the name, then builds the list from one snapshot of the paths and
-// the setting taken under a single lock.
+// Validates the name, then builds the list from one snapshot of the paths
+// taken under the lock.
 std::vector<std::string> PakLoader::SearchPathsGet(const std::string &pak_name, size_t &configured_count) const
 {
     NameParser parsed(pak_name, "resource pak");
 
     std::shared_lock lock(this->mutex);
-    return seed::internal::SearchListBuild(this->paths, this->development_paths, parsed.org, parsed.library,
-                                           true, configured_count);
+    return seed::internal::SearchListBuild(this->paths, parsed.org, parsed.library, true, configured_count);
 }

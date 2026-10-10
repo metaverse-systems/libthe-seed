@@ -14,13 +14,12 @@
  * first location holding <library>.pak decides. A pak that is present but
  * cannot be read fails the load with LoadError (NotLoadable) and later
  * locations are not tried. The working directory is never searched unless the
- * application adds it with PathAdd. Development locations are searched only
- * after DevelopmentPathsEnable, and after the configured ones. Failures are
- * LoadError (InvalidName, NotFound, NotLoadable).
+ * application adds it with PathAdd. The development locations of a the-seed
+ * source tree are searched after the configured ones. Failures are LoadError
+ * (InvalidName, NotFound, NotLoadable).
  *
  * Threads: every method is safe to call from several threads at once. A
- * request made after PathAdd or DevelopmentPathsEnable returned uses the new
- * setting.
+ * request made after PathAdd returned uses the new location.
  */
 class PakLoader
 {
@@ -44,20 +43,13 @@ class PakLoader
     std::vector<std::string> PathsGet() const;
 
     /**
-     * Turns the development locations on or off for this loader (default
-     * off): "../../<library>" and, for an "org/library" name,
-     * "../node_modules/<org>/<library>", relative to the working directory.
-     * They are meant for development, searched only when enabled and always
-     * after the configured locations. The working directory itself is never
-     * searched unless the application adds it with PathAdd.
-     */
-    void DevelopmentPathsEnable(bool enabled = true);
-    bool DevelopmentPathsEnabled() const;
-
-    /**
-     * The ordered locations a lookup of `pak_name` searches: configured
-     * first, then development when enabled. Throws LoadError (InvalidName) for
-     * an invalid name. Does not touch the file system.
+     * The ordered locations a lookup of `pak_name` searches: the configured
+     * locations in the order they were added, then the development locations
+     * of a the-seed source tree: "../../<library>" and, for an "org/library"
+     * name, "../node_modules/<org>/<library>", relative to the working
+     * directory. The working directory itself is never searched unless the
+     * application adds it with PathAdd. Throws LoadError (InvalidName) for an
+     * invalid name. Does not touch the file system.
      */
     std::vector<std::string> SearchPathsGet(const std::string &pak_name) const;
 
@@ -65,6 +57,5 @@ class PakLoader
     std::vector<std::string> SearchPathsGet(const std::string &pak_name, size_t &configured_count) const;
 
     std::vector<std::string> paths;
-    bool development_paths = false;
     mutable std::shared_mutex mutex;
 };

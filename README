@@ -144,10 +144,10 @@ The same rules apply to `ComponentLoader`, `SystemLoader` and `PakLoader`:
 * Locations added with `PathAdd` are searched first, in the order they were added. A relative location is resolved against the working directory at the time of the load. A location added after a load applies to the next load.
 * The first location that holds the file decides. If that file cannot be loaded, the load fails with the reason and the later locations are not tried; a damaged file is never skipped in favour of another copy.
 * The working directory is never searched. To load from it, add it: `loader.PathAdd(".")`.
-* Development locations (`../../<library>/src/.libs` and `../node_modules/<org>/<library>/src/.libs` relative to the working directory, and the matching pak folders) are searched only after `DevelopmentPathsEnable()`, and always after the configured ones. They exist for working inside a source tree; do not enable them in a program you ship.
+* The development locations (`../../<library>/src/.libs` and `../node_modules/<org>/<library>/src/.libs` relative to the working directory, and the matching pak folders `../../<library>` and `../node_modules/<org>/<library>`) are searched after the configured ones. They exist for working inside a source tree, where sibling projects' build output is found without installing it.
 * The file is opened by its absolute path. The plugin file is `lib<name>.so`, `lib<name>-0.dll` or `lib<name>.dylib`; a pak is `<name>.pak`.
 * A name is `library` or `org/library`. Empty parts, `.` or `..` parts, backslashes, `:`, control characters, a leading `/` and more than one `/` are refused with `LoadError::Reason::InvalidName` before any file is touched.
-* `SearchPathsGet(name)` returns the ordered locations a load of `name` would search, without touching the file system. `DevelopmentPathsEnabled()` returns the setting.
+* `SearchPathsGet(name)` returns the ordered locations a load of `name` would search, without touching the file system.
 
 ### ComponentLoader
 
@@ -185,16 +185,13 @@ auto system = loader.Create("org/my-system");
 
 ### Development locations
 
-Working inside a source tree, a program can ask the loaders to look at the build output of sibling libraries after the configured locations:
+Working inside a source tree, the loaders find the build output of sibling libraries after the configured locations. `SearchPathsGet` shows the full order:
 
 ```cpp
 #include <libthe-seed/ComponentLoader.hpp>
 
 ComponentLoader loader;
 loader.PathAdd("/usr/lib/the-seed/components");
-#ifdef SEED_DEVELOPMENT
-loader.DevelopmentPathsEnable();
-#endif
 
 for(const auto &location : loader.SearchPathsGet("org/my-component"))
 {
@@ -252,7 +249,7 @@ Scenes are all or nothing: the whole scene is read, checked and every component 
 
 ### Thread Safety
 
-All loader instances are safe to use from several threads: any method can be called on the same instance concurrently, including `PathAdd` and `DevelopmentPathsEnable` while loads are running. A plugin is loaded once per loader: concurrent requests for one name wait for the same load and get the same result, and different names that resolve to the same file share one open of it. A failed load is reported to every request that waited for it and is not remembered; the next request tries again. No loader lock is held while the file system is searched or a plugin is opened. A request that starts after `PathAdd` or `DevelopmentPathsEnable` has returned uses the new setting. A plugin's static initialiser must not load through the same loader that is loading it.
+All loader instances are safe to use from several threads: any method can be called on the same instance concurrently, including `PathAdd` while loads are running. A plugin is loaded once per loader: concurrent requests for one name wait for the same load and get the same result, and different names that resolve to the same file share one open of it. A failed load is reported to every request that waited for it and is not remembered; the next request tries again. No loader lock is held while the file system is searched or a plugin is opened. A request that starts after `PathAdd` has returned uses the new location. A plugin's static initialiser must not load through the same loader that is loading it.
 
 ```cpp
 ComponentLoader loader;
@@ -271,7 +268,7 @@ Every loader throws `LoadError` (`#include <libthe-seed/LoadError.hpp>`, in the 
 | `Reason` | Meaning |
 |---|---|
 | `InvalidName` | The name breaks a name rule; nothing was searched. |
-| `NotFound` | No searched location holds the file. The message lists every location and its state, and says when development locations are off. |
+| `NotFound` | No searched location holds the file. The message lists every location and its state, development locations marked as such. |
 | `NotLoadable` | The deciding file is present but the platform (or the pak reader) refused it. The message has the absolute file and the platform's reason. |
 | `EntryPointMissing` | The plugin loaded but has no `create_component`, `create_system` or requested function. |
 | `NoObject` | The entry point returned no object. |
@@ -297,12 +294,13 @@ On Windows, a plugin is opened by absolute path with its own folder first in the
 * The working directory is no longer searched. A program that relied on it now sees, for example:
 
   ```
-  component plugin "org/my-component" not found: no locations are configured
-  development locations are off for this loader
+  component plugin "org/my-component" not found: no location holds libmy-component.so
+    development location, does not exist: ../../my-component/src/.libs
+    development location, does not exist: ../node_modules/org/my-component/src/.libs
   ```
 
-  or, with locations added, the list of them with `searched:` or `does not exist:` for each. Fix it by adding the folder: `loader.PathAdd(".")`.
-* The development locations (`../../<library>/src/.libs`, `../node_modules/<org>/<library>/src/.libs`) are searched only after `DevelopmentPathsEnable()`.
+  with any locations added listed first, `searched:` or `does not exist:` for each. Fix it by adding the folder: `loader.PathAdd(".")`.
+* The development locations (`../../<library>/src/.libs`, `../node_modules/<org>/<library>/src/.libs`) are searched after the configured locations instead of before them.
 * Failures are `LoadError`. Code that caught `std::invalid_argument` (invalid names) or `nlohmann::json::parse_error` (scenes) must catch `LoadError`; catching `std::runtime_error` keeps working.
 * A scene with no `entities`, or an entity without `Components`, is now an error (`SceneNotUnderstood`). Write `"entities": []` for an empty scene.
 * A missing scene file is `SceneUnopenable`, not a parse error at line 1, column 1.

@@ -175,16 +175,6 @@ TEST_CASE("LoadError message for NotFound with no locations", "[LoadError]")
     REQUIRE(Contains(message, "no locations are configured"));
 }
 
-TEST_CASE("LoadError message for NotFound with development locations off", "[LoadError]")
-{
-    std::vector<LoadError::Location> locations = {
-        {"/etc/app/plugins", false, LoadError::LocationState::Searched},
-    };
-    LoadError error(LoadError::Reason::NotFound, "thing", "libthing.so", locations, "");
-
-    REQUIRE(Contains(error.what(), "development locations are off for this loader"));
-}
-
 TEST_CASE("LoadError message for NotLoadable", "[LoadError]")
 {
     std::vector<LoadError::Location> locations = {

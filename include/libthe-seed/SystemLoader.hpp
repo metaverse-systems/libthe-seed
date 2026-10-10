@@ -24,8 +24,8 @@ template <typename Creator> class PluginCache;
  * open. A failed load is reported to every waiting request and is not
  * remembered; the next request tries again. No loader lock is held while the
  * file system is searched or a plugin is opened. A plugin's static initialiser
- * must not load through the same loader. A request made after PathAdd or
- * DevelopmentPathsEnable returned uses the new setting.
+ * must not load through the same loader. A request made after PathAdd
+ * returned uses the new location.
  */
 class SystemLoader
 {
@@ -49,21 +49,12 @@ class SystemLoader
     std::vector<std::string> PathsGet() const;
 
     /**
-     * Turns the development locations on or off for this loader (default
-     * off). They are meant for development trees: the library's
-     * "../../<library>/src/.libs" and, for an "org/library" name,
-     * "../node_modules/<org>/<library>/src/.libs", relative to the working
-     * directory. They are searched only when enabled and always after the
-     * configured locations. The working directory itself is never searched
-     * unless the application adds it with PathAdd. A load already in progress
-     * keeps the setting it started with.
-     */
-    void DevelopmentPathsEnable(bool enabled = true);
-    bool DevelopmentPathsEnabled() const;
-
-    /**
      * The ordered locations a lookup of `name` searches: the configured
-     * locations, then the development locations when enabled. Throws LoadError
+     * locations in the order they were added, then the development locations
+     * of a the-seed source tree: "../../<library>/src/.libs" and, for an
+     * "org/library" name, "../node_modules/<org>/<library>/src/.libs",
+     * relative to the working directory. The working directory itself is never
+     * searched unless the application adds it with PathAdd. Throws LoadError
      * (InvalidName) for an invalid name. Does not touch the file system.
      */
     std::vector<std::string> SearchPathsGet(const std::string &name) const;

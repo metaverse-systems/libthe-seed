@@ -159,18 +159,14 @@ std::vector<std::string> DevelopmentLocations(const std::string &org, const std:
     return result;
 }
 
-std::vector<std::string> SearchListBuild(const std::vector<std::string> &configured, bool development,
-                                         const std::string &org, const std::string &library, bool pak,
-                                         size_t &configured_count)
+std::vector<std::string> SearchListBuild(const std::vector<std::string> &configured, const std::string &org,
+                                         const std::string &library, bool pak, size_t &configured_count)
 {
     std::vector<std::string> list = configured;
     configured_count = list.size();
-    if(development)
+    for(std::string &location : DevelopmentLocations(org, library, pak))
     {
-        for(std::string &location : DevelopmentLocations(org, library, pak))
-        {
-            list.push_back(std::move(location));
-        }
+        list.push_back(std::move(location));
     }
     return list;
 }
