@@ -7,7 +7,9 @@
 
 #include <libecs-cpp/ecs.hpp>
 
+#include <cstdint>
 #include <memory>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
@@ -16,6 +18,18 @@ namespace seed::internal
 
 // The kind used in the messages of every pak failure.
 inline constexpr const char *PakKind = "resource pak";
+
+// Thrown by PakEntryRead when the memory for one resource cannot be had. The
+// text names the resource and its size.
+class PakNoMemory : public std::runtime_error
+{
+  public:
+    PakNoMemory(const std::string &name, std::uint64_t size)
+        : std::runtime_error("not enough memory to read resource \"" + name + "\" (" + std::to_string(size) +
+                             " bytes)")
+    {
+    }
+};
 
 // Called from inside a catch block: throws the LoadError that describes the
 // exception being handled. A pak that breaks the format, or ends while it is
@@ -30,7 +44,7 @@ inline constexpr const char *PakKind = "resource pak";
 
 // Fills `resource` with the bytes of `entry`, allocated at exactly the
 // entry's size and read straight into place. Throws the exceptions of
-// PakFile::ReadAt or std::bad_alloc.
+// PakFile::ReadAt or PakNoMemory.
 void PakEntryRead(const PakFile &file, const PakEntry &entry, ecs::Resource &resource);
 
 } // namespace seed::internal

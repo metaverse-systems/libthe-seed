@@ -2,6 +2,7 @@
 #include "TestPaths.hpp"
 #include <libthe-seed/ResourcePak.hpp>
 #include <libthe-seed/LoadError.hpp>
+#include <filesystem>
 #include <fstream>
 #include <cstdint>
 
@@ -275,4 +276,89 @@ TEST_CASE("ResourcePak reads a pak with no resources", "[ResourcePak]")
     auto *world = manager.Container("world");
     REQUIRE_NOTHROW(pak.LoadAll(world));
     REQUIRE_FALSE(world->ResourceGet("anything"));
+}
+
+TEST_CASE("ResourcePak on a missing path is not found", "[ResourcePak]")
+{
+    seedtest::ScratchDir scratch;
+    const std::string path = scratch.File("absent.pak");
+
+    try
+    {
+        ResourcePak pak(path);
+        FAIL("a missing pak was accepted");
+    }
+    catch(const LoadError &error)
+    {
+        REQUIRE(error.ReasonGet() == LoadError::Reason::NotFound);
+        REQUIRE(error.NameGet() == path);
+        REQUIRE(error.FileGet() == path);
+        REQUIRE(error.LocationsGet().empty());
+        REQUIRE_FALSE(error.DetailGet().empty());
+#ifndef _WIN32
+        REQUIRE(error.DetailGet().find("No such file or directory") != std::string::npos);
+#endif
+        const std::string message = error.what();
+        REQUIRE(message.find(path + ": " + error.DetailGet()) != std::string::npos);
+    }
+    catch(...)
+    {
+        FAIL("an exception other than LoadError escaped");
+    }
+}
+
+TEST_CASE("ResourcePak reports a pak damaged after it was opened", "[ResourcePak]")
+{
+    seedtest::ScratchDir scratch;
+    const seedtest::PakSpec spec = SeveralSpec();
+    const std::vector<std::uint8_t> sound = seedtest::PakBytes(spec);
+    const std::filesystem::path path = seedtest::WritePakFile(scratch.Path(), "several.pak", spec);
+
+    ResourcePak pak(path.string());
+    REQUIRE(pak.Load("alpha").Data == spec.resources[1].bytes);
+
+    SECTION("A pak truncated after the constructor is checked again by the next Load")
+    {
+        seedtest::WriteBytes(path, seedtest::PakTruncate(sound, 10));
+
+        try
+        {
+            pak.Load("zeta");
+            FAIL("a truncated pak was read");
+        }
+        catch(const LoadError &error)
+        {
+            REQUIRE(error.ReasonGet() == LoadError::Reason::NotLoadable);
+            REQUIRE(error.FileGet() == path.string());
+            REQUIRE(error.DetailGet() == "damaged: the description claims " + std::to_string(sound.size()) +
+                                             " bytes but the file holds " + std::to_string(sound.size() - 10));
+        }
+        catch(...)
+        {
+            FAIL("an exception other than LoadError escaped");
+        }
+    }
+
+    SECTION("Data appended after the constructor is reported by LoadAll")
+    {
+        seedtest::WriteBytes(path, seedtest::PakAppend(sound, 7));
+
+        ecs::Manager manager;
+        auto *world = manager.Container("world");
+        try
+        {
+            pak.LoadAll(world);
+            FAIL("a pak with trailing data was read");
+        }
+        catch(const LoadError &error)
+        {
+            REQUIRE(error.ReasonGet() == LoadError::Reason::NotLoadable);
+            REQUIRE(error.DetailGet() == "damaged: 7 bytes of unexplained data after the last resource");
+        }
+        catch(...)
+        {
+            FAIL("an exception other than LoadError escaped");
+        }
+        REQUIRE_FALSE(world->ResourceGet("zeta"));
+    }
 }

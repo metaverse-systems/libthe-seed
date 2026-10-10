@@ -1,5 +1,7 @@
 #include "PakAccess.hpp"
 
+#include "BoundedBytes.hpp"
+
 #include <new>
 #include <stdexcept>
 
@@ -39,6 +41,10 @@ void PakFailureThrow(const std::string &name, const std::string &file,
     {
         throw LoadError(LoadError::Reason::NotLoadable, name, file, locations, error.what(), PakKind);
     }
+    catch(const PakNoMemory &error)
+    {
+        throw LoadError(LoadError::Reason::NotLoadable, name, file, locations, error.what(), PakKind);
+    }
     catch(const std::bad_alloc &)
     {
         throw LoadError(LoadError::Reason::NotLoadable, name, file, locations,
@@ -49,11 +55,32 @@ void PakFailureThrow(const std::string &name, const std::string &file,
         throw LoadError(LoadError::Reason::NotLoadable, name, file, locations,
                         "not enough memory to read the resource pak", PakKind);
     }
+    catch(const std::exception &error)
+    {
+        throw LoadError(LoadError::Reason::NotLoadable, name, file, locations,
+                        std::string("internal error (") + detail::TypeName(error) + "): " + error.what(), PakKind);
+    }
+    catch(...)
+    {
+        throw LoadError(LoadError::Reason::NotLoadable, name, file, locations, "internal error (unknown exception)",
+                        PakKind);
+    }
 }
 
 void PakEntryRead(const PakFile &file, const PakEntry &entry, ecs::Resource &resource)
 {
-    resource.Data.resize(static_cast<std::size_t>(entry.size));
+    try
+    {
+        resource.Data.resize(static_cast<std::size_t>(entry.size));
+    }
+    catch(const std::bad_alloc &)
+    {
+        throw PakNoMemory(entry.name, entry.size);
+    }
+    catch(const std::length_error &)
+    {
+        throw PakNoMemory(entry.name, entry.size);
+    }
     if(entry.size > 0)
     {
         file.ReadAt(entry.offset, resource.Data.data(), entry.size);
