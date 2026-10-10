@@ -7,6 +7,20 @@
 #include <vector>
 #include <libecs-cpp/ecs.hpp>
 
+/**
+ * @brief Loads resource paks by name.
+ *
+ * Search: locations added with PathAdd are searched first, in order, and the
+ * first location holding <library>.pak decides. A pak that is present but
+ * cannot be read fails the load with LoadError (NotLoadable) and later
+ * locations are not tried. The working directory is never searched unless the
+ * application adds it with PathAdd. The development locations of a the-seed
+ * source tree are searched after the configured ones. Failures are LoadError
+ * (InvalidName, NotFound, NotLoadable).
+ *
+ * Threads: every method is safe to call from several threads at once. A
+ * request made after PathAdd returned uses the new location.
+ */
 class PakLoader
 {
   public:
@@ -28,7 +42,20 @@ class PakLoader
     void PathAdd(const std::string &path);
     std::vector<std::string> PathsGet() const;
 
+    /**
+     * The ordered locations a lookup of `pak_name` searches: the configured
+     * locations in the order they were added, then the development locations
+     * of a the-seed source tree: "../../<library>" and, for an "org/library"
+     * name, "../node_modules/<org>/<library>", relative to the working
+     * directory. The working directory itself is never searched unless the
+     * application adds it with PathAdd. Throws LoadError (InvalidName) for an
+     * invalid name. Does not touch the file system.
+     */
+    std::vector<std::string> SearchPathsGet(const std::string &pak_name) const;
+
   private:
-    std::vector<std::string> paths_;
-    mutable std::shared_mutex mutex_;
+    std::vector<std::string> SearchPathsGet(const std::string &pak_name, size_t &configured_count) const;
+
+    std::vector<std::string> paths;
+    mutable std::shared_mutex mutex;
 };

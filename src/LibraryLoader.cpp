@@ -6,7 +6,10 @@
 
 #include <libthe-seed/LibraryLoader.hpp>
 
-#include <filesystem>
+#include "internal/PluginSearch.hpp"
+
+#include <libthe-seed/LoadError.hpp>
+
 
 void LibraryLoader::PathAdd(const std::string &path)
 {
@@ -15,91 +18,38 @@ void LibraryLoader::PathAdd(const std::string &path)
 
 std::vector<std::string> LibraryLoader::PathsGet()
 {
-    std::vector<std::string> valid_paths;
-
-    for(const auto &path : this->paths)
-    {
-#ifdef _WIN32
-        std::string full_path = path + "\\lib" + this->name + "-0.dll";
-#elif __APPLE__
-        std::string full_path = path + "/lib" + this->name + ".dylib";
-#else
-        std::string full_path = path + "/lib" + this->name + ".so";
-#endif
-
-#ifdef _WIN32
-        DWORD attrib = GetFileAttributesA(full_path.c_str());
-        if(attrib != INVALID_FILE_ATTRIBUTES && !(attrib & FILE_ATTRIBUTE_DIRECTORY))
-        {
-            valid_paths.push_back(full_path);
-        }
-#else
-        if(std::filesystem::exists(full_path))
-        {
-            valid_paths.push_back(full_path);
-        }
-#endif
-    }
-
-    if(valid_paths.size() == 0)
-    {
-        std::string error = "Could not find " + this->name + " shared object in the following paths:\n";
-        for(const auto &path : this->paths)
-        {
-            error += path + "\n";
-        }
-        throw std::runtime_error(error);
-    }
-
-    return valid_paths;
+    return this->paths;
 }
 
 void LibraryLoader::Load()
 {
     if(this->library_handle != nullptr) return;
-    std::string error;
-    std::vector<std::string> search_paths = this->PathsGet();
 
-    for(const auto &path : search_paths)
+    // Names that could address anything but a plain file below a location.
+    if(this->name.find_first_of("/\\:") != std::string::npos)
     {
-#ifdef _WIN32
-        HMODULE lib = LoadLibrary(path.c_str());
-#else
-        void *lib = dlopen(path.c_str(), RTLD_LAZY);
-#endif
-        if(lib == nullptr)
-        {
-            error = LibraryLoader::GetLastErrorAsString();
-        }
-        else
-        {
-            this->library_handle.reset(lib);
-            break;
-        }
+        throw LoadError(LoadError::Reason::InvalidName, this->name, "", {},
+                        "contains \"/\", a backslash or \":\"", "library");
     }
 
-    if(this->library_handle == nullptr)
-    {
-        throw std::runtime_error(error);
-    }
+    // Plugins are pinned: the platform never unmaps their code, so objects
+    // and function pointers stay valid after this loader is gone. Only the
+    // added locations are searched and the first one holding the file decides.
+    seed::internal::SearchResult search;
+    void *lib = seed::internal::PluginOpen(this->paths, this->paths.size(), this->name, this->name, "library", search);
+    this->library_handle.reset(lib);
+    this->loaded_file = search.file.string();
 }
 
 void *LibraryLoader::FunctionGet(const std::string &FunctionName)
 {
     this->Load();
 
-    void *ptr = nullptr;
     std::string error;
-
-#ifdef _WIN32
-    ptr = (void *)GetProcAddress((HMODULE)this->library_handle.get(), FunctionName.c_str());
-#else
-    ptr = dlsym(this->library_handle.get(), FunctionName.c_str());
-#endif
-
+    void *ptr = seed::internal::SymbolFind(this->library_handle.get(), FunctionName, error);
     if(!ptr)
     {
-        throw std::runtime_error(LibraryLoader::GetLastErrorAsString());
+        seed::internal::EntryPointMissingThrow(this->loaded_file, this->name, FunctionName, error, "library");
     }
     return ptr;
 }

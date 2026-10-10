@@ -27,7 +27,17 @@ struct LibraryDeleter
 /**
  * @brief Loads functions from dynamic libraries.
  *        (.so, .dll, .dylib)
- * 
+ *
+ * Every library the loader opens is pinned: the platform never unmaps its
+ * code, so function pointers returned by FunctionGet and objects made by them
+ * stay valid after this loader is destroyed. The code stays loaded until the
+ * process ends.
+ *
+ * FunctionGet searches the locations added with PathAdd in order and the first
+ * file holding the library decides; the working directory is searched only if
+ * it was added. Failures are LoadError (NotFound, NotLoadable,
+ * EntryPointMissing, InvalidName). The library name given to the constructor
+ * must not contain '/', '\\' or ':'.
  */
 class LibraryLoader
 {
@@ -51,6 +61,14 @@ class LibraryLoader
      * @param path Path to add.
      */
     void PathAdd(const std::string &path);
+    /**
+     * @brief The locations added with PathAdd, in the order they were added.
+     *
+     * Returns the locations themselves, whether or not they exist or hold the
+     * library, and never throws. Earlier versions returned the library files
+     * found and threw when there were none. The working directory is searched
+     * only if it was added.
+     */
     std::vector<std::string> PathsGet();
     const std::string name;
     static const std::string GetLastErrorAsString();
@@ -58,4 +76,5 @@ class LibraryLoader
     std::unique_ptr<void, LibraryDeleter> library_handle;
     void Load();
     std::vector<std::string> paths;
+    std::string loaded_file;
 };

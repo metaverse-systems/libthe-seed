@@ -1,69 +1,58 @@
 #include <libthe-seed/ComponentLoader.hpp>
-#include <libthe-seed/LibraryLoader.hpp>
+#include <libthe-seed/LoadError.hpp>
+#include "internal/PluginCache.hpp"
+#include "internal/PluginSearch.hpp"
 #include "NameParser.hpp"
-#include <shared_mutex>
-#include <stdexcept>
+#include <memory>
 
-ComponentLoader::ComponentLoader() = default;
+namespace
+{
+seed::internal::PluginCache<ComponentLoader::ComponentCreator>::Entry Resolve(seed::internal::PluginCache<ComponentLoader::ComponentCreator> &cache,
+                                                         const std::string &name)
+{
+    // Reject names that could address anything but a plain file first.
+    NameParser parsed(name, "component plugin");
+    return cache.Get(name, parsed.org, parsed.library, "create_component", "component plugin");
+}
+} // namespace
+
+ComponentLoader::ComponentLoader() : cache(std::make_unique<seed::internal::PluginCache<ComponentCreator>>())
+{
+}
 
 ComponentLoader::~ComponentLoader() = default;
 
 std::unique_ptr<ecs::Component> ComponentLoader::Create(const std::string &name)
 {
-    return Create(name, nullptr);
+    return this->Create(name, nullptr);
 }
 
 std::unique_ptr<ecs::Component> ComponentLoader::Create(const std::string &name, void *data)
 {
-    auto creator = Get(name);
-    return std::unique_ptr<ecs::Component>(creator(data));
+    auto entry = Resolve(*this->cache, name);
+    ecs::Component *object = entry.creator(data);
+    if (object == nullptr)
+        seed::internal::NoObjectThrow(entry.file, name, "create_component", "component plugin");
+    return std::unique_ptr<ecs::Component>(object);
 }
 
 ComponentLoader::ComponentCreator ComponentLoader::Get(const std::string &name)
 {
-    {
-        std::shared_lock lock(mutex_);
-        auto it = creators_.find(name);
-        if (it != creators_.end())
-            return it->second;
-    }
-
-    std::unique_lock lock(mutex_);
-    auto it = creators_.find(name);
-    if (it != creators_.end())
-        return it->second;
-
-    auto parsed = NameParser(name);
-    auto lib = std::make_unique<LibraryLoader>(parsed.library);
-
-    lib->PathAdd(".");
-    lib->PathAdd("../../" + parsed.library + "/src/.libs/");
-    if (!parsed.org.empty())
-    {
-        auto path = "../node_modules/" + parsed.org + "/" + parsed.library + "/src/.libs";
-        lib->PathAdd(path);
-    }
-
-    for (const auto &path : paths_)
-        lib->PathAdd(path);
-
-    void *ptr = lib->FunctionGet("create_component");
-    auto creator = reinterpret_cast<ComponentCreator>(ptr);
-
-    cache_[name] = std::move(lib);
-    creators_[name] = creator;
-
-    return creator;
+    return Resolve(*this->cache, name).creator;
 }
 
 void ComponentLoader::PathAdd(const std::string &path)
 {
-    std::unique_lock lock(mutex_);
-    paths_.push_back(path);
+    this->cache->PathAdd(path);
 }
 
 std::vector<std::string> ComponentLoader::PathsGet() const
 {
-    std::shared_lock lock(mutex_);
-    return paths_;
+    return this->cache->PathsGet();
+}
+
+std::vector<std::string> ComponentLoader::SearchPathsGet(const std::string &name) const
+{
+    NameParser parsed(name, "component plugin");
+    return this->cache->SearchPathsGet(parsed.org, parsed.library);
 }

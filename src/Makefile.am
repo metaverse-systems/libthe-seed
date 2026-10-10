@@ -1,5 +1,6 @@
 lib_LTLIBRARIES = libthe-seed.la
 pkginclude_HEADERS = \
+    ../include/libthe-seed/LoadError.hpp \
     ../include/libthe-seed/JSONLoader.hpp \
     ../include/libthe-seed/SystemLoader.hpp \
     ../include/libthe-seed/ComponentLoader.hpp \
@@ -21,6 +22,8 @@ noinst_HEADERS = \
 	internal/PeCertificate.hpp \
 	NameParser.hpp \
 	internal/FileIO.hpp \
+	internal/PluginSearch.hpp \
+	internal/PluginCache.hpp \
 	internal/FileReplaceHooks.hpp \
 	internal/MachODefs.hpp \
 	internal/MachOLayout.hpp \
@@ -34,7 +37,8 @@ noinst_HEADERS = \
 libthe_seed_la_CXXFLAGS = -std=c++20 -I$(top_srcdir)/include -I$(top_srcdir)/external ${LIBECS_CFLAGS} $(SANITIZER_CXXFLAGS)
 libthe_seed_la_LIBADD = -lpthread ${LIBECS_LIBS}
 libthe_seed_la_LDFLAGS = -no-undefined -version-info 0:0:0 $(SANITIZER_LDFLAGS)
-libthe_seed_la_SOURCES = LibraryLoader.cpp \
+libthe_seed_la_SOURCES = LoadError.cpp \
+		LibraryLoader.cpp \
 		SystemLoader.cpp \
 		ComponentLoader.cpp \
 		JSONLoader.cpp \
@@ -49,6 +53,7 @@ libthe_seed_la_SOURCES = LibraryLoader.cpp \
 		MachOSigner.cpp \
 		MsiSigner.cpp \
 		internal/FileIO.cpp \
+		internal/PluginSearch.cpp \
 		internal/MachOLayout.cpp \
 		internal/CfbReader.cpp \
 		internal/CfbWriter.cpp \

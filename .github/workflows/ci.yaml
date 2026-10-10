@@ -34,6 +34,7 @@ jobs:
         include:
           - { name: plain, sanitizer: "" }
           - { name: address+undefined, sanitizer: address }
+          - { name: thread, sanitizer: thread }
 
     steps:
       - name: Check out repository
@@ -120,8 +121,12 @@ jobs:
       - name: Check the sanitizer runtime is linked
         if: matrix.sanitizer != ''
         run: |
-          if ! ldd tests/.libs/test_NameParser | grep -q libasan; then
-            echo "::error::tests/.libs/test_NameParser is not linked with libasan"
+          case "${{ matrix.sanitizer }}" in
+            address) runtime=libasan ;;
+            thread) runtime=libtsan ;;
+          esac
+          if ! ldd tests/.libs/test_NameParser | grep -q "$runtime"; then
+            echo "::error::tests/.libs/test_NameParser is not linked with $runtime"
             exit 1
           fi
 

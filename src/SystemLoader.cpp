@@ -1,69 +1,58 @@
 #include <libthe-seed/SystemLoader.hpp>
-#include <libthe-seed/LibraryLoader.hpp>
+#include <libthe-seed/LoadError.hpp>
+#include "internal/PluginCache.hpp"
+#include "internal/PluginSearch.hpp"
 #include "NameParser.hpp"
-#include <shared_mutex>
-#include <stdexcept>
+#include <memory>
 
-SystemLoader::SystemLoader() = default;
+namespace
+{
+seed::internal::PluginCache<SystemLoader::SystemCreator>::Entry Resolve(seed::internal::PluginCache<SystemLoader::SystemCreator> &cache,
+                                                         const std::string &name)
+{
+    // Reject names that could address anything but a plain file first.
+    NameParser parsed(name, "system plugin");
+    return cache.Get(name, parsed.org, parsed.library, "create_system", "system plugin");
+}
+} // namespace
+
+SystemLoader::SystemLoader() : cache(std::make_unique<seed::internal::PluginCache<SystemCreator>>())
+{
+}
 
 SystemLoader::~SystemLoader() = default;
 
 std::unique_ptr<ecs::System> SystemLoader::Create(const std::string &name)
 {
-    return Create(name, nullptr);
+    return this->Create(name, nullptr);
 }
 
 std::unique_ptr<ecs::System> SystemLoader::Create(const std::string &name, void *data)
 {
-    auto creator = Get(name);
-    return std::unique_ptr<ecs::System>(creator(data));
+    auto entry = Resolve(*this->cache, name);
+    ecs::System *object = entry.creator(data);
+    if (object == nullptr)
+        seed::internal::NoObjectThrow(entry.file, name, "create_system", "system plugin");
+    return std::unique_ptr<ecs::System>(object);
 }
 
 SystemLoader::SystemCreator SystemLoader::Get(const std::string &name)
 {
-    {
-        std::shared_lock lock(mutex_);
-        auto it = creators_.find(name);
-        if (it != creators_.end())
-            return it->second;
-    }
-
-    std::unique_lock lock(mutex_);
-    auto it = creators_.find(name);
-    if (it != creators_.end())
-        return it->second;
-
-    auto parsed = NameParser(name);
-    auto lib = std::make_unique<LibraryLoader>(parsed.library);
-
-    lib->PathAdd("./");
-    lib->PathAdd("../../" + parsed.library + "/src/.libs/");
-    if (!parsed.org.empty())
-    {
-        auto path = "../node_modules/" + parsed.org + "/" + parsed.library + "/src/.libs";
-        lib->PathAdd(path);
-    }
-
-    for (const auto &path : paths_)
-        lib->PathAdd(path);
-
-    void *ptr = lib->FunctionGet("create_system");
-    auto creator = reinterpret_cast<SystemCreator>(ptr);
-
-    cache_[name] = std::move(lib);
-    creators_[name] = creator;
-
-    return creator;
+    return Resolve(*this->cache, name).creator;
 }
 
 void SystemLoader::PathAdd(const std::string &path)
 {
-    std::unique_lock lock(mutex_);
-    paths_.push_back(path);
+    this->cache->PathAdd(path);
 }
 
 std::vector<std::string> SystemLoader::PathsGet() const
 {
-    std::shared_lock lock(mutex_);
-    return paths_;
+    return this->cache->PathsGet();
+}
+
+std::vector<std::string> SystemLoader::SearchPathsGet(const std::string &name) const
+{
+    NameParser parsed(name, "system plugin");
+    return this->cache->SearchPathsGet(parsed.org, parsed.library);
 }

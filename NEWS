@@ -1,3 +1,54 @@
+libthe-seed (unreleased)
+
+* Plugins are pinned. Every plugin that ComponentLoader, SystemLoader and
+  LibraryLoader open stays loaded until the process ends, so components,
+  systems, creators and scene contents stay valid and destructible after their
+  loader is destroyed, in any order. Destroying a loader no longer unloads
+  anything.
+
+* Search order: locations added with PathAdd are searched first, in order, and
+  the first location holding the file decides. A damaged file is reported, not
+  skipped for a later copy. The file is opened by absolute path. The working
+  directory is never searched unless it is added with PathAdd. This applies to
+  ComponentLoader, SystemLoader, PakLoader and LibraryLoader.
+
+* Development locations (../../<library>/src/.libs and
+  ../node_modules/<org>/<library>/src/.libs) are searched after the
+  configured locations instead of before them. New: SearchPathsGet(name) on
+  ComponentLoader, SystemLoader and PakLoader.
+
+* LoadError (new, installed, derives from std::runtime_error) reports every
+  failure to load a plugin, resource pak or scene with a reason (InvalidName,
+  NotFound, NotLoadable, EntryPointMissing, NoObject, SceneUnopenable,
+  SceneNotUnderstood, SceneComponentFailed), the name, the file, every
+  location searched and the platform's own text. Code that caught
+  std::invalid_argument or nlohmann::json::parse_error from a loader must
+  catch LoadError.
+
+* Name rules: a plugin name is "library" or "org/library"; empty parts, "." and
+  ".." parts, backslashes, ":", control characters, a leading "/" and more than
+  one "/" are refused with InvalidName before any file is touched.
+
+* JSONLoader is all or nothing: a scene that fails leaves the container
+  unchanged. A missing or unreadable file is SceneUnopenable rather than a
+  parse error at line 1, column 1. A scene without "entities", or an entity
+  without "Handle" or "Components", is now an error (SceneNotUnderstood).
+
+* LibraryLoader::PathsGet returns the locations added with PathAdd and never
+  throws (it used to return the library files found and throw when there were
+  none).
+
+* Concurrent loads: one open per plugin file per loader, concurrent requests
+  for one name share one load, and a failed load is not remembered.
+
+* Tests: configure --enable-sanitizer=thread builds the library, the tests and
+  the test plugins with ThreadSanitizer. The README examples are compiled and
+  run by test_ReadmeExamples.
+
+* ABI: the private members of every loader changed. Rebuild programs against
+  the new headers. No version change; the version is set when the work is
+  released.
+
 libthe-seed 0.7.0
 
 * MsiSigner computes the same Authenticode fingerprint as osslsigncode 2.14

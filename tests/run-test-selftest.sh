@@ -142,6 +142,9 @@ check "3a known gap under none" zero "KNOWN GAP:"
 runwrap address test_a "$GAP
 "
 check "3b known gap under address" zero "KNOWN GAP:"
+runwrap thread test_a "$GAP
+"
+check "3c known gap under thread" zero "KNOWN GAP:"
 
 # 4
 mkfake test_a "alpha beta" "beta=heap-use-after-free" ""
@@ -151,6 +154,24 @@ check "4 address entry ignored under none" nonzero
 if grep -q "KNOWN GAP:" "$WORK/out"; then
     bad "4 address entry must not be applied under none"
 fi
+
+# 4b
+mkfake test_a "alpha beta" "beta=data-race" ""
+runwrap address test_a 'thread | test_a | beta | data-race | libthe-seed-1 finding 2 | libthe-seed-1: Some task title
+'
+check "4b thread entry ignored under address" nonzero
+if grep -q "KNOWN GAP:" "$WORK/out"; then
+    bad "4b thread entry must not be applied under address"
+fi
+runwrap thread test_a 'thread | test_a | beta | data-race | libthe-seed-1 finding 2 | libthe-seed-1: Some task title
+'
+check "4c thread entry applied under thread" zero "KNOWN GAP:"
+runwrap thread test_a 'address | test_a | beta | data-race | libthe-seed-1 finding 2 | libthe-seed-1: Some task title
+'
+check "4d address entry ignored under thread" nonzero
+runwrap thread test_a "$(printf 'all | test_a | beta | data-race | libthe-seed-1 finding 1 | libthe-seed-1: Some task title')
+"
+check "4e all entry applied under thread" zero "KNOWN GAP:"
 
 # 5
 mkfake test_a "alpha beta" "beta=other" ""
@@ -179,7 +200,7 @@ malformed() {
 }
 malformed "five fields" 'all | test_a | beta | boom | libthe-seed-1 finding 1'
 malformed "variant plain" 'plain | test_a | beta | boom | libthe-seed-1 finding 1 | libthe-seed-1: Some task title'
-malformed "variant thread" 'thread | test_a | beta | boom | libthe-seed-1 finding 1 | libthe-seed-1: Some task title'
+malformed "variant unknown" 'sanitize | test_a | beta | boom | libthe-seed-1 finding 1 | libthe-seed-1: Some task title'
 malformed "bare sanitizer name" 'address | test_a | beta | AddressSanitizer | libthe-seed-1 finding 1 | libthe-seed-1: Some task title'
 malformed "FAILED as signature" 'all | test_a | beta | FAILED | libthe-seed-1 finding 1 | libthe-seed-1: Some task title'
 malformed "empty signature" 'all | test_a | beta |  | libthe-seed-1 finding 1 | libthe-seed-1: Some task title'
@@ -209,6 +230,8 @@ check "10 every case listed and hit" zero "KNOWN GAP:"
 mkfake test_a "alpha" "" ""
 runwrap bogus test_a ""
 check "11a unknown SEED_SANITIZER" 99
+runwrap thread test_a ""
+check "11d thread SEED_SANITIZER accepted" zero
 printf '' >"$WORK/gaps.txt"
 SEED_SANITIZER=none SEED_KNOWN_GAPS_FILE=$WORK/missing.txt SEED_TEST_PROGRAMS=test_a \
     sh "$WRAPPER" "$WORK/bin/test_a" >"$WORK/out" 2>&1

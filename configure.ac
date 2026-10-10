@@ -25,11 +25,12 @@ AS_IF([test -f "$srcdir/external/Catch2/extras/catch_amalgamated.hpp"],
     [],
     [AC_MSG_ERROR([external/Catch2 is missing: run git submodule update --init])])
 
-# Optional memory-error checking: --enable-sanitizer=address builds the library
-# and the tests with AddressSanitizer and UndefinedBehaviorSanitizer.
+# Optional runtime checking: --enable-sanitizer=address builds the library and
+# the tests with AddressSanitizer and UndefinedBehaviorSanitizer;
+# --enable-sanitizer=thread builds them with ThreadSanitizer.
 AC_ARG_ENABLE([sanitizer],
-    [AS_HELP_STRING([--enable-sanitizer@<:@=no|address@:>@],
-        [build with address and undefined-behavior checking (default: no)])],
+    [AS_HELP_STRING([--enable-sanitizer@<:@=no|address|thread@:>@],
+        [build with address and undefined-behavior checking, or with thread checking (default: no)])],
     [],
     [enable_sanitizer=no])
 case "$enable_sanitizer" in
@@ -43,8 +44,13 @@ case "$enable_sanitizer" in
         SANITIZER_CXXFLAGS="-fsanitize=address,undefined -fno-sanitize-recover=undefined -fno-omit-frame-pointer -g -O1"
         SANITIZER_LDFLAGS="-fsanitize=address,undefined"
         ;;
+    thread)
+        SANITIZER=thread
+        SANITIZER_CXXFLAGS="-fsanitize=thread -fno-omit-frame-pointer -g -O1"
+        SANITIZER_LDFLAGS="-fsanitize=thread"
+        ;;
     *)
-        AC_MSG_ERROR([invalid value '$enable_sanitizer' for --enable-sanitizer: use no or address])
+        AC_MSG_ERROR([invalid value '$enable_sanitizer' for --enable-sanitizer: use no, address or thread])
         ;;
 esac
 AC_SUBST([SANITIZER])

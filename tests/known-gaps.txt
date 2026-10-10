@@ -5,10 +5,13 @@
 #
 #   variant | program | test case | signature | finding | fixed by
 #
-#   variant    all      the failure appears in the plain run and in the
-#                       address+undefined run (failed assertions)
+#   variant    all      the failure appears in the plain, the address+undefined
+#                       and the thread run (failed assertions)
 #              address  the failure appears only in the address+undefined run
 #                       (sanitizer reports)
+#              thread   the failure appears only in the thread run
+#                       (sanitizer reports)
+#              The variant check in run-test.sh accepts all, address and thread.
 #   program    basename of a program in check_PROGRAMS
 #   test case  exact Catch2 test case name, special characters escaped with \
 #   signature  fixed (not a regular expression) text that must appear in the
