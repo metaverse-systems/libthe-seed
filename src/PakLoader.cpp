@@ -2,6 +2,7 @@
 #include <libthe-seed/ResourcePak.hpp>
 #include <libthe-seed/LoadError.hpp>
 #include "internal/PluginSearch.hpp"
+#include "internal/PakAccess.hpp"
 #include "NameParser.hpp"
 #include <shared_mutex>
 #include <stdexcept>
@@ -9,62 +10,70 @@
 
 PakLoader::PakLoader() = default;
 
-// Opens the pak named `pak_name` from the first location in `locations` that holds
-// <library>.pak. A pak that is present but refused by ResourcePak ends the
-// search; later locations are not tried.
-static std::shared_ptr<ResourcePak> LoadPak(const std::vector<std::string> &locations, size_t configured_count, const std::string &pak_name)
-{
-    constexpr const char *kind = "resource pak";
-    NameParser parsed(pak_name, kind);
+using namespace seed::internal;
 
-    const std::string file_name = seed::internal::PakFileName(parsed.library);
-    seed::internal::SearchResult search = seed::internal::SearchFirst(locations, file_name, configured_count);
+std::shared_ptr<const PakIndex> PakLoader::IndexGet(const std::string &identity, PakFile &file)
+{
+    const PakStamp stamp = file.Stamp();
+    {
+        std::shared_lock lock(this->mutex);
+        auto found = this->remembered.find(identity);
+        if(found != this->remembered.end() && found->second->stamp == stamp)
+        {
+            return found->second;
+        }
+    }
+
+    // No lock is held while the description is read.
+    std::shared_ptr<const PakIndex> index = PakIndexRead(file);
+    std::unique_lock lock(this->mutex);
+    this->remembered[identity] = index;
+    return index;
+}
+
+std::unordered_map<std::string, std::shared_ptr<ecs::Resource>>
+PakLoader::Request(const std::string &pak_name, const std::vector<std::string> *resource_names)
+{
+    size_t configured_count = 0;
+    std::vector<std::string> search_paths = this->SearchPathsGet(pak_name, configured_count);
+    NameParser parsed(pak_name, PakKind);
+
+    const std::string file_name = PakFileName(parsed.library);
+    SearchResult search = SearchFirst(search_paths, file_name, configured_count);
     if (!search.found)
-        seed::internal::NotFoundThrow(search, pak_name, file_name, kind);
+        NotFoundThrow(search, pak_name, file_name, PakKind);
 
     try
     {
-        return std::make_shared<ResourcePak>(search.file.string());
+        PakFile file = PakFile::Open(search.file);
+        auto index = this->IndexGet(search.identity.string(), file);
+
+        std::unordered_map<std::string, std::shared_ptr<ecs::Resource>> resources;
+        for (const PakEntry &entry : index->entries)
+        {
+            if (resource_names != nullptr &&
+                std::find(resource_names->begin(), resource_names->end(), entry.name) == resource_names->end())
+                continue;
+            auto resource = std::make_shared<ecs::Resource>();
+            PakEntryRead(file, entry, *resource);
+            resources[entry.name] = std::move(resource);
+        }
+        return resources;
     }
-    catch (const std::exception &e)
+    catch (...)
     {
-        seed::internal::NotLoadableThrow(search, pak_name, e.what(), kind);
+        PakFailureThrow(pak_name, search.file.string(), search.locations, false);
     }
 }
 
 std::unordered_map<std::string, std::shared_ptr<ecs::Resource>> PakLoader::Load(const std::string &pak_name)
 {
-    size_t configured_count = 0;
-    std::vector<std::string> search_paths = this->SearchPathsGet(pak_name, configured_count);
-
-    auto pak = LoadPak(search_paths, configured_count, pak_name);
-    std::vector<std::string> resource_names = pak->ResourceNames();
-    std::unordered_map<std::string, std::shared_ptr<ecs::Resource>> resources;
-    for (const auto &resource_name : resource_names)
-    {
-        resources[resource_name] = std::make_shared<ecs::Resource>(pak->Load(resource_name));
-    }
-
-    return resources;
+    return this->Request(pak_name, nullptr);
 }
 
 std::unordered_map<std::string, std::shared_ptr<ecs::Resource>> PakLoader::Load(const std::string &pak_name, const std::vector<std::string> &resource_names)
 {
-    size_t configured_count = 0;
-    std::vector<std::string> search_paths = this->SearchPathsGet(pak_name, configured_count);
-
-    auto pak = LoadPak(search_paths, configured_count, pak_name);
-    std::vector<std::string> available_resource_names = pak->ResourceNames();
-    std::unordered_map<std::string, std::shared_ptr<ecs::Resource>> resources;
-    for (const auto &available_name : available_resource_names)
-    {
-        if (std::find(resource_names.begin(), resource_names.end(), available_name) != resource_names.end())
-        {
-            resources[available_name] = std::make_shared<ecs::Resource>(pak->Load(available_name));
-        }
-    }
-
-    return resources;
+    return this->Request(pak_name, &resource_names);
 }
 
 void PakLoader::PathAdd(const std::string &path)

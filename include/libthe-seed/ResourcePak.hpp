@@ -1,8 +1,8 @@
 #pragma once
 
+#include <memory>
 #include <string>
-#include <map>
-#include <unordered_map>
+#include <vector>
 #include <libecs-cpp/ecs.hpp>
 #include <libecs-cpp/json.hpp>
 
@@ -15,7 +15,10 @@ class ResourcePak
   public:
     /**
      * @brief Construct a new ResourcePak object.
-     * 
+     *
+     * Opens the pak, checks its description and remembers it; no resource is
+     * read. Throws LoadError if the file is missing or damaged.
+     *
      * @param filename Path to resource pak to load.
      */
     ResourcePak(const std::string &filename);
@@ -40,19 +43,16 @@ class ResourcePak
      * @param container Container to load resource into.
      */
     void LoadAll(ecs::Container *container);
-    std::vector<std::string> ResourceNames()
-    {
-        std::vector<std::string> names;
-        for(auto &resource : this->header["resources"])
-        {
-            names.push_back(resource["name"].get<std::string>());
-        }
-        return names;
-    }
+    /**
+     * @brief Names of the resources in the pak, in the order the pak lists them.
+     *
+     * Answered from the description remembered by the constructor; the file
+     * is not touched.
+     */
+    std::vector<std::string> ResourceNames() const;
   private:
+    struct State;
+
     const std::string filename;
-    uint64_t header_size = 0;
-    std::vector<char> raw;
-    nlohmann::json header;
-    std::unordered_map<std::string, std::pair<uint64_t, uint64_t>> offset_map;
+    std::shared_ptr<State> state;
 };

@@ -25,6 +25,7 @@ noinst_HEADERS = \
 	internal/PluginSearch.hpp \
 	internal/PakFile.hpp \
 	internal/PakIndex.hpp \
+	internal/PakAccess.hpp \
 	internal/PluginCache.hpp \
 	internal/FileReplaceHooks.hpp \
 	internal/MachODefs.hpp \
@@ -58,6 +59,7 @@ libthe_seed_la_SOURCES = LoadError.cpp \
 		internal/PluginSearch.cpp \
 		internal/PakFile.cpp \
 		internal/PakIndex.cpp \
+		internal/PakAccess.cpp \
 		internal/MachOLayout.cpp \
 		internal/CfbReader.cpp \
 		internal/CfbWriter.cpp \

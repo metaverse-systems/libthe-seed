@@ -2,6 +2,8 @@
 #include <libthe-seed/PakLoader.hpp>
 #include <libthe-seed/LoadError.hpp>
 #include "LoaderTestSupport.hpp"
+#include "internal/PakFile.hpp"
+#include "internal/PakIndex.hpp"
 #include <filesystem>
 #include <stdexcept>
 #include <string>
@@ -142,3 +144,111 @@ TEST_CASE("PakLoader search passes over an unreadable location", "[PakLoader]") 
     }
 }
 #endif
+
+namespace
+{
+    std::vector<std::uint8_t> Pattern(std::size_t count, std::uint8_t first)
+    {
+        std::vector<std::uint8_t> bytes(count);
+        for(std::size_t i = 0; i < count; ++i)
+        {
+            bytes[i] = static_cast<std::uint8_t>(first + i * 3);
+        }
+        return bytes;
+    }
+}
+
+TEST_CASE("PakLoader loads a writer's pak and reads the description once per loader", "[PakLoader]")
+{
+    using namespace seed::internal;
+    seedtest::ScratchDir scratch;
+    const std::vector<std::pair<std::string, std::vector<std::uint8_t>>> contents = {
+        {"zeta", Pattern(300, 1)}, {"alpha", Pattern(5, 40)}, {"empty", {}}, {"mid", Pattern(70000, 9)}};
+    seedtest::WritePak(scratch.Path(), "several", contents);
+
+    SECTION("Load returns every resource with its exact bytes")
+    {
+        PakLoader loader;
+        loader.PathAdd(scratch.Path().string());
+        auto resources = loader.Load("several");
+        REQUIRE(resources.size() == contents.size());
+        for(const auto &item : contents)
+        {
+            INFO(item.first);
+            REQUIRE(resources.count(item.first) == 1);
+            REQUIRE(resources.at(item.first)->Data == item.second);
+        }
+    }
+
+    SECTION("A filtered Load returns only the named resources")
+    {
+        PakLoader loader;
+        loader.PathAdd(scratch.Path().string());
+        auto resources = loader.Load("several", {"mid", "empty"});
+        REQUIRE(resources.size() == 2);
+        REQUIRE(resources.at("mid")->Data == contents[3].second);
+        REQUIRE(resources.at("empty")->Data.empty());
+    }
+
+    SECTION("Two requests through one loader parse the description once")
+    {
+        PakLoader loader;
+        loader.PathAdd(scratch.Path().string());
+        ResetPakDescriptionParseCount();
+        loader.Load("several", {"zeta"});
+        REQUIRE(PakDescriptionParseCount() == 1);
+        loader.Load("several", {"alpha"});
+        loader.Load("several");
+        REQUIRE(PakDescriptionParseCount() == 1);
+    }
+
+    SECTION("Two loaders each parse the description once")
+    {
+        PakLoader first;
+        PakLoader second;
+        first.PathAdd(scratch.Path().string());
+        second.PathAdd(scratch.Path().string());
+        ResetPakDescriptionParseCount();
+        first.Load("several", {"zeta"});
+        first.Load("several", {"mid"});
+        REQUIRE(PakDescriptionParseCount() == 1);
+        second.Load("several", {"zeta"});
+        second.Load("several", {"mid"});
+        REQUIRE(PakDescriptionParseCount() == 2);
+    }
+
+    SECTION("A second request for one resource reads no description")
+    {
+        PakLoader loader;
+        loader.PathAdd(scratch.Path().string());
+        loader.Load("several", {"zeta"});
+        ResetPakBytesReadCount();
+        loader.Load("several", {"alpha"});
+        REQUIRE(PakBytesReadCount() == 5);
+    }
+
+    SECTION("Resources stored with Container::Resources are shared, not copied")
+    {
+        PakLoader loader;
+        loader.PathAdd(scratch.Path().string());
+        auto resources = loader.Load("several");
+        ecs::Manager manager;
+        auto *world = manager.Container("world");
+        world->Resources(resources);
+        for(const auto &entry : resources)
+        {
+            INFO(entry.first);
+            REQUIRE(world->ResourceGet(entry.first).get() == entry.second.get());
+        }
+    }
+}
+
+TEST_CASE("PakLoader loads a pak with no resources", "[PakLoader]")
+{
+    seedtest::ScratchDir scratch;
+    seedtest::WritePak(scratch.Path(), "nothing", {});
+    PakLoader loader;
+    loader.PathAdd(scratch.Path().string());
+    REQUIRE(loader.Load("nothing").empty());
+    REQUIRE(loader.Load("nothing", {}).empty());
+}

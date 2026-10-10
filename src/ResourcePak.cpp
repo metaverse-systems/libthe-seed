@@ -1,46 +1,49 @@
 #include <libthe-seed/ResourcePak.hpp>
-#include <fstream>
-#include <stdexcept>
+#include <libthe-seed/LoadError.hpp>
+#include "internal/PakAccess.hpp"
+#include <filesystem>
+#include <mutex>
 
-ResourcePak::ResourcePak(const std::string &filename): filename(filename)
+using namespace seed::internal;
+
+// Shared by every copy of a ResourcePak. The description is replaced when the
+// file on disk is found to be a different version.
+struct ResourcePak::State
 {
-    std::ifstream file(this->filename, std::ios::binary);
-    if(!file.good())
+    std::mutex mutex;
+    std::filesystem::path path;
+    std::shared_ptr<const PakIndex> index;
+};
+
+namespace
+{
+    // The current description of the file open as `file`: the remembered one
+    // when the file is the version it was validated from, otherwise a freshly
+    // validated one, which replaces it.
+    std::shared_ptr<const PakIndex> IndexFor(std::mutex &mutex, std::shared_ptr<const PakIndex> &remembered,
+                                             PakFile &file)
     {
-        throw std::runtime_error("Couldn't open resource pak: " + filename);
-    }
-
-    // get its size:
-    file.seekg(0, std::ios::end);
-    auto size = file.tellg();
-    file.seekg(0, std::ios::beg);
-
-    this->raw.resize(size);
-    file.read(this->raw.data(), size);
-    file.close();
-
-    // copy from this->raw.data() until the first new line into rawHeader
-    std::string rawHeader;
-    for(auto &c : this->raw)
-    {
-        if(c == '\n')
+        const PakStamp stamp = file.Stamp();
+        std::lock_guard<std::mutex> lock(mutex);
+        if(!remembered || remembered->stamp != stamp)
         {
-            break;
+            remembered = PakIndexRead(file);
         }
-        rawHeader += c;
+        return remembered;
     }
+}
 
-    this->header = nlohmann::json::parse(rawHeader);
-
-    this->header_size = std::stoul(this->header["headerSize"].get<std::string>());
-
-    uint64_t pointer = this->header_size;
-    for(auto &resource : this->header["resources"])
+ResourcePak::ResourcePak(const std::string &filename): filename(filename), state(std::make_shared<State>())
+{
+    try
     {
-        auto rname = resource["name"].get<std::string>();
-        auto rsize = resource["size"].get<uint64_t>();
-        this->offset_map[rname] = {pointer, rsize};
-        pointer += rsize;
+        this->state->path = std::filesystem::absolute(this->filename);
+        PakFile file = PakFile::Open(this->state->path);
+        IndexFor(this->state->mutex, this->state->index, file);
+    }
+    catch(...)
+    {
+        PakFailureThrow(this->filename, this->filename, {}, true);
     }
 }
 
@@ -52,27 +55,65 @@ void ResourcePak::Load(ecs::Container *container, const std::string &name)
 
 ecs::Resource ResourcePak::Load(const std::string &name)
 {
-    auto it = this->offset_map.find(name);
-    if(it == this->offset_map.end())
+    try
     {
-        throw std::runtime_error("Resource " + name + " not found");
-    }
+        PakFile file = PakFile::Open(this->state->path);
+        auto index = IndexFor(this->state->mutex, this->state->index, file);
+        auto found = index->by_name.find(name);
+        if(found == index->by_name.end())
+        {
+            throw LoadError(LoadError::Reason::ResourceMissing, this->filename, this->filename, {}, "",
+                            PakKind, {name});
+        }
 
-    auto [pointer, size] = it->second;
-    if(pointer + size > static_cast<uint64_t>(this->raw.size()))
+        ecs::Resource resource;
+        PakEntryRead(file, index->entries[found->second], resource);
+        return resource;
+    }
+    catch(...)
     {
-        throw std::runtime_error("Resource '" + name + "' exceeds pak data bounds");
+        PakFailureThrow(this->filename, this->filename, {}, true);
     }
-
-    ecs::Resource temp;
-    temp.Data.assign(this->raw.begin() + pointer, this->raw.begin() + pointer + size);
-    return temp;
 }
 
 void ResourcePak::LoadAll(ecs::Container *container)
 {
-    for(auto &resource : this->header["resources"])
+    std::vector<std::pair<std::string, ecs::Resource>> resources;
+    try
     {
-        this->Load(container, resource["name"].get<std::string>());
+        PakFile file = PakFile::Open(this->state->path);
+        auto index = IndexFor(this->state->mutex, this->state->index, file);
+        resources.reserve(index->entries.size());
+        for(const PakEntry &entry : index->entries)
+        {
+            resources.emplace_back(entry.name, ecs::Resource());
+            PakEntryRead(file, entry, resources.back().second);
+        }
     }
+    catch(...)
+    {
+        PakFailureThrow(this->filename, this->filename, {}, true);
+    }
+
+    for(auto &resource : resources)
+    {
+        container->ResourceAdd(resource.first, std::move(resource.second));
+    }
+}
+
+std::vector<std::string> ResourcePak::ResourceNames() const
+{
+    std::shared_ptr<const PakIndex> index;
+    {
+        std::lock_guard<std::mutex> lock(this->state->mutex);
+        index = this->state->index;
+    }
+
+    std::vector<std::string> names;
+    names.reserve(index->entries.size());
+    for(const PakEntry &entry : index->entries)
+    {
+        names.push_back(entry.name);
+    }
+    return names;
 }
