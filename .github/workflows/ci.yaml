@@ -46,13 +46,17 @@ jobs:
       - name: Install dependencies
         # osslsigncode and Wine are read live by the installer tests
         # (test_MsiLiveTools, test_MsiLarge): a missing tool fails the test
-        # rather than skipping it, see tests/ToolSupport.hpp.
+        # rather than skipping it, see tests/ToolSupport.hpp. node runs the
+        # resource pak writer's own code in test_PakWriterCompat; a missing node
+        # fails that test (SEED_TOOLS_OPTIONAL is not set in CI), and the version
+        # is printed here so a missing node fails visibly before the tests.
         run: |
           sudo apt-get update
           sudo apt-get install -y build-essential autoconf automake libtool pkg-config uuid-dev \
             osslsigncode wine wine64
           osslsigncode --version
           wine --version
+          node --version
 
       - name: Restore libecs-cpp
         id: ecs-cache

@@ -255,3 +255,111 @@ TEST_CASE("LoadError message for SceneComponentFailed", "[LoadError]")
     REQUIRE(Contains(message, "org/missing"));
     REQUIRE(Contains(message, "not found"));
 }
+
+TEST_CASE("LoadError message for ResourceMissing", "[LoadError]")
+{
+    const std::vector<std::string> missing = {"tex_hero", "snd_jump"};
+    LoadError error(LoadError::Reason::ResourceMissing, "org/art", "/game/paks/art.pak", {}, "", "resource pak",
+                    missing);
+    const std::string message = error.what();
+
+    REQUIRE(error.ReasonGet() == LoadError::Reason::ResourceMissing);
+    REQUIRE(error.NameGet() == "org/art");
+    REQUIRE(error.FileGet() == "/game/paks/art.pak");
+    REQUIRE(error.KindGet() == "resource pak");
+    REQUIRE(error.LocationsGet().empty());
+
+    // MissingGet returns the list unchanged: same names, same order.
+    REQUIRE(error.MissingGet() == missing);
+
+    REQUIRE(Contains(message, "resource pak \"org/art\""));
+    REQUIRE(Contains(message, "/game/paks/art.pak"));
+    REQUIRE(Contains(message, "does not contain \"tex_hero\", \"snd_jump\""));
+    REQUIRE(message.find("\"tex_hero\"") < message.find("\"snd_jump\""));
+    REQUIRE(message.find('\n') == std::string::npos);
+
+    SECTION("The list survives a copy")
+    {
+        LoadError copy(error);
+        REQUIRE(copy.MissingGet() == missing);
+        REQUIRE(std::string(copy.what()) == message);
+    }
+
+    SECTION("Control characters in a missing name are escaped")
+    {
+        LoadError odd(LoadError::Reason::ResourceMissing, "org/art", "/game/paks/art.pak", {}, "", "resource pak",
+                      {"two\nlines", "tab\there", "bell\x07"});
+        const std::string text = odd.what();
+
+        REQUIRE(Contains(text, "\"two\\nlines\""));
+        REQUIRE(Contains(text, "\"tab\\there\""));
+        REQUIRE(Contains(text, "\"bell\\x07\""));
+        REQUIRE(text.find('\n') == std::string::npos);
+        REQUIRE(text.find('\t') == std::string::npos);
+        // The names themselves are returned as they were given.
+        REQUIRE(odd.MissingGet()[0] == "two\nlines");
+    }
+}
+
+TEST_CASE("LoadError MissingGet is empty for every other reason", "[LoadError]")
+{
+    const LoadError::Reason reasons[] = {
+        LoadError::Reason::InvalidName,
+        LoadError::Reason::NotFound,
+        LoadError::Reason::NotLoadable,
+        LoadError::Reason::EntryPointMissing,
+        LoadError::Reason::NoObject,
+        LoadError::Reason::SceneUnopenable,
+        LoadError::Reason::SceneNotUnderstood,
+        LoadError::Reason::SceneComponentFailed,
+    };
+
+    for(LoadError::Reason reason : reasons)
+    {
+        LoadError error(reason, "org/thing", "/some/dir/libthing.so", LocationsMake(), "some detail");
+        REQUIRE(error.MissingGet().empty());
+    }
+}
+
+TEST_CASE("LoadError message for an unreadable location", "[LoadError]")
+{
+    std::vector<LoadError::Location> locations = {
+        {"/game/paks", false, LoadError::LocationState::Searched},
+        {"/locked/paks", false, LoadError::LocationState::Unreadable, "Permission denied"},
+        {"../../art", true, LoadError::LocationState::Missing},
+    };
+    LoadError error(LoadError::Reason::NotFound, "org/art", "art.pak", locations, "", "resource pak");
+    const std::string message = error.what();
+
+    REQUIRE(error.LocationsGet().size() == 3);
+    REQUIRE(error.LocationsGet()[1].state == LoadError::LocationState::Unreadable);
+    REQUIRE(error.LocationsGet()[1].reason == "Permission denied");
+    REQUIRE(error.LocationsGet()[0].reason.empty());
+
+    REQUIRE(Contains(message, "\n  searched: /game/paks"));
+    REQUIRE(Contains(message, "\n  could not be examined: /locked/paks: Permission denied"));
+    REQUIRE(Contains(message, "\n  development location, does not exist: ../../art"));
+    REQUIRE(message.find("/game/paks") < message.find("/locked/paks"));
+    REQUIRE(message.find("/locked/paks") < message.find("../../art"));
+}
+
+TEST_CASE("LoadError message for NotFound with no locations and a detail", "[LoadError]")
+{
+    LoadError error(LoadError::Reason::NotFound, "/game/paks/art.pak", "/game/paks/art.pak", {},
+                    "No such file or directory", "resource pak");
+    const std::string message = error.what();
+
+    REQUIRE(message ==
+            "resource pak \"/game/paks/art.pak\" not found: /game/paks/art.pak: No such file or directory");
+    REQUIRE_FALSE(Contains(message, "no locations are configured"));
+}
+
+TEST_CASE("LoadError Location still takes three members", "[LoadError]")
+{
+    const LoadError::Location location{"/some/dir", true, LoadError::LocationState::NotReached};
+
+    REQUIRE(location.path == "/some/dir");
+    REQUIRE(location.development);
+    REQUIRE(location.state == LoadError::LocationState::NotReached);
+    REQUIRE(location.reason.empty());
+}

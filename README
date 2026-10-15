@@ -217,6 +217,97 @@ auto resources = loader.Load("org/my-pak");
 auto filtered = loader.Load("org/my-pak", {"texture1", "mesh2"});
 ```
 
+A request reads what it is asked for and no more:
+
+* `Load(name)` reads every resource of the pak, once, straight into its own `ecs::Resource`.
+* `Load(name, names)` reads only the resources named. A name listed twice is returned once. An empty list returns an empty map. If any requested name is not in the pak, the whole request fails with `LoadError::Reason::ResourceMissing`, nothing is returned and no resource is read; `MissingGet()` lists every missing name, in request order.
+* The pak's description (the list of resource names and sizes, the first line of the file) is read and checked once for each version of the file, then remembered by the loader for the loader's life. Only the description is remembered: no resource bytes and no open file are kept. Every request compares the file it finds with what was remembered (the file's identity, size and modification time) and reads the description again if they differ, so a pak that was rebuilt, replaced or restored is picked up by the next request. A pak that fails is not remembered: the next request examines the file again.
+* This differs from plugins on purpose. A plugin stays loaded until the process ends, so a rebuilt plugin is picked up only by a new process. A pak is read afresh by every request, so a rebuilt pak is picked up by the next one.
+* The file is opened for each request and closed before the request returns. Another program may replace or delete the pak at any time, on Linux and on Windows. A request sees one version of the file: the one it opened.
+
+The map can be handed to a container as it is (`ecs::Container::Resources` shares the resources, no copy). A request that names a resource the pak lacks is told apart from a damaged pak:
+
+```cpp
+PakLoader paks;
+paks.PathAdd(install_dir + "/paks");
+
+try
+{
+    auto some = paks.Load("org/art", {"logo", "click"});   // reads the description once per file version,
+                                                           // then only these two resources
+    world->Resources(some);                                // shared, no copy (libecs-cpp)
+}
+catch(const LoadError &e)
+{
+    if(e.ReasonGet() == LoadError::Reason::ResourceMissing)
+    {
+        // e.MissingGet() lists the requested names the pak lacks; nothing was returned
+    }
+    else if(e.ReasonGet() == LoadError::Reason::NotLoadable)
+    {
+        // e.DetailGet() starts with "damaged:" for a broken pak, else the system's reason
+    }
+}
+```
+
+`ResourcePak` reads one pak file by path. Its constructor opens the file, checks the description and remembers it; no resource is read until `Load` or `LoadAll` is called, and `ResourceNames()` answers from the remembered description without touching the file. Like `PakLoader`, it opens the file for each read, checks it against what it remembered, and reads only the resource asked for. `LoadAll(container)` reads every resource of one version of the file and then adds them: if anything fails, nothing is added. Its failures are `LoadError` too.
+
+```cpp
+ResourcePak pak(install_dir + "/paks/art.pak");
+for(const auto &name : pak.ResourceNames())
+{
+    ecs::Resource resource = pak.Load(name);
+    std::cout << name << ": " << resource.Data.size() << " bytes\n";
+}
+```
+
+#### Resource pak format
+
+A pak is one file: a description line, then the resources one after the other.
+
+```text
+offset 0                     description line (UTF-8 JSON, no raw newline)
+offset L-1                   '\n'
+offset L = headerSize        bytes of resources[0]
+offset L + size[0]           bytes of resources[1]
+...
+offset L + sum(size)         end of file
+```
+
+`the-seed resource-pak build` writes the description with `JSON.stringify`, so it has no spaces and the keys are in the order `name`, `headerSize`, `resources`:
+
+```json
+{"name":"@scope/pak","headerSize":"0000000123","resources":[{"name":"logo","size":1024},{"name":"click","size":88,"attributes":{"kind":"sound"}}]}
+```
+
+* `headerSize` is a string of digits, zero-padded to 10, equal to the length of the line plus one. For an ASCII line this is the byte offset of the first resource.
+* `size` is the size of the resource's file when `the-seed resource-pak add` ran. Names are unique.
+
+The reader checks every rule below and reports the first one that is broken, in this order, as a damaged pak (`NotLoadable`, with a detail that starts with `damaged:`):
+
+| Rule | Text after `damaged: ` |
+|---|---|
+| The file holds a `\n` within its first 64 MiB | `no description line (no newline in the first N bytes)`, `description line is longer than 67108864 bytes` |
+| The line is valid JSON nested no deeper than 64 levels | `description is not valid JSON: ...`, `description is nested deeper than 64 levels` |
+| The top level is an object | `description is not a JSON object` |
+| `headerSize` is a string of 1 to 20 ASCII digits that fits 64 bits | `"headerSize" is missing`, `"headerSize" is not a string of decimal digits`, `"headerSize" is out of range` |
+| `headerSize` is the offset of the first `\n` plus one | `stated description length N does not match the description's end at byte M` |
+| `resources` is an array | `"resources" is missing`, `"resources" is not an array` |
+| Each resource is an object with a string `name` | `resource K is not an object`, `resource K has no "name"`, `resource K "name" is not a string` |
+| Each `size` is an integer of 0 or more that fits 64 bits | `resource "x" has no "size"`, `resource "x" "size" is not a non-negative integer` |
+| Names are unique | `resource "x" appears more than once` |
+| Running offsets do not overflow and each size fits in memory | `size of resource "x" is out of range` |
+| `headerSize` plus the sizes is the size of the file | `the description claims N bytes but the file holds M`, `D bytes of unexplained data after the last resource` |
+
+The top-level `name`, `attributes`, unknown keys, key order and the width of the zero padding are not checked. An empty pak (`"resources": []` and a file of exactly `headerSize` bytes) and an empty resource (`size` 0) are valid.
+
+A file that becomes shorter than its description while a request reads it is reported the same way (`damaged: file is shorter than its description: ...`).
+
+Two things the writer can produce are refused as damaged, and both are fixed when the pak is made, not when it is read:
+
+* A non-ASCII character in a resource name. The writer counts the line in UTF-16 units, not bytes, so `headerSize` is wrong. Use ASCII names.
+* A resource file that changed size between `add` and `build`. The sizes in the description no longer add up to the file. Run `add` again after changing a file, then `build`.
+
 ### JSONLoader
 
 Parses JSON scene files into an ECS container (made by an `ecs::Manager`), using a ComponentLoader to instantiate components.
@@ -251,6 +342,8 @@ Scenes are all or nothing: the whole scene is read, checked and every component 
 
 All loader instances are safe to use from several threads: any method can be called on the same instance concurrently, including `PathAdd` while loads are running. A plugin is loaded once per loader: concurrent requests for one name wait for the same load and get the same result, and different names that resolve to the same file share one open of it. A failed load is reported to every request that waited for it and is not remembered; the next request tries again. No loader lock is held while the file system is searched or a plugin is opened. A request that starts after `PathAdd` has returned uses the new location. A plugin's static initialiser must not load through the same loader that is loading it.
 
+For paks, concurrent requests for one unchanged file check its description once and share the result; requests for different resources of it read them at the same time. No loader lock is held while the file system is searched, a pak is opened and checked, or resources are read. One `ResourcePak` may be used from several threads, and copies of it share the remembered description; adding to an `ecs::Container` is still limited to the container's own thread, as libecs-cpp requires.
+
 ```cpp
 ComponentLoader loader;
 loader.PathAdd("/usr/lib/the-seed/components");
@@ -269,7 +362,8 @@ Every loader throws `LoadError` (`#include <libthe-seed/LoadError.hpp>`, in the 
 |---|---|
 | `InvalidName` | The name breaks a name rule; nothing was searched. |
 | `NotFound` | No searched location holds the file. The message lists every location and its state, development locations marked as such. |
-| `NotLoadable` | The deciding file is present but the platform (or the pak reader) refused it. The message has the absolute file and the platform's reason. |
+| `NotLoadable` | The deciding file is present but the platform (or the pak reader) refused it. The message has the absolute file and the platform's reason. For a pak, `DetailGet()` starts with `damaged:` when the file breaks a rule of the format, and is the system's text (for example `Permission denied`) when the file could not be read. |
+| `ResourceMissing` | A pak was found and is sound, but does not hold every resource requested. `MissingGet()` lists the missing names; `FileGet()` is the pak. |
 | `EntryPointMissing` | The plugin loaded but has no `create_component`, `create_system` or requested function. |
 | `NoObject` | The entry point returned no object. |
 | `SceneUnopenable`, `SceneNotUnderstood`, `SceneComponentFailed` | See JSONLoader. |
@@ -284,6 +378,24 @@ try {
     }
 }
 ```
+
+A location whose folder or file cannot be examined for a reason other than not existing (for example `Permission denied`) does not stop the search: it is listed as `could not be examined:` with the system's text, and the next location is tried. This holds for every loader. A pak that is present is never reported as `NotFound`.
+
+```text
+resource pak "org/art" not found: no location holds art.pak
+  searched: /game/paks
+  could not be examined: /locked/paks: Permission denied
+  development location, does not exist: ../../art
+```
+
+A damaged pak and a pak lacking a resource read:
+
+```text
+resource pak "org/art": /game/paks/art.pak is present but could not be read: damaged: the description claims 268467203 bytes but the file holds 1048576
+resource pak "org/art": /game/paks/art.pak does not contain "tex_hero", "snd_jump"
+```
+
+`LoadError::Location::state` has a fifth value, `LocationState::Unreadable`, with the system's text in `Location::reason`. No exception other than `LoadError` leaves `PakLoader` or `ResourcePak`.
 
 `LibraryLoader::PathsGet` returns the locations added with `PathAdd`, in order, whether or not they exist, and never throws. Earlier versions returned the library files found and threw when there were none.
 
@@ -306,7 +418,11 @@ On Windows, a plugin is opened by absolute path with its own folder first in the
 * A missing scene file is `SceneUnopenable`, not a parse error at line 1, column 1.
 * A damaged plugin in an earlier location is reported instead of being skipped for a later copy.
 * `LibraryLoader::PathsGet` returns locations and never throws.
+* Resource paks: `Load(name, names)` now fails with `ResourceMissing` when a requested name is not in the pak, where it used to return the smaller map. Code that relied on the smaller map calls `ResourcePak(file).ResourceNames()` first, or catches `LoadError` and uses `MissingGet()`.
+* `ResourcePak` throws `LoadError` for a missing or damaged file and for an unknown resource name, where it threw `std::runtime_error`, `nlohmann::json` exceptions, `std::length_error` or `std::invalid_argument`. Catch `LoadError`; catching `std::runtime_error` keeps working. Its constructor no longer reads the resources, and `ResourceNames()` is `const`.
+* Paks that were silently misread are refused as damaged: a pak with a non-ASCII resource name, or one built after a resource file changed size (see "Resource pak format"). Make them again.
+* A pak that cannot be examined in an earlier location (permission denied) no longer ends the search with `NotFound` and no reason: the search continues and the message says which locations could not be examined.
 * Plugins are never unloaded. Remove any code that depended on destroying a loader to unload a plugin.
-* The private members of every loader changed: rebuild programs against the new headers.
+* The private members of every loader, and of `ResourcePak`, changed: rebuild programs against the new headers.
 
 The dependency lister, the Mach-O parser and the PE, Mach-O and MSI signers treat every file and every signature blob as untrusted. Malformed input is rejected with `std::runtime_error`, whose message names the format and the structure at fault, and is never repaired or partly processed. A file that a rejected operation would have modified is left unchanged. `DependencyLister` reports such errors per input in `DependencyResult::errors` instead of throwing.

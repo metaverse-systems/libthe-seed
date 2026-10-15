@@ -18,10 +18,19 @@ std::string PluginFileName(const std::string &library);
 // The file name of the resource pak `library`: <library>.pak.
 std::string PakFileName(const std::string &library);
 
+#ifdef _WIN32
+// The system's text for the Windows error `id` (a DWORD), without a trailing
+// line break; empty for zero.
+std::string PlatformMessage(unsigned long id);
+#endif
+
 // What a search through a list of locations found. `locations` holds every
 // location in search order with its state: Missing when it is not a
 // directory, Searched when it is one without the file, Found for the one that
-// holds the file and NotReached for those after it. When `found` is true,
+// holds the file and NotReached for those after it. A location whose folder or
+// candidate file cannot be examined for a reason other than "does not exist"
+// is Unreadable, with the system's text in Location::reason; the search goes
+// on with the next location. When `found` is true,
 // `file` is the absolute path of the deciding file and `identity` its
 // canonical path, which names the file regardless of how it was reached.
 struct SearchResult
@@ -48,7 +57,7 @@ std::vector<std::string> SearchListBuild(const std::vector<std::string> &configu
 // regular file of that name decides; later locations are not looked at.
 // Relative locations are resolved against the working directory at the time
 // of the call. Nothing is searched but the given locations. Never throws for
-// a missing location or file.
+// a missing or unreadable location or file.
 // Entries from index `configured_count` on are reported as development
 // locations.
 SearchResult SearchFirst(const std::vector<std::string> &locations, const std::string &file_name,
