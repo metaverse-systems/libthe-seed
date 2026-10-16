@@ -10,6 +10,20 @@
 
 #include <libthe-seed/LoadError.hpp>
 
+namespace the_seed
+{
+
+LibraryLoader::~LibraryLoader()
+{
+    if(this->library_handle)
+    {
+#ifdef _WIN32
+        FreeLibrary(static_cast<HMODULE>(this->library_handle));
+#else
+        dlclose(this->library_handle);
+#endif
+    }
+}
 
 void LibraryLoader::PathAdd(const std::string &path)
 {
@@ -37,7 +51,7 @@ void LibraryLoader::Load()
     // added locations are searched and the first one holding the file decides.
     the_seed::internal::SearchResult search;
     void *lib = the_seed::internal::PluginOpen(this->paths, this->paths.size(), this->name, this->name, "library", search);
-    this->library_handle.reset(lib);
+    this->library_handle = lib;
     this->loaded_file = search.file.string();
 }
 
@@ -46,7 +60,7 @@ void *LibraryLoader::FunctionGet(const std::string &FunctionName)
     this->Load();
 
     std::string error;
-    void *ptr = the_seed::internal::SymbolFind(this->library_handle.get(), FunctionName, error);
+    void *ptr = the_seed::internal::SymbolFind(this->library_handle, FunctionName, error);
     if(!ptr)
     {
         the_seed::internal::EntryPointMissingThrow(this->loaded_file, this->name, FunctionName, error, "library");
@@ -76,3 +90,4 @@ const std::string LibraryLoader::GetLastErrorAsString()
     return std::string(errorMessage);
 #endif
 }
+} // namespace the_seed

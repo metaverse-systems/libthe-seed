@@ -151,9 +151,9 @@ TEST_CASE("corpus: msi packages the library writes", "[FuzzCorpus]")
         for(const std::size_t size : {100u, 4096u})
         {
             seedtest::malformed::WriteScratch(scratch, "written.msi", input);
-            MsiSigner::EmbedSignature(path, cfb::PatternBytes(size, 3));
+            the_seed::MsiSigner::EmbedSignature(path, cfb::PatternBytes(size, 3));
             Replay(seedfuzz::FuzzMsi, seedtest::malformed::ReadAll(path));
-            (void)MsiSigner::StripSignature(path);
+            (void)the_seed::MsiSigner::StripSignature(path);
             Replay(seedfuzz::FuzzMsi, seedtest::malformed::ReadAll(path));
         }
     }

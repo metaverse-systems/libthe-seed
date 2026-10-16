@@ -106,7 +106,7 @@ Bytes TestBlob(std::size_t size)
 
 std::string DigestOf(const std::string &path)
 {
-    return ToHex(PeSigner::ComputeAuthenticodeDigest(path).digest);
+    return ToHex(the_seed::PeSigner::ComputeAuthenticodeDigest(path).digest);
 }
 
 std::uint32_t CertificateOffset(const Bytes &bytes)
@@ -141,10 +141,10 @@ TEST_CASE("aligned: the fingerprint equals the recorded value and survives embed
 
             CHECK(DigestOf(path) == Recorded(fixture, 0));
 
-            PeSigner::EmbedSignature(path, TestBlob(128));
+            the_seed::PeSigner::EmbedSignature(path, TestBlob(128));
             CHECK(DigestOf(path) == Recorded(fixture, 0));
 
-            const auto extracted = PeSigner::ExtractSignature(path);
+            const auto extracted = the_seed::PeSigner::ExtractSignature(path);
             REQUIRE(extracted.has_value());
             CHECK(*extracted == TestBlob(128));
         }
@@ -178,7 +178,7 @@ TEST_CASE("unaligned: the fingerprint equals the verifier's value for the signed
                     DYNAMIC_SECTION("blob of " << blob_size << " bytes")
                     {
                         seedtest::malformed::WriteScratch(scratch, fixture, input);
-                        PeSigner::EmbedSignature(path, TestBlob(blob_size));
+                        the_seed::PeSigner::EmbedSignature(path, TestBlob(blob_size));
                         const Bytes signed_bytes = seedtest::malformed::ReadAll(path);
 
                         CHECK(DigestOf(path) == before);
@@ -197,7 +197,7 @@ TEST_CASE("unaligned: the fingerprint equals the verifier's value for the signed
                         CHECK(Bytes(signed_bytes.begin() + static_cast<std::ptrdiff_t>(input.size() - count),
                                     signed_bytes.begin() + static_cast<std::ptrdiff_t>(input.size())) ==
                               Bytes(input.end() - static_cast<std::ptrdiff_t>(count), input.end()));
-                        CHECK(PeSigner::ExtractSignature(path) == std::optional<Bytes>(TestBlob(blob_size)));
+                        CHECK(the_seed::PeSigner::ExtractSignature(path) == std::optional<Bytes>(TestBlob(blob_size)));
                     }
                 }
             }
@@ -221,13 +221,13 @@ TEST_CASE("signed: the fingerprint equals that of the program with its signature
                 seedtest::ScratchDir scratch("pe-digest-signed");
                 const std::string path =
                     seedtest::malformed::WriteScratch(scratch, fixture, Derived(fixture, count));
-                PeSigner::EmbedSignature(path, TestBlob(128));
-                REQUIRE(PeSigner::HasEmbeddedSignature(path));
+                the_seed::PeSigner::EmbedSignature(path, TestBlob(128));
+                REQUIRE(the_seed::PeSigner::HasEmbeddedSignature(path));
                 const std::string signed_digest = DigestOf(path);
                 CHECK(signed_digest == Recorded(fixture, count));
 
-                PeSigner::StripSignature(path);
-                CHECK_FALSE(PeSigner::HasEmbeddedSignature(path));
+                the_seed::PeSigner::StripSignature(path);
+                CHECK_FALSE(the_seed::PeSigner::HasEmbeddedSignature(path));
                 CHECK(DigestOf(path) == signed_digest);
             }
         }
@@ -249,21 +249,21 @@ TEST_CASE("signed: embedding replaces the old signature and leaves exactly one",
                 const Bytes first = TestBlob(128);
                 const Bytes second = TestBlob(200);
 
-                PeSigner::EmbedSignature(path, first);
+                the_seed::PeSigner::EmbedSignature(path, first);
                 const Bytes after_first = seedtest::malformed::ReadAll(path);
-                PeSigner::EmbedSignature(path, second);
+                the_seed::PeSigner::EmbedSignature(path, second);
                 const Bytes after_second = seedtest::malformed::ReadAll(path);
 
-                CHECK(PeSigner::ExtractSignature(path) == std::optional<Bytes>(second));
+                CHECK(the_seed::PeSigner::ExtractSignature(path) == std::optional<Bytes>(second));
                 // One certificate table, ending the file: the old one is gone.
                 CHECK(after_second.size() == CertificateOffset(after_second) + CertificateSize(after_second));
                 CHECK(CertificateOffset(after_second) == CertificateOffset(after_first));
                 CHECK(after_second.size() < after_first.size() + 200);
                 CHECK(DigestOf(path) == Recorded(fixture, count));
 
-                PeSigner::StripSignature(path);
-                CHECK_FALSE(PeSigner::HasEmbeddedSignature(path));
-                CHECK_FALSE(PeSigner::ExtractSignature(path).has_value());
+                the_seed::PeSigner::StripSignature(path);
+                CHECK_FALSE(the_seed::PeSigner::HasEmbeddedSignature(path));
+                CHECK_FALSE(the_seed::PeSigner::ExtractSignature(path).has_value());
             }
         }
     }
@@ -279,9 +279,9 @@ void RequireDigestAndEmbedRejected(const Bytes &input, const std::string &keywor
 {
     seedtest::ScratchDir scratch("pe-digest-malformed");
     const std::string path = seedtest::malformed::WriteScratch(scratch, "input.bin", input);
-    seedtest::malformed::RequireRejected([&] { (void)PeSigner::ComputeAuthenticodeDigest(path); },
+    seedtest::malformed::RequireRejected([&] { (void)the_seed::PeSigner::ComputeAuthenticodeDigest(path); },
                                          "PE", keyword, input.size());
-    seedtest::malformed::RequireRejected([&] { PeSigner::EmbedSignature(path, TestBlob(128)); },
+    seedtest::malformed::RequireRejected([&] { the_seed::PeSigner::EmbedSignature(path, TestBlob(128)); },
                                          "PE", keyword, input.size(), 128);
     seedtest::malformed::RequireUnchanged(path, input);
 }

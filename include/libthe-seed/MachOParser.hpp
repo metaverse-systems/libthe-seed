@@ -6,6 +6,8 @@
 #include <string>
 #include <vector>
 
+namespace the_seed
+{
 /**
  * Mach-O binary format parser.
  * Detects format, lists architecture slices in fat binaries.
@@ -110,3 +112,8 @@ public:
      */
     static std::vector<std::string> ListDependencies(const std::string &file_path);
 };
+} // namespace the_seed
+
+#ifdef THE_SEED_LEGACY_NAMES
+using MachOParser [[deprecated("use the_seed::MachOParser")]] = the_seed::MachOParser;
+#endif

@@ -7,6 +7,8 @@
 #include <vector>
 #include <optional>
 
+namespace the_seed
+{
 /**
  * Mach-O binary code signature operations.
  * All methods are static: no instance state required.
@@ -222,3 +224,8 @@ public:
         const std::vector<std::uint8_t> &super_blob
     );
 };
+} // namespace the_seed
+
+#ifdef THE_SEED_LEGACY_NAMES
+using MachOSigner [[deprecated("use the_seed::MachOSigner")]] = the_seed::MachOSigner;
+#endif

@@ -23,7 +23,7 @@
 # Every offending name is printed. Exit status: 0 pass, 1 fail, 77 skipped.
 #
 # Environment (set by tests/Makefile.am): CXX, NM, OBJDUMP, CXXFILT,
-# top_builddir, top_srcdir, host, CROSS_COMPILING.
+# top_builddir, top_srcdir, host, CROSS_COMPILING, SEED_SANITIZER.
 
 here=$(cd "$(dirname "$0")" && pwd)
 top_srcdir=$(cd "${top_srcdir:-$here/..}" && pwd)
@@ -142,9 +142,17 @@ else
     link_args="-L$libdir -lthe-seed"
 fi
 
+# A sanitizer build of the library needs the sanitizer runtime at link time;
+# without it every probe would fail for the wrong reason.
+case "${SEED_SANITIZER:-none}" in
+    address) sanitizer_args="-fsanitize=address,undefined" ;;
+    thread) sanitizer_args="-fsanitize=thread" ;;
+    *) sanitizer_args="" ;;
+esac
+
 probe_links() {
     # $1 probe source; returns 0 when it links
-    $CXX -std=c++20 -I"$top_srcdir/include" ${LIBECS_CFLAGS:-} "$1" -o "$work/probe.out" $link_args >"$work/probe.log" 2>&1
+    $CXX -std=c++20 $sanitizer_args -I"$top_srcdir/include" ${LIBECS_CFLAGS:-} "$1" -o "$work/probe.out" $link_args >"$work/probe.log" 2>&1
 }
 
 cat >"$work/probe-readfilebytes.cpp" <<'PROBE'

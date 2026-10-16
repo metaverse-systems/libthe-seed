@@ -7,7 +7,7 @@
 #include <stdexcept>
 
 TEST_CASE("LibraryLoader adds and retrieves paths correctly", "[LibraryLoader]") {
-    LibraryLoader loader("NotReal");
+    the_seed::LibraryLoader loader("NotReal");
 
     SECTION("PathsGet is empty before any path is added") {
         REQUIRE(loader.PathsGet().empty());
@@ -25,7 +25,7 @@ TEST_CASE("LibraryLoader adds and retrieves paths correctly", "[LibraryLoader]")
     }
 
     SECTION("PathsGet returns locations, not candidate files") {
-        LibraryLoader real("testmodule");
+        the_seed::LibraryLoader real("testmodule");
         real.PathAdd(seedtest::ModuleDir());
         REQUIRE(real.PathsGet() == std::vector<std::string>{seedtest::ModuleDir()});
     }
@@ -33,30 +33,30 @@ TEST_CASE("LibraryLoader adds and retrieves paths correctly", "[LibraryLoader]")
 
 TEST_CASE("LibraryLoader loads libraries and functions correctly", "[LibraryLoader]") {
     SECTION("FunctionGet throws LoadError when library cannot be found") {
-        LibraryLoader loader("NotReal");
+        the_seed::LibraryLoader loader("NotReal");
         loader.PathAdd("/nonexistent/path");
-        REQUIRE_THROWS_AS(loader.FunctionGet("any_symbol"), LoadError);
+        REQUIRE_THROWS_AS(loader.FunctionGet("any_symbol"), the_seed::LoadError);
     }
 
     SECTION("The failure is still caught as std::runtime_error") {
-        LibraryLoader loader("NotReal");
+        the_seed::LibraryLoader loader("NotReal");
         loader.PathAdd("/nonexistent/path");
         REQUIRE_THROWS_AS(loader.FunctionGet("any_symbol"), std::runtime_error);
     }
 
     SECTION("The failure is NotFound") {
-        LibraryLoader loader("NotReal");
+        the_seed::LibraryLoader loader("NotReal");
         loader.PathAdd("/nonexistent/path");
         try {
             loader.FunctionGet("any_symbol");
             FAIL("expected a LoadError");
-        } catch(const LoadError &error) {
-            REQUIRE(error.ReasonGet() == LoadError::Reason::NotFound);
+        } catch(const the_seed::LoadError &error) {
+            REQUIRE(error.ReasonGet() == the_seed::LoadError::Reason::NotFound);
         }
     }
 
     SECTION("FunctionGet finds a function in a library in a configured location") {
-        LibraryLoader loader("testmodule");
+        the_seed::LibraryLoader loader("testmodule");
         loader.PathAdd(seedtest::ModuleDir());
         REQUIRE(loader.FunctionGet("create_component") != nullptr);
     }
@@ -65,19 +65,19 @@ TEST_CASE("LibraryLoader loads libraries and functions correctly", "[LibraryLoad
         seedtest::ScratchDir scratch;
         seedtest::CopyModule(scratch, "testmodule", "cwd", "testmodule");
         seedtest::WorkingDirectoryGuard guard(scratch.Path() / "cwd");
-        LibraryLoader loader("testmodule");
-        REQUIRE_THROWS_AS(loader.FunctionGet("create_component"), LoadError);
+        the_seed::LibraryLoader loader("testmodule");
+        REQUIRE_THROWS_AS(loader.FunctionGet("create_component"), the_seed::LoadError);
     }
 
     SECTION("A name containing a separator or a colon is an invalid name") {
         for(const char *name : {"a/b", "a\\b", "c:x"}) {
-            LibraryLoader loader(name);
+            the_seed::LibraryLoader loader(name);
             loader.PathAdd(seedtest::ModuleDir());
             try {
                 loader.FunctionGet("create_component");
                 FAIL("expected a LoadError for " << name);
-            } catch(const LoadError &error) {
-                REQUIRE(error.ReasonGet() == LoadError::Reason::InvalidName);
+            } catch(const the_seed::LoadError &error) {
+                REQUIRE(error.ReasonGet() == the_seed::LoadError::Reason::InvalidName);
             }
         }
     }
@@ -87,7 +87,7 @@ TEST_CASE("LibraryLoader destruction completes and unloads nothing", "[LibraryLo
     using Creator = void *(*)(void *);
     Creator creator = nullptr;
     {
-        auto loader = std::make_unique<LibraryLoader>("testmodule");
+        auto loader = std::make_unique<the_seed::LibraryLoader>("testmodule");
         loader->PathAdd(seedtest::ModuleDir());
         creator = reinterpret_cast<Creator>(loader->FunctionGet("create_component"));
         REQUIRE(creator != nullptr);

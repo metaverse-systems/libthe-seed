@@ -231,7 +231,7 @@ std::string WriteImage(const seedtest::ScratchDir &scratch, const Bytes &bytes)
 // list. This wraps that report as an exception so RequireRejected can judge it.
 void ListOrThrow(const std::string &path)
 {
-    DependencyLister lister;
+    the_seed::DependencyLister lister;
     const auto result = lister.ListDependencies({path}, {});
     const auto error = result.errors.find(path);
     if(error != result.errors.end())
@@ -264,9 +264,9 @@ void RequireBoundedListing(const Bytes &input)
     seedtest::malformed::detail::CheckLimits(outcome, input.size(), 0);
 }
 
-DependencyResult ListOne(const std::string &path)
+the_seed::DependencyResult ListOne(const std::string &path)
 {
-    DependencyLister lister;
+    the_seed::DependencyLister lister;
     return lister.ListDependencies({path}, {});
 }
 

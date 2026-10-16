@@ -155,25 +155,25 @@ void RunLarge(const Expectation &expect)
     // The fingerprint, read from the file.
     {
         std::string digest;
-        const Measured measured = Measure([&] { digest = msi::ToHexString(MsiSigner::ComputeAuthenticodeDigest(path).digest); });
+        const Measured measured = Measure([&] { digest = msi::ToHexString(the_seed::MsiSigner::ComputeAuthenticodeDigest(path).digest); });
         RequireWithinBound(std::string(expect.label) + " fingerprint", original_size, measured);
         CHECK(digest == fingerprint);
     }
     {
-        MsiSigner::SignatureCheck check;
-        const Measured measured = Measure([&] { check = MsiSigner::CheckSignature(path); });
+        the_seed::MsiSigner::SignatureCheck check;
+        const Measured measured = Measure([&] { check = the_seed::MsiSigner::CheckSignature(path); });
         RequireWithinBound(std::string(expect.label) + " check", original_size, measured);
-        CHECK(check.state == MsiSigner::SignatureState::None);
+        CHECK(check.state == the_seed::MsiSigner::SignatureState::None);
     }
 
     // Sign with a signature below the cut-off (a real one that osslsigncode wrote).
     const Bytes first = msi::SampleSignature("tiny-osslsig-small.msi");
     {
-        const Measured measured = Measure([&] { MsiSigner::EmbedSignature(path, first); });
+        const Measured measured = Measure([&] { the_seed::MsiSigner::EmbedSignature(path, first); });
         RequireWithinBound(std::string(expect.label) + " sign", original_size, measured);
         CHECK(measured.seconds < expect.seconds);
         RequireResult(sm::ReadAll(path), listing, fingerprint, first);
-        CHECK(MsiSigner::ExtractSignature(path) == std::optional<Bytes>(first));
+        CHECK(the_seed::MsiSigner::ExtractSignature(path) == std::optional<Bytes>(first));
     }
     const Bytes signed_once = sm::ReadAll(path);
 
@@ -207,7 +207,7 @@ void RunLarge(const Expectation &expect)
     for(int round = 0; round < 2; ++round)
     {
         INFO("second signing, round " << round);
-        const Measured measured = Measure([&] { MsiSigner::EmbedSignature(path, second); });
+        const Measured measured = Measure([&] { the_seed::MsiSigner::EmbedSignature(path, second); });
         RequireWithinBound(std::string(expect.label) + " sign again", original_size, measured);
         CHECK(measured.seconds < expect.seconds);
         RequireResult(sm::ReadAll(path), listing, fingerprint, second);
@@ -215,7 +215,7 @@ void RunLarge(const Expectation &expect)
 
     // Back below the cut-off: the package is what signing the bare one once gives.
     {
-        const Measured measured = Measure([&] { MsiSigner::EmbedSignature(path, first); });
+        const Measured measured = Measure([&] { the_seed::MsiSigner::EmbedSignature(path, first); });
         RequireWithinBound(std::string(expect.label) + " sign back", original_size, measured);
         CHECK(sm::ReadAll(path) == signed_once);
     }
@@ -223,22 +223,22 @@ void RunLarge(const Expectation &expect)
     // With the digest check (the signature holds another fingerprint, so it is refused and nothing changes).
     {
         const Bytes before = sm::ReadAll(path);
-        CHECK_THROWS_AS(MsiSigner::EmbedSignature(path, first, true), std::runtime_error);
+        CHECK_THROWS_AS(the_seed::MsiSigner::EmbedSignature(path, first, true), std::runtime_error);
         sm::RequireUnchanged(path, before);
     }
 
     // Strip.
     {
         bool removed = false;
-        const Measured measured = Measure([&] { removed = MsiSigner::StripSignature(path); });
+        const Measured measured = Measure([&] { removed = the_seed::MsiSigner::StripSignature(path); });
         RequireWithinBound(std::string(expect.label) + " strip", original_size, measured);
         CHECK(removed);
         RequireResult(sm::ReadAll(path), listing, fingerprint, std::nullopt);
-        CHECK_FALSE(MsiSigner::HasEmbeddedSignature(path));
+        CHECK_FALSE(the_seed::MsiSigner::HasEmbeddedSignature(path));
     }
     {
         const Bytes stripped = sm::ReadAll(path);
-        CHECK_FALSE(MsiSigner::StripSignature(path));
+        CHECK_FALSE(the_seed::MsiSigner::StripSignature(path));
         sm::RequireUnchanged(path, stripped);
     }
 }
@@ -322,11 +322,11 @@ TEST_CASE("a refusal on a large package leaves the file as it was and stays with
             {
                 if(embed)
                 {
-                    MsiSigner::EmbedSignature(path, cfb::PatternBytes(300, 1));
+                    the_seed::MsiSigner::EmbedSignature(path, cfb::PatternBytes(300, 1));
                 }
                 else
                 {
-                    const bool removed = MsiSigner::StripSignature(path);
+                    const bool removed = the_seed::MsiSigner::StripSignature(path);
                     CHECK_FALSE(removed);
                 }
             }
@@ -348,7 +348,7 @@ TEST_CASE("a refusal on a large package leaves the file as it was and stays with
         const Measured measured = Measure([&] {
             try
             {
-                MsiSigner::EmbedSignature(path, cfb::PatternBytes(300, 1));
+                the_seed::MsiSigner::EmbedSignature(path, cfb::PatternBytes(300, 1));
             }
             catch(const std::runtime_error &)
             {

@@ -59,14 +59,14 @@ struct SliceFact
 struct SampleFact
 {
     const char *name;
-    MachOParser::Format format;
+    the_seed::MachOParser::Format format;
     std::vector<SliceFact> slices;
     Names dependencies;
 };
 
 const std::vector<SampleFact> &Samples()
 {
-    using F = MachOParser::Format;
+    using F = the_seed::MachOParser::Format;
     static const std::vector<SampleFact> samples = {
         {"tiny-macho-x86_64", F::MachO64, {{kCpuX86_64, kSubX86_64, 0, 4248, false, 0, 0}}, {kLibSystem}},
         {"tiny-macho-arm64", F::MachO64, {{kCpuArm64, kSubArm64, 0, 16536, false, 0, 0}}, {kLibSystem}},
@@ -189,8 +189,8 @@ TEST_CASE("MachOParser::DetectFormat identifies x86_64 Mach-O", "[MachOParser]")
     auto path = seedtest::FixturePath("tiny-macho-x86_64");
     REQUIRE(std::filesystem::exists(path));
 
-    auto fmt = MachOParser::DetectFormat(path);
-    CHECK(fmt == MachOParser::Format::MachO64);
+    auto fmt = the_seed::MachOParser::DetectFormat(path);
+    CHECK(fmt == the_seed::MachOParser::Format::MachO64);
 }
 
 TEST_CASE("MachOParser::DetectFormat identifies arm64 Mach-O", "[MachOParser]")
@@ -198,8 +198,8 @@ TEST_CASE("MachOParser::DetectFormat identifies arm64 Mach-O", "[MachOParser]")
     auto path = seedtest::FixturePath("tiny-macho-arm64");
     REQUIRE(std::filesystem::exists(path));
 
-    auto fmt = MachOParser::DetectFormat(path);
-    CHECK(fmt == MachOParser::Format::MachO64);
+    auto fmt = the_seed::MachOParser::DetectFormat(path);
+    CHECK(fmt == the_seed::MachOParser::Format::MachO64);
 }
 
 TEST_CASE("MachOParser::DetectFormat identifies fat Mach-O", "[MachOParser]")
@@ -207,8 +207,8 @@ TEST_CASE("MachOParser::DetectFormat identifies fat Mach-O", "[MachOParser]")
     auto path = seedtest::FixturePath("tiny-macho-universal");
     REQUIRE(std::filesystem::exists(path));
 
-    auto fmt = MachOParser::DetectFormat(path);
-    CHECK(fmt == MachOParser::Format::Fat);
+    auto fmt = the_seed::MachOParser::DetectFormat(path);
+    CHECK(fmt == the_seed::MachOParser::Format::Fat);
 }
 
 TEST_CASE("MachOParser::DetectFormat returns NotMachO for PE", "[MachOParser]")
@@ -216,8 +216,8 @@ TEST_CASE("MachOParser::DetectFormat returns NotMachO for PE", "[MachOParser]")
     auto path = seedtest::FixturePath("tiny.exe");
     REQUIRE(std::filesystem::exists(path));
 
-    auto fmt = MachOParser::DetectFormat(path);
-    CHECK(fmt == MachOParser::Format::NotMachO);
+    auto fmt = the_seed::MachOParser::DetectFormat(path);
+    CHECK(fmt == the_seed::MachOParser::Format::NotMachO);
 }
 
 TEST_CASE("MachOParser::DetectFormat returns NotMachO for plain text", "[MachOParser]")
@@ -225,8 +225,8 @@ TEST_CASE("MachOParser::DetectFormat returns NotMachO for plain text", "[MachOPa
     auto path = seedtest::FixturePath("plain.txt");
     REQUIRE(std::filesystem::exists(path));
 
-    auto fmt = MachOParser::DetectFormat(path);
-    CHECK(fmt == MachOParser::Format::NotMachO);
+    auto fmt = the_seed::MachOParser::DetectFormat(path);
+    CHECK(fmt == the_seed::MachOParser::Format::NotMachO);
 }
 
 TEST_CASE("MachOParser::DetectFormat classifies every genuine sample", "[MachOParser][samples]")
@@ -236,32 +236,32 @@ TEST_CASE("MachOParser::DetectFormat classifies every genuine sample", "[MachOPa
         DYNAMIC_SECTION(sample.name)
         {
             const std::string path = seedtest::FixturePath(sample.name);
-            CHECK(MachOParser::DetectFormat(path) == sample.format);
-            CHECK(MachOParser::IsMachO(path));
-            CHECK(MachOParser::IsFatBinary(path) == (sample.format == MachOParser::Format::Fat));
+            CHECK(the_seed::MachOParser::DetectFormat(path) == sample.format);
+            CHECK(the_seed::MachOParser::IsMachO(path));
+            CHECK(the_seed::MachOParser::IsFatBinary(path) == (sample.format == the_seed::MachOParser::Format::Fat));
         }
     }
 }
 
 TEST_CASE("MachOParser::IsMachO returns true for Mach-O files", "[MachOParser]")
 {
-    CHECK(MachOParser::IsMachO(seedtest::FixturePath("tiny-macho-x86_64")) == true);
-    CHECK(MachOParser::IsMachO(seedtest::FixturePath("tiny-macho-arm64")) == true);
-    CHECK(MachOParser::IsMachO(seedtest::FixturePath("tiny-macho-universal")) == true);
+    CHECK(the_seed::MachOParser::IsMachO(seedtest::FixturePath("tiny-macho-x86_64")) == true);
+    CHECK(the_seed::MachOParser::IsMachO(seedtest::FixturePath("tiny-macho-arm64")) == true);
+    CHECK(the_seed::MachOParser::IsMachO(seedtest::FixturePath("tiny-macho-universal")) == true);
 }
 
 TEST_CASE("MachOParser::IsMachO returns false for non-Mach-O files", "[MachOParser]")
 {
-    CHECK(MachOParser::IsMachO(seedtest::FixturePath("tiny.exe")) == false);
-    CHECK(MachOParser::IsMachO(seedtest::FixturePath("plain.txt")) == false);
+    CHECK(the_seed::MachOParser::IsMachO(seedtest::FixturePath("tiny.exe")) == false);
+    CHECK(the_seed::MachOParser::IsMachO(seedtest::FixturePath("plain.txt")) == false);
 }
 
 TEST_CASE("MachOParser::IsFatBinary returns true only for fat binaries", "[MachOParser]")
 {
-    CHECK(MachOParser::IsFatBinary(seedtest::FixturePath("tiny-macho-universal")) == true);
-    CHECK(MachOParser::IsFatBinary(seedtest::FixturePath("tiny-macho-universal64")) == true);
-    CHECK(MachOParser::IsFatBinary(seedtest::FixturePath("tiny-macho-x86_64")) == false);
-    CHECK(MachOParser::IsFatBinary(seedtest::FixturePath("tiny-macho-arm64")) == false);
+    CHECK(the_seed::MachOParser::IsFatBinary(seedtest::FixturePath("tiny-macho-universal")) == true);
+    CHECK(the_seed::MachOParser::IsFatBinary(seedtest::FixturePath("tiny-macho-universal64")) == true);
+    CHECK(the_seed::MachOParser::IsFatBinary(seedtest::FixturePath("tiny-macho-x86_64")) == false);
+    CHECK(the_seed::MachOParser::IsFatBinary(seedtest::FixturePath("tiny-macho-arm64")) == false);
 }
 
 // The name of this case is recorded in known-gaps.txt (it failed with
@@ -271,7 +271,7 @@ TEST_CASE("MachOParser::GetArchSlices returns slices for fat binary", "[MachOPar
     auto path = seedtest::FixturePath("tiny-macho-universal");
     REQUIRE(std::filesystem::exists(path));
 
-    auto slices = MachOParser::GetArchSlices(path);
+    auto slices = the_seed::MachOParser::GetArchSlices(path);
     REQUIRE(slices.size() == 2);
 
     // llvm-lipo -archs: x86_64 arm64, in that order.
@@ -291,7 +291,7 @@ TEST_CASE("MachOParser::GetArchSlices returns single slice for non-fat", "[MachO
     auto path = seedtest::FixturePath("tiny-macho-x86_64");
     REQUIRE(std::filesystem::exists(path));
 
-    auto slices = MachOParser::GetArchSlices(path);
+    auto slices = the_seed::MachOParser::GetArchSlices(path);
     REQUIRE(slices.size() == 1);
     CHECK(slices[0].cpu_type == kCpuX86_64);
     CHECK(slices[0].cpu_subtype == kSubX86_64);
@@ -306,7 +306,7 @@ TEST_CASE("MachOParser::GetArchSlices reports architectures and signature facts 
     {
         DYNAMIC_SECTION(sample.name)
         {
-            const auto slices = MachOParser::GetArchSlices(seedtest::FixturePath(sample.name));
+            const auto slices = the_seed::MachOParser::GetArchSlices(seedtest::FixturePath(sample.name));
             REQUIRE(slices.size() == sample.slices.size());
             for(std::size_t i = 0; i < slices.size(); ++i)
             {
@@ -331,7 +331,7 @@ TEST_CASE("MachOParser::GetArchSlices reads the 64-bit offset container", "[Mach
     REQUIRE(bytes.size() >= 4);
     CHECK(ComposeBE(bytes, 0, 4) == 0xCAFEBABF);
 
-    const auto slices = MachOParser::GetArchSlices(seedtest::FixturePath("tiny-macho-universal64"));
+    const auto slices = the_seed::MachOParser::GetArchSlices(seedtest::FixturePath("tiny-macho-universal64"));
     REQUIRE(slices.size() == 2);
     CHECK(slices[0].cpu_type == kCpuX86_64);
     CHECK(slices[0].offset == 4096);
@@ -348,7 +348,7 @@ TEST_CASE("MachOParser::ListDependencies lists the references of every genuine s
     {
         DYNAMIC_SECTION(sample.name)
         {
-            CHECK(MachOParser::ListDependencies(seedtest::FixturePath(sample.name)) == sample.dependencies);
+            CHECK(the_seed::MachOParser::ListDependencies(seedtest::FixturePath(sample.name)) == sample.dependencies);
         }
     }
 }
@@ -356,7 +356,7 @@ TEST_CASE("MachOParser::ListDependencies lists the references of every genuine s
 TEST_CASE("MachOParser reads a library without listing its own name", "[MachOParser][samples]")
 {
     // llvm-otool -l shows LC_ID_DYLIB (the library's own install name) and one LC_LOAD_DYLIB.
-    const Names names = MachOParser::ListDependencies(seedtest::FixturePath("tiny-macho-dylib-arm64"));
+    const Names names = the_seed::MachOParser::ListDependencies(seedtest::FixturePath("tiny-macho-dylib-arm64"));
     REQUIRE(names.size() == 1);
     CHECK(names[0] == kLibSystem);
 }
@@ -403,7 +403,7 @@ TEST_CASE("MachOParser reads the same values from explicit byte orders on any ho
             const bool is_wide = ComposeBE(bytes, 0, 4) == 0xCAFEBABF;
             const std::uint64_t entry = is_wide ? 32 : 20;
             const int field = is_wide ? 8 : 4;
-            const auto slices = MachOParser::GetArchSlices(seedtest::FixturePath(name));
+            const auto slices = the_seed::MachOParser::GetArchSlices(seedtest::FixturePath(name));
             REQUIRE(slices.size() == ComposeBE(bytes, 4, 4));
             for(std::size_t i = 0; i < slices.size(); ++i)
             {
@@ -427,8 +427,8 @@ TEST_CASE("MachOParser rejects a Java class header as not a Mach-O file", "[Mach
     seedtest::ScratchDir scratch("macho-java");
     const Bytes bytes = machoref::JavaClassHeader();
     const std::string path = WriteImage(scratch, bytes);
-    RequireRejected([&] { (void)MachOParser::GetArchSlices(path); }, "not a Mach-O");
-    RequireRejected([&] { (void)MachOParser::ListDependencies(path); }, "not a Mach-O");
+    RequireRejected([&] { (void)the_seed::MachOParser::GetArchSlices(path); }, "not a Mach-O");
+    RequireRejected([&] { (void)the_seed::MachOParser::ListDependencies(path); }, "not a Mach-O");
 }
 
 TEST_CASE("MachOParser rejects a file shorter than its header", "[MachOParser][safety]")
@@ -441,8 +441,8 @@ TEST_CASE("MachOParser rejects a file shorter than its header", "[MachOParser][s
         {
             const Bytes cut(thin.begin(), thin.begin() + static_cast<std::ptrdiff_t>(length));
             const std::string path = WriteImage(scratch, cut);
-            RequireRejected([&] { (void)MachOParser::GetArchSlices(path); }, "header");
-            RequireRejected([&] { (void)MachOParser::ListDependencies(path); }, "header");
+            RequireRejected([&] { (void)the_seed::MachOParser::GetArchSlices(path); }, "header");
+            RequireRejected([&] { (void)the_seed::MachOParser::ListDependencies(path); }, "header");
         }
     }
     const Bytes fat = LoadBytes("tiny-macho-universal");
@@ -452,8 +452,8 @@ TEST_CASE("MachOParser rejects a file shorter than its header", "[MachOParser][s
         {
             const Bytes cut(fat.begin(), fat.begin() + static_cast<std::ptrdiff_t>(length));
             const std::string path = WriteImage(scratch, cut);
-            RequireRejected([&] { (void)MachOParser::GetArchSlices(path); }, "Truncated fat header");
-            RequireRejected([&] { (void)MachOParser::ListDependencies(path); }, "Truncated fat header");
+            RequireRejected([&] { (void)the_seed::MachOParser::GetArchSlices(path); }, "Truncated fat header");
+            RequireRejected([&] { (void)the_seed::MachOParser::ListDependencies(path); }, "Truncated fat header");
         }
     }
 }
@@ -474,8 +474,8 @@ TEST_CASE("MachOParser rejects truncated slice tables of both container forms", 
             const Bytes whole = LoadBytes(c.sample);
             const Bytes cut(whole.begin(), whole.begin() + static_cast<std::ptrdiff_t>(c.length));
             const std::string path = WriteImage(scratch, cut);
-            RequireRejected([&] { (void)MachOParser::GetArchSlices(path); }, "Truncated fat_arch entry table");
-            RequireRejected([&] { (void)MachOParser::ListDependencies(path); }, "Truncated fat_arch entry table");
+            RequireRejected([&] { (void)the_seed::MachOParser::GetArchSlices(path); }, "Truncated fat_arch entry table");
+            RequireRejected([&] { (void)the_seed::MachOParser::ListDependencies(path); }, "Truncated fat_arch entry table");
         }
     }
 }
@@ -491,7 +491,7 @@ TEST_CASE("MachOParser rejects overlapping slices read from the table as written
         bytes[second_offset_field + i] = bytes[8 + 8 + i];
     }
     const std::string path = WriteImage(scratch, bytes);
-    RequireRejected([&] { (void)MachOParser::GetArchSlices(path); }, "overlap");
+    RequireRejected([&] { (void)the_seed::MachOParser::GetArchSlices(path); }, "overlap");
 }
 
 TEST_CASE("MachOParser rejects a program signed by an earlier version with a pointer to the fix",
@@ -510,9 +510,9 @@ TEST_CASE("MachOParser rejects a program signed by an earlier version with a poi
     const std::string path = WriteImage(scratch, bytes);
     const std::string advice = "this can be a program signed by an earlier version of the-seed; "
                                "rebuild it from the unsigned original";
-    RequireRejected([&] { (void)MachOParser::ListDependencies(path); }, "load command 13 size 0 is smaller than 8");
-    RequireRejected([&] { (void)MachOParser::ListDependencies(path); }, advice);
-    RequireRejected([&] { (void)MachOParser::GetArchSlices(path); }, advice);
+    RequireRejected([&] { (void)the_seed::MachOParser::ListDependencies(path); }, "load command 13 size 0 is smaller than 8");
+    RequireRejected([&] { (void)the_seed::MachOParser::ListDependencies(path); }, advice);
+    RequireRejected([&] { (void)the_seed::MachOParser::GetArchSlices(path); }, advice);
 }
 
 // Library references of every kind, on synthesised files in the byte order the
@@ -544,7 +544,7 @@ TEST_CASE("MachOParser::ListDependencies returns all five reference kinds in fil
         {dep::kReexportDylib, "/lib/reexport"},
     }));
 
-    CHECK(MachOParser::ListDependencies(path) ==
+    CHECK(the_seed::MachOParser::ListDependencies(path) ==
           Names{"/lib/upward", "/lib/normal", "/lib/lazy", "/lib/weak", "/lib/reexport"});
 }
 
@@ -558,7 +558,7 @@ TEST_CASE("MachOParser::ListDependencies returns each single kind", "[MachOParse
         DYNAMIC_SECTION("kind 0x" << std::hex << kind)
         {
             const std::string path = WriteImage(scratch, Referencing({{kind, "/lib/one"}}));
-            CHECK(MachOParser::ListDependencies(path) == Names{"/lib/one"});
+            CHECK(the_seed::MachOParser::ListDependencies(path) == Names{"/lib/one"});
         }
     }
 }
@@ -568,7 +568,7 @@ TEST_CASE("MachOParser::ListDependencies returns an empty list for a file with n
 {
     seedtest::ScratchDir scratch("macho-kinds");
     const std::string path = WriteImage(scratch, Referencing({}));
-    CHECK(MachOParser::ListDependencies(path).empty());
+    CHECK(the_seed::MachOParser::ListDependencies(path).empty());
 }
 
 TEST_CASE("MachOParser::ListDependencies lists a name repeated across kinds once", "[MachOParser][kinds]")
@@ -582,7 +582,7 @@ TEST_CASE("MachOParser::ListDependencies lists a name repeated across kinds once
         {dep::kLazyLoadDylib, "/lib/other"},
     }));
 
-    CHECK(MachOParser::ListDependencies(path) == Names{"/lib/shared", "/lib/other"});
+    CHECK(the_seed::MachOParser::ListDependencies(path) == Names{"/lib/shared", "/lib/other"});
 }
 
 TEST_CASE("MachOParser::ListDependencies covers every slice of a fat file once each",
@@ -602,7 +602,7 @@ TEST_CASE("MachOParser::ListDependencies covers every slice of a fat file once e
     SECTION("two slices")
     {
         const std::string path = WriteImage(scratch, Universal({first, second}));
-        CHECK(MachOParser::ListDependencies(path) ==
+        CHECK(the_seed::MachOParser::ListDependencies(path) ==
               Names{"/lib/common", "/lib/first", "/lib/second", "/lib/third"});
     }
 
@@ -610,7 +610,7 @@ TEST_CASE("MachOParser::ListDependencies covers every slice of a fat file once e
     {
         const std::string path =
             WriteImage(scratch, Universal({Referencing({}), second, first}));
-        CHECK(MachOParser::ListDependencies(path) ==
+        CHECK(the_seed::MachOParser::ListDependencies(path) ==
               Names{"/lib/common", "/lib/second", "/lib/third", "/lib/first"});
     }
 }

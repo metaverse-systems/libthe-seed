@@ -39,7 +39,7 @@ namespace
         }
 
         ecs::Manager manager;
-        ComponentLoader loader;
+        the_seed::ComponentLoader loader;
         ecs::Container *world = nullptr;
     };
 }
@@ -47,7 +47,7 @@ namespace
 TEST_CASE("JSONLoader attaches a component made by a module", "[JSONLoader]")
 {
     Scene scene;
-    JSONLoader loader(scene.world, scene.loader);
+    the_seed::JSONLoader loader(scene.world, scene.loader);
 
     nlohmann::json config;
     config["value"] = 7;
@@ -67,7 +67,7 @@ TEST_CASE("JSONLoader attaches a component made by a module", "[JSONLoader]")
 TEST_CASE("JSONLoader replaces a second component of the same type", "[JSONLoader]")
 {
     Scene scene;
-    JSONLoader loader(scene.world, scene.loader);
+    the_seed::JSONLoader loader(scene.world, scene.loader);
 
     nlohmann::json first;
     first["value"] = 1;
@@ -90,7 +90,7 @@ TEST_CASE("JSONLoader replaces a second component of the same type", "[JSONLoade
 TEST_CASE("JSONLoader attaches nothing when the factory returns no component", "[JSONLoader]")
 {
     Scene scene;
-    JSONLoader loader(scene.world, scene.loader);
+    the_seed::JSONLoader loader(scene.world, scene.loader);
 
     nlohmann::json config;
     config["null"] = true;
@@ -111,7 +111,7 @@ TEST_CASE("JSONLoader attaches nothing when the factory returns no component", "
 TEST_CASE("JSONLoader rejects a component with an empty type", "[JSONLoader]")
 {
     Scene scene;
-    JSONLoader loader(scene.world, scene.loader);
+    the_seed::JSONLoader loader(scene.world, scene.loader);
 
     nlohmann::json config;
     config["type"] = "";
@@ -162,7 +162,7 @@ namespace
 
     struct Failure
     {
-        LoadError::Reason reason;
+        the_seed::LoadError::Reason reason;
         std::string message;
     };
 
@@ -178,19 +178,19 @@ namespace
     {
         nlohmann::json config;
         config["value"] = 1;
-        JSONLoader existing(scene.world, scene.loader);
+        the_seed::JSONLoader existing(scene.world, scene.loader);
         existing.StringParse(scene.text("existing", config));
         const Counts before(scene.world);
         REQUIRE(before.entities == 1);
         REQUIRE(before.components == 1);
 
-        Failure failure{LoadError::Reason::NotFound, ""};
+        Failure failure{the_seed::LoadError::Reason::NotFound, ""};
         try
         {
             run();
             FAIL("no error was thrown");
         }
-        catch(const LoadError &e)
+        catch(const the_seed::LoadError &e)
         {
             failure.reason = e.ReasonGet();
             failure.message = e.what();
@@ -202,7 +202,7 @@ namespace
 
     Failure TextFails(Scene &scene, const std::string &text)
     {
-        JSONLoader loader(scene.world, scene.loader);
+        the_seed::JSONLoader loader(scene.world, scene.loader);
         return Fails(scene, [&] { loader.StringParse(text); });
     }
 
@@ -219,11 +219,11 @@ TEST_CASE("JSONLoader reports a missing scene file as unopenable", "[JSONLoader]
 {
     Scene scene;
     seedtest::ScratchDir scratch;
-    JSONLoader loader(scene.world, scene.loader);
+    the_seed::JSONLoader loader(scene.world, scene.loader);
     const std::string file = scratch.File("absent.json");
 
     Failure failure = Fails(scene, [&] { loader.FileParse(file); });
-    REQUIRE(failure.reason == LoadError::Reason::SceneUnopenable);
+    REQUIRE(failure.reason == the_seed::LoadError::Reason::SceneUnopenable);
     REQUIRE(Contains(failure.message, "could not be opened"));
     REQUIRE(Contains(failure.message, file));
     REQUIRE(Contains(failure.message, "No such file or directory"));
@@ -234,10 +234,10 @@ TEST_CASE("JSONLoader reports a directory as unopenable", "[JSONLoader]")
 {
     Scene scene;
     seedtest::ScratchDir scratch;
-    JSONLoader loader(scene.world, scene.loader);
+    the_seed::JSONLoader loader(scene.world, scene.loader);
 
     Failure failure = Fails(scene, [&] { loader.FileParse(scratch.Path().string()); });
-    REQUIRE(failure.reason == LoadError::Reason::SceneUnopenable);
+    REQUIRE(failure.reason == the_seed::LoadError::Reason::SceneUnopenable);
     REQUIRE(Contains(failure.message, "it is a directory"));
     REQUIRE(Contains(failure.message, scratch.Path().string()));
     REQUIRE_FALSE(Contains(failure.message, "parse"));
@@ -257,7 +257,7 @@ TEST_CASE("JSONLoader reports an unreadable scene file as unopenable", "[JSONLoa
 
     Scene scene;
     seedtest::ScratchDir scratch;
-    JSONLoader loader(scene.world, scene.loader);
+    the_seed::JSONLoader loader(scene.world, scene.loader);
     const std::string file = scratch.File("locked.json");
     {
         std::ofstream out(file);
@@ -267,7 +267,7 @@ TEST_CASE("JSONLoader reports an unreadable scene file as unopenable", "[JSONLoa
 
     Failure failure = Fails(scene, [&] { loader.FileParse(file); });
     chmod(file.c_str(), 0600);
-    REQUIRE(failure.reason == LoadError::Reason::SceneUnopenable);
+    REQUIRE(failure.reason == the_seed::LoadError::Reason::SceneUnopenable);
     REQUIRE(Contains(failure.message, "Permission denied"));
     REQUIRE(Contains(failure.message, file));
     REQUIRE_FALSE(Contains(failure.message, "parse"));
@@ -278,12 +278,12 @@ TEST_CASE("JSONLoader reports an empty file and a syntax error as not understood
 {
     Scene scene;
     seedtest::ScratchDir scratch;
-    JSONLoader loader(scene.world, scene.loader);
+    the_seed::JSONLoader loader(scene.world, scene.loader);
 
     const std::string empty = scratch.File("empty.json");
     { std::ofstream out(empty); }
     Failure failure = Fails(scene, [&] { loader.FileParse(empty); });
-    REQUIRE(failure.reason == LoadError::Reason::SceneNotUnderstood);
+    REQUIRE(failure.reason == the_seed::LoadError::Reason::SceneNotUnderstood);
     REQUIRE(Contains(failure.message, "could not be understood"));
     REQUIRE(Contains(failure.message, empty));
 
@@ -293,13 +293,13 @@ TEST_CASE("JSONLoader reports an empty file and a syntax error as not understood
         out << "{\"entities\": [\n  {\"Handle\": \"a\",,}\n]}";
     }
     failure = Fails(scene, [&] { loader.FileParse(broken); });
-    REQUIRE(failure.reason == LoadError::Reason::SceneNotUnderstood);
+    REQUIRE(failure.reason == the_seed::LoadError::Reason::SceneNotUnderstood);
     REQUIRE(Contains(failure.message, broken));
     REQUIRE(Contains(failure.message, "line 2"));
     REQUIRE(Contains(failure.message, "column"));
 
     failure = TextFails(scene, "{\"entities\": [");
-    REQUIRE(failure.reason == LoadError::Reason::SceneNotUnderstood);
+    REQUIRE(failure.reason == the_seed::LoadError::Reason::SceneNotUnderstood);
     REQUIRE(Contains(failure.message, "line 1"));
     REQUIRE(Contains(failure.message, "column"));
 }
@@ -308,7 +308,7 @@ TEST_CASE("JSONLoader names the scene text for a string", "[JSONLoader]")
 {
     Scene scene;
     Failure failure = TextFails(scene, "not json");
-    REQUIRE(failure.reason == LoadError::Reason::SceneNotUnderstood);
+    REQUIRE(failure.reason == the_seed::LoadError::Reason::SceneNotUnderstood);
     REQUIRE(Contains(failure.message, "scene text"));
 }
 
@@ -319,28 +319,28 @@ TEST_CASE("JSONLoader reports structure errors as not understood", "[JSONLoader]
     SECTION("entities is missing")
     {
         Failure failure = TextFails(scene, "{}");
-        REQUIRE(failure.reason == LoadError::Reason::SceneNotUnderstood);
+        REQUIRE(failure.reason == the_seed::LoadError::Reason::SceneNotUnderstood);
         REQUIRE(Contains(failure.message, "entities"));
     }
 
     SECTION("entities is not an array")
     {
         Failure failure = TextFails(scene, R"({"entities": {"a": 1}})");
-        REQUIRE(failure.reason == LoadError::Reason::SceneNotUnderstood);
+        REQUIRE(failure.reason == the_seed::LoadError::Reason::SceneNotUnderstood);
         REQUIRE(Contains(failure.message, "\"entities\" must be an array"));
     }
 
     SECTION("an entity is not an object")
     {
         Failure failure = TextFails(scene, R"({"entities": [{"Handle": "a", "Components": {}}, 5]})");
-        REQUIRE(failure.reason == LoadError::Reason::SceneNotUnderstood);
+        REQUIRE(failure.reason == the_seed::LoadError::Reason::SceneNotUnderstood);
         REQUIRE(Contains(failure.message, "entity 1"));
     }
 
     SECTION("Handle is missing")
     {
         Failure failure = TextFails(scene, R"({"entities": [{"Components": {}}]})");
-        REQUIRE(failure.reason == LoadError::Reason::SceneNotUnderstood);
+        REQUIRE(failure.reason == the_seed::LoadError::Reason::SceneNotUnderstood);
         REQUIRE(Contains(failure.message, "entity 0"));
         REQUIRE(Contains(failure.message, "\"Handle\" must be a non-empty string"));
     }
@@ -348,7 +348,7 @@ TEST_CASE("JSONLoader reports structure errors as not understood", "[JSONLoader]
     SECTION("Handle is empty")
     {
         Failure failure = TextFails(scene, R"({"entities": [{"Handle": "", "Components": {}}]})");
-        REQUIRE(failure.reason == LoadError::Reason::SceneNotUnderstood);
+        REQUIRE(failure.reason == the_seed::LoadError::Reason::SceneNotUnderstood);
         REQUIRE(Contains(failure.message, "entity 0"));
         REQUIRE(Contains(failure.message, "\"Handle\" must be a non-empty string"));
     }
@@ -356,7 +356,7 @@ TEST_CASE("JSONLoader reports structure errors as not understood", "[JSONLoader]
     SECTION("Components is missing")
     {
         Failure failure = TextFails(scene, R"({"entities": [{"Handle": "a"}]})");
-        REQUIRE(failure.reason == LoadError::Reason::SceneNotUnderstood);
+        REQUIRE(failure.reason == the_seed::LoadError::Reason::SceneNotUnderstood);
         REQUIRE(Contains(failure.message, "entity 0"));
         REQUIRE(Contains(failure.message, "\"a\""));
         REQUIRE(Contains(failure.message, "Components"));
@@ -365,7 +365,7 @@ TEST_CASE("JSONLoader reports structure errors as not understood", "[JSONLoader]
     SECTION("Components is not an object")
     {
         Failure failure = TextFails(scene, R"({"entities": [{"Handle": "a", "Components": []}]})");
-        REQUIRE(failure.reason == LoadError::Reason::SceneNotUnderstood);
+        REQUIRE(failure.reason == the_seed::LoadError::Reason::SceneNotUnderstood);
         REQUIRE(Contains(failure.message, "entity 0"));
         REQUIRE(Contains(failure.message, "\"a\""));
         REQUIRE(Contains(failure.message, "Components"));
@@ -381,7 +381,7 @@ TEST_CASE("JSONLoader reports structure errors as not understood", "[JSONLoader]
         nlohmann::json scenejson;
         scenejson["entities"] = nlohmann::json::array({good, nlohmann::json::object({{"Handle", "bad"}})});
         Failure failure = TextFails(scene, scenejson.dump());
-        REQUIRE(failure.reason == LoadError::Reason::SceneNotUnderstood);
+        REQUIRE(failure.reason == the_seed::LoadError::Reason::SceneNotUnderstood);
         REQUIRE(Contains(failure.message, "entity 1"));
         REQUIRE_FALSE(scene.world->Entities.contains("good"));
     }
@@ -397,7 +397,7 @@ TEST_CASE("JSONLoader reports a plugin failure with the entity and the component
         entity["Handle"] = "hero";
         entity["Components"]["nosuchplugin"] = nlohmann::json::object();
         Failure failure = TextFails(scene, EntityScene(entity));
-        REQUIRE(failure.reason == LoadError::Reason::SceneComponentFailed);
+        REQUIRE(failure.reason == the_seed::LoadError::Reason::SceneComponentFailed);
         REQUIRE(Contains(failure.message, "hero"));
         REQUIRE(Contains(failure.message, "nosuchplugin"));
         REQUIRE(Contains(failure.message, "not found"));
@@ -408,7 +408,7 @@ TEST_CASE("JSONLoader reports a plugin failure with the entity and the component
         nlohmann::json config;
         config["null"] = true;
         Failure failure = TextFails(scene, scene.text("hero", config));
-        REQUIRE(failure.reason == LoadError::Reason::SceneComponentFailed);
+        REQUIRE(failure.reason == the_seed::LoadError::Reason::SceneComponentFailed);
         REQUIRE(Contains(failure.message, "hero"));
         REQUIRE(Contains(failure.message, "testmodule"));
         REQUIRE(Contains(failure.message, "produced no object"));
@@ -419,7 +419,7 @@ TEST_CASE("JSONLoader reports a plugin failure with the entity and the component
         nlohmann::json config;
         config["type"] = "";
         Failure failure = TextFails(scene, scene.text("hero", config));
-        REQUIRE(failure.reason == LoadError::Reason::SceneComponentFailed);
+        REQUIRE(failure.reason == the_seed::LoadError::Reason::SceneComponentFailed);
         REQUIRE(Contains(failure.message, "hero"));
         REQUIRE(Contains(failure.message, "testmodule"));
         REQUIRE(Contains(failure.message, "component type is empty"));
@@ -438,7 +438,7 @@ TEST_CASE("JSONLoader reports a plugin failure with the entity and the component
         nlohmann::json scenejson;
         scenejson["entities"] = nlohmann::json::array({good, bad});
         Failure failure = TextFails(scene, scenejson.dump());
-        REQUIRE(failure.reason == LoadError::Reason::SceneComponentFailed);
+        REQUIRE(failure.reason == the_seed::LoadError::Reason::SceneComponentFailed);
         REQUIRE(Contains(failure.message, "bad"));
         REQUIRE_FALSE(scene.world->Entities.contains("good"));
     }
@@ -447,7 +447,7 @@ TEST_CASE("JSONLoader reports a plugin failure with the entity and the component
 TEST_CASE("JSONLoader accepts an explicit empty entity list and adds nothing", "[JSONLoader]")
 {
     Scene scene;
-    JSONLoader loader(scene.world, scene.loader);
+    the_seed::JSONLoader loader(scene.world, scene.loader);
     const Counts before(scene.world);
 
     REQUIRE_NOTHROW(loader.StringParse(R"({"entities": []})"));
@@ -458,7 +458,7 @@ TEST_CASE("JSONLoader loads a good scene file", "[JSONLoader]")
 {
     Scene scene;
     seedtest::ScratchDir scratch;
-    JSONLoader loader(scene.world, scene.loader);
+    the_seed::JSONLoader loader(scene.world, scene.loader);
     nlohmann::json config;
     config["value"] = 5;
     const std::string file = scratch.File("good.json");

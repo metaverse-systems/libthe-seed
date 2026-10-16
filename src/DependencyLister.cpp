@@ -16,6 +16,9 @@
 #include <system_error>
 #include <vector>
 
+namespace the_seed
+{
+
 namespace {
 namespace fs = std::filesystem;
 using the_seed::internal::DependencyGraph;
@@ -486,3 +489,4 @@ DependencyResult DependencyLister::ListDependencies(
 
     return result;
 }
+} // namespace the_seed

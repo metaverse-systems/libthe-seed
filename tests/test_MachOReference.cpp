@@ -342,7 +342,7 @@ TEST_CASE("reference: programs signed with the known inputs match the recorded a
         const std::string path = ms::CopyFixture(scratch, name);
         const mr::Bytes original = ms::ReadAll(path);
 
-        const MachOSigner::PreparedSignature prepared = ms::SignWithKnownInputs(path);
+        const the_seed::MachOSigner::PreparedSignature prepared = ms::SignWithKnownInputs(path);
         const mr::Bytes finished = ms::ReadAll(path);
         if(write_to != nullptr && write_to[0] != '\0')
         {

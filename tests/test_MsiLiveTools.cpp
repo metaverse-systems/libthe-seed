@@ -217,10 +217,10 @@ TEST_CASE("the packages recorded as known answers are written and read back", "[
         INFO("sample " << pair.sample << " with the signature of " << pair.blob);
         const Bytes blob = msi::SampleSignature(pair.blob);
         const std::string path = msi::CopySample(scratch, pair.sample);
-        REQUIRE_NOTHROW(MsiSigner::EmbedSignature(path, blob, true));
-        CHECK(MsiSigner::ExtractSignature(path) == std::optional<Bytes>(blob));
-        CHECK(MsiSigner::CheckSignature(path).state == MsiSigner::SignatureState::Matches);
-        CHECK(msi::ToHexString(MsiSigner::ComputeAuthenticodeDigest(path).digest) == msi::RecordedFingerprint(pair.sample));
+        REQUIRE_NOTHROW(the_seed::MsiSigner::EmbedSignature(path, blob, true));
+        CHECK(the_seed::MsiSigner::ExtractSignature(path) == std::optional<Bytes>(blob));
+        CHECK(the_seed::MsiSigner::CheckSignature(path).state == the_seed::MsiSigner::SignatureState::Matches);
+        CHECK(msi::ToHexString(the_seed::MsiSigner::ComputeAuthenticodeDigest(path).digest) == msi::RecordedFingerprint(pair.sample));
         if(write_to != nullptr && write_to[0] != '\0')
         {
             std::filesystem::copy_file(path, std::filesystem::path(write_to) / (std::string(pair.sample) + "--" + pair.blob + ".msi"),
@@ -244,8 +244,8 @@ TEST_CASE("osslsigncode reads the signature the library writes in every size cla
         {
             INFO("sample " << sample << " signature of " << blob.label);
             const std::string path = msi::CopySample(scratch, sample);
-            REQUIRE_NOTHROW(MsiSigner::EmbedSignature(path, blob.bytes));
-            REQUIRE(MsiSigner::ExtractSignature(path) == std::optional<Bytes>(blob.bytes));
+            REQUIRE_NOTHROW(the_seed::MsiSigner::EmbedSignature(path, blob.bytes));
+            REQUIRE(the_seed::MsiSigner::ExtractSignature(path) == std::optional<Bytes>(blob.bytes));
             RequireOsslsigncodeAccepts(path, blob.bytes, msi::RecordedFingerprint(sample), scratch);
         }
     }
@@ -265,16 +265,16 @@ TEST_CASE("osslsigncode reads the signature after replacing and after strip then
     for(const std::size_t index : {0u, 5u, 1u, 3u, 0u})
     {
         INFO("signature of " << blobs[index].label);
-        REQUIRE_NOTHROW(MsiSigner::EmbedSignature(path, blobs[index].bytes));
+        REQUIRE_NOTHROW(the_seed::MsiSigner::EmbedSignature(path, blobs[index].bytes));
         RequireOsslsigncodeAccepts(path, blobs[index].bytes, msi::RecordedFingerprint(sample), scratch);
     }
-    REQUIRE(MsiSigner::StripSignature(path));
+    REQUIRE(the_seed::MsiSigner::StripSignature(path));
     {
         const seedtest::ToolRun verify = seedtest::RunCommand("osslsigncode verify -in " + seedtest::ShellQuote(path));
         INFO(verify.output);
         CHECK(verify.output.find("no signature") != std::string::npos);
     }
-    REQUIRE_NOTHROW(MsiSigner::EmbedSignature(path, blobs[0].bytes));
+    REQUIRE_NOTHROW(the_seed::MsiSigner::EmbedSignature(path, blobs[0].bytes));
     RequireOsslsigncodeAccepts(path, blobs[0].bytes, msi::RecordedFingerprint(sample), scratch);
 }
 
@@ -301,7 +301,7 @@ TEST_CASE("osslsigncode is checked on packages it wrote and on the one an earlie
         CHECK(HasStructureError(verify.output));
         // After the library replaced the signature the same program reads it.
         const Bytes blob = msi::SampleSignature("tiny-osslsig-small.msi");
-        REQUIRE_NOTHROW(MsiSigner::EmbedSignature(path, blob));
+        REQUIRE_NOTHROW(the_seed::MsiSigner::EmbedSignature(path, blob));
         RequireOsslsigncodeAccepts(path, blob, msi::RecordedFingerprint("legacy-the-seed-0.6.0.msi"), scratch);
     }
 }
@@ -351,7 +351,7 @@ TEST_CASE("Wine finds the signature stream by name in packages the library write
             const NamedBlob blob = Blobs(pick.sample)[index];
             INFO("sample " << pick.sample << " signature of " << blob.label);
             const std::string path = msi::CopySample(scratch, pick.sample);
-            REQUIRE_NOTHROW(MsiSigner::EmbedSignature(path, blob.bytes));
+            REQUIRE_NOTHROW(the_seed::MsiSigner::EmbedSignature(path, blob.bytes));
             const seedtest::ToolRun run = RunProbe(scratch, path, blob.bytes);
             INFO("msi-open.exe:\n" << run.output);
             CHECK(run.status == 0);
@@ -377,14 +377,14 @@ TEST_CASE("Wine finds the signature stream after strip then sign and in a packag
         INFO(run.output);
         CHECK(run.status == 0);
     }
-    REQUIRE(MsiSigner::StripSignature(path));
+    REQUIRE(the_seed::MsiSigner::StripSignature(path));
     {
         // Nothing to find after strip: the probe reports the stream missing.
         const seedtest::ToolRun run = RunProbe(scratch, path, blobs[0].bytes);
         INFO(run.output);
         CHECK(run.status == 2);
     }
-    REQUIRE_NOTHROW(MsiSigner::EmbedSignature(path, blobs[2].bytes));
+    REQUIRE_NOTHROW(the_seed::MsiSigner::EmbedSignature(path, blobs[2].bytes));
     {
         const seedtest::ToolRun run = RunProbe(scratch, path, blobs[2].bytes);
         INFO(run.output);
@@ -410,7 +410,7 @@ TEST_CASE("Wine does not find the signature of a package an earlier version sign
         CHECK(run.output.find("0x80030002") != std::string::npos);
     }
     const Bytes blob = cfb::PatternBytes(1426, 4);
-    REQUIRE_NOTHROW(MsiSigner::EmbedSignature(path, blob));
+    REQUIRE_NOTHROW(the_seed::MsiSigner::EmbedSignature(path, blob));
     {
         const seedtest::ToolRun run = RunProbe(scratch, path, blob);
         INFO(run.output);

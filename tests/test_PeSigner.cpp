@@ -25,7 +25,7 @@ TEST_CASE("PeSigner::ComputeAuthenticodeDigest computes valid digest", "[PeSigne
     auto fixturePath = seedtest::FixturePath("tiny.exe");
     REQUIRE(std::filesystem::exists(fixturePath));
 
-    auto result = PeSigner::ComputeAuthenticodeDigest(fixturePath);
+    auto result = the_seed::PeSigner::ComputeAuthenticodeDigest(fixturePath);
 
     // Digest should be 32 bytes (SHA-256)
     REQUIRE(result.digest.size() == 32);
@@ -34,7 +34,7 @@ TEST_CASE("PeSigner::ComputeAuthenticodeDigest computes valid digest", "[PeSigne
     CHECK(result.is_pe32_plus == true);
 
     // Digest should be deterministic
-    auto result2 = PeSigner::ComputeAuthenticodeDigest(fixturePath);
+    auto result2 = the_seed::PeSigner::ComputeAuthenticodeDigest(fixturePath);
     CHECK(result.digest == result2.digest);
 }
 
@@ -43,7 +43,7 @@ TEST_CASE("PeSigner::HasEmbeddedSignature returns false for unsigned PE", "[PeSi
     auto fixturePath = seedtest::FixturePath("tiny.exe");
     REQUIRE(std::filesystem::exists(fixturePath));
 
-    CHECK(PeSigner::HasEmbeddedSignature(fixturePath) == false);
+    CHECK(the_seed::PeSigner::HasEmbeddedSignature(fixturePath) == false);
 }
 
 TEST_CASE("PeSigner::EmbedSignature and ExtractSignature round-trip", "[PeSigner]")
@@ -52,7 +52,7 @@ TEST_CASE("PeSigner::EmbedSignature and ExtractSignature round-trip", "[PeSigner
     auto tempPath = CopyFixture(scratch, "tiny.exe");
 
     // Initially unsigned
-    REQUIRE(PeSigner::HasEmbeddedSignature(tempPath) == false);
+    REQUIRE(the_seed::PeSigner::HasEmbeddedSignature(tempPath) == false);
 
     // Create a fake PKCS#7 blob (not valid CMS, just for round-trip testing)
     std::vector<std::uint8_t> fakePkcs7(128);
@@ -60,13 +60,13 @@ TEST_CASE("PeSigner::EmbedSignature and ExtractSignature round-trip", "[PeSigner
         fakePkcs7[i] = static_cast<std::uint8_t>(i & 0xFF);
 
     // Embed signature
-    PeSigner::EmbedSignature(tempPath, fakePkcs7);
+    the_seed::PeSigner::EmbedSignature(tempPath, fakePkcs7);
 
     // Now should have embedded signature
-    CHECK(PeSigner::HasEmbeddedSignature(tempPath) == true);
+    CHECK(the_seed::PeSigner::HasEmbeddedSignature(tempPath) == true);
 
     // Extract and verify round-trip
-    auto extracted = PeSigner::ExtractSignature(tempPath);
+    auto extracted = the_seed::PeSigner::ExtractSignature(tempPath);
     REQUIRE(extracted.has_value());
     CHECK(extracted->size() == fakePkcs7.size());
     CHECK(*extracted == fakePkcs7);
@@ -81,17 +81,17 @@ TEST_CASE("PeSigner::StripSignature removes embedded signature", "[PeSigner]")
 
     // Embed a fake signature first
     std::vector<std::uint8_t> fakePkcs7(64, 0xAA);
-    PeSigner::EmbedSignature(tempPath, fakePkcs7);
-    REQUIRE(PeSigner::HasEmbeddedSignature(tempPath) == true);
+    the_seed::PeSigner::EmbedSignature(tempPath, fakePkcs7);
+    REQUIRE(the_seed::PeSigner::HasEmbeddedSignature(tempPath) == true);
 
     // Strip it
-    PeSigner::StripSignature(tempPath);
+    the_seed::PeSigner::StripSignature(tempPath);
 
     // Should be unsigned again
-    CHECK(PeSigner::HasEmbeddedSignature(tempPath) == false);
+    CHECK(the_seed::PeSigner::HasEmbeddedSignature(tempPath) == false);
 
     // Extract should return nullopt
-    auto extracted = PeSigner::ExtractSignature(tempPath);
+    auto extracted = the_seed::PeSigner::ExtractSignature(tempPath);
     CHECK_FALSE(extracted.has_value());
 
     // Clean up
@@ -102,8 +102,8 @@ TEST_CASE("PeSigner throws on non-PE file", "[PeSigner]")
     auto fixturePath = seedtest::FixturePath("plain.txt");
     REQUIRE(std::filesystem::exists(fixturePath));
 
-    CHECK_THROWS_AS(PeSigner::ComputeAuthenticodeDigest(fixturePath), std::runtime_error);
-    CHECK_THROWS_AS(PeSigner::HasEmbeddedSignature(fixturePath), std::runtime_error);
+    CHECK_THROWS_AS(the_seed::PeSigner::ComputeAuthenticodeDigest(fixturePath), std::runtime_error);
+    CHECK_THROWS_AS(the_seed::PeSigner::HasEmbeddedSignature(fixturePath), std::runtime_error);
 }
 
 TEST_CASE("PeSigner::ComputeAuthenticodeDigest changes after embed", "[PeSigner]")
@@ -112,15 +112,15 @@ TEST_CASE("PeSigner::ComputeAuthenticodeDigest changes after embed", "[PeSigner]
     auto tempPath = CopyFixture(scratch, "tiny.exe");
 
     // Get digest before signing
-    auto digestBefore = PeSigner::ComputeAuthenticodeDigest(tempPath);
+    auto digestBefore = the_seed::PeSigner::ComputeAuthenticodeDigest(tempPath);
 
     // Embed a fake signature
     std::vector<std::uint8_t> fakePkcs7(128, 0xBB);
-    PeSigner::EmbedSignature(tempPath, fakePkcs7);
+    the_seed::PeSigner::EmbedSignature(tempPath, fakePkcs7);
 
     // Get digest after signing — should be the same because Authenticode
     // digest excludes the certificate data and DD entry 4
-    auto digestAfter = PeSigner::ComputeAuthenticodeDigest(tempPath);
+    auto digestAfter = the_seed::PeSigner::ComputeAuthenticodeDigest(tempPath);
     CHECK(digestBefore.digest == digestAfter.digest);
 
 }

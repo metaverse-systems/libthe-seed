@@ -7,6 +7,9 @@
 #include <algorithm>
 #include <stdexcept>
 
+namespace the_seed
+{
+
 namespace {
 
 using the_seed::internal::ByteSpan;
@@ -127,3 +130,4 @@ std::vector<std::string> MachOParser::ListDependencies(const std::string &file_p
         return deps;
     });
 }
+} // namespace the_seed

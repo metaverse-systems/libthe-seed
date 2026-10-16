@@ -156,7 +156,7 @@ Dynamically loads shared libraries that provide ECS components.
 ```cpp
 #include <libthe-seed/ComponentLoader.hpp>
 
-ComponentLoader loader;
+the_seed::ComponentLoader loader;
 loader.PathAdd("/usr/lib/the-seed/components");
 
 auto component = loader.Create("org/my-component");
@@ -176,7 +176,7 @@ Dynamically loads shared libraries that provide ECS systems. Same API pattern as
 ```cpp
 #include <libthe-seed/SystemLoader.hpp>
 
-SystemLoader loader;
+the_seed::SystemLoader loader;
 loader.PathAdd("/usr/lib/the-seed/systems");
 
 auto system = loader.Create("org/my-system");
@@ -190,7 +190,7 @@ Working inside a source tree, the loaders find the build output of sibling libra
 ```cpp
 #include <libthe-seed/ComponentLoader.hpp>
 
-ComponentLoader loader;
+the_seed::ComponentLoader loader;
 loader.PathAdd("/usr/lib/the-seed/components");
 
 for(const auto &location : loader.SearchPathsGet("org/my-component"))
@@ -206,7 +206,7 @@ Loads resource paks (bundled asset files).
 ```cpp
 #include <libthe-seed/PakLoader.hpp>
 
-PakLoader loader;
+the_seed::PakLoader loader;
 loader.PathAdd("/usr/share/the-seed/paks");
 
 // Load all resources from a pak
@@ -228,7 +228,7 @@ A request reads what it is asked for and no more:
 The map can be handed to a container as it is (`ecs::Container::Resources` shares the resources, no copy). A request that names a resource the pak lacks is told apart from a damaged pak:
 
 ```cpp
-PakLoader paks;
+the_seed::PakLoader paks;
 paks.PathAdd(install_dir + "/paks");
 
 try
@@ -237,13 +237,13 @@ try
                                                            // then only these two resources
     world->Resources(some);                                // shared, no copy (libecs-cpp)
 }
-catch(const LoadError &e)
+catch(const the_seed::LoadError &e)
 {
-    if(e.ReasonGet() == LoadError::Reason::ResourceMissing)
+    if(e.ReasonGet() == the_seed::LoadError::Reason::ResourceMissing)
     {
         // e.MissingGet() lists the requested names the pak lacks; nothing was returned
     }
-    else if(e.ReasonGet() == LoadError::Reason::NotLoadable)
+    else if(e.ReasonGet() == the_seed::LoadError::Reason::NotLoadable)
     {
         // e.DetailGet() starts with "damaged:" for a broken pak, else the system's reason
     }
@@ -253,7 +253,7 @@ catch(const LoadError &e)
 `ResourcePak` reads one pak file by path. Its constructor opens the file, checks the description and remembers it; no resource is read until `Load` or `LoadAll` is called, and `ResourceNames()` answers from the remembered description without touching the file. Like `PakLoader`, it opens the file for each read, checks it against what it remembered, and reads only the resource asked for. `LoadAll(container)` reads every resource of one version of the file and then adds them: if anything fails, nothing is added. Its failures are `LoadError` too.
 
 ```cpp
-ResourcePak pak(install_dir + "/paks/art.pak");
+the_seed::ResourcePak pak(install_dir + "/paks/art.pak");
 for(const auto &name : pak.ResourceNames())
 {
     ecs::Resource resource = pak.Load(name);
@@ -318,10 +318,10 @@ Parses JSON scene files into an ECS container (made by an `ecs::Manager`), using
 
 ecs::Manager manager;
 ecs::Container *container = manager.Container("world");
-ComponentLoader comp_loader;
+the_seed::ComponentLoader comp_loader;
 comp_loader.PathAdd("/usr/lib/the-seed/components");
 
-JSONLoader json(container, comp_loader);
+the_seed::JSONLoader json(container, comp_loader);
 json.FileParse("scene.json");
 // The container, json and comp_loader may be destroyed in any order.
 // Or parse from a string:
@@ -345,7 +345,7 @@ All loader instances are safe to use from several threads: any method can be cal
 For paks, concurrent requests for one unchanged file check its description once and share the result; requests for different resources of it read them at the same time. No loader lock is held while the file system is searched, a pak is opened and checked, or resources are read. One `ResourcePak` may be used from several threads, and copies of it share the remembered description; adding to an `ecs::Container` is still limited to the container's own thread, as libecs-cpp requires.
 
 ```cpp
-ComponentLoader loader;
+the_seed::ComponentLoader loader;
 loader.PathAdd("/usr/lib/the-seed/components");
 
 std::thread t1([&]() { auto c = loader.Create("org/comp-a"); });
@@ -371,8 +371,8 @@ Every loader throws `LoadError` (`#include <libthe-seed/LoadError.hpp>`, in the 
 ```cpp
 try {
     auto component = loader.Create("nonexistent/component");
-} catch (const LoadError &e) {
-    if(e.ReasonGet() == LoadError::Reason::NotFound)
+} catch (const the_seed::LoadError &e) {
+    if(e.ReasonGet() == the_seed::LoadError::Reason::NotFound)
     {
         // e.what() lists every location that was searched
     }
@@ -403,6 +403,21 @@ On Windows, a plugin is opened by absolute path with its own folder first in the
 
 ### Migrating from earlier versions
 
+* Every public class is now in the `the_seed` namespace: `the_seed::ComponentLoader`, `the_seed::SystemLoader`, `the_seed::JSONLoader`, `the_seed::PakLoader`, `the_seed::ResourcePak`, `the_seed::LoadError`, `the_seed::LibraryLoader`, `the_seed::DependencyLister` (with `DependencyResult` and `LibraryError`), `the_seed::MachOParser`, `the_seed::PeSigner`, `the_seed::MachOSigner` and `the_seed::MsiSigner`. The old global names clashed with names in applications and platform headers. There are two ways to move:
+  * Rename. Write `the_seed::` before each name, or add a using-declaration at your own scope (`using the_seed::ComponentLoader;`).
+  * Compile with the switch. Define `THE_SEED_LEGACY_NAMES` before the first `#include <libthe-seed/...>` (or with `-DTHE_SEED_LEGACY_NAMES`) and the former global names exist again as deprecated aliases (`using ComponentLoader [[deprecated("use the_seed::ComponentLoader")]] = the_seed::ComponentLoader;`). The program compiles with a deprecation warning for each use, naming the new name. The aliases are kept until the next incompatible release after the one that introduces the prefix, and they bring back the risk of clashing with other global names, so use the switch only while moving.
+
+  ```cpp
+  #define THE_SEED_LEGACY_NAMES
+  #include <libthe-seed/ComponentLoader.hpp>
+
+  ComponentLoader loader;   // warning: 'ComponentLoader' is deprecated: use the_seed::ComponentLoader
+  ```
+
+  Every symbol of the library has a new name, so applications must be rebuilt; a program built against the old library fails to start with an unresolved-symbol error, never silently. Plugins built before the change keep loading unchanged, because a plugin exports only `create_component` or `create_system` and does not link this library; a plugin that links this library's classes must be rebuilt.
+* Only the classes listed above are exported from the shared library. Helpers that were exported by accident are no longer visible.
+* `LibraryDeleter` is removed. Code that used it must use its own deleter.
+* Code that relied on `<windows.h>` or `<dlfcn.h>` arriving through `LibraryLoader.hpp` must include them itself.
 * The working directory is no longer searched. A program that relied on it now sees, for example:
 
   ```

@@ -35,7 +35,7 @@ using seedtest::msi::Bytes;
 namespace sm = seedtest::malformed;
 namespace cfb = seedtest::cfb;
 namespace msi = seedtest::msi;
-using State = MsiSigner::SignatureState;
+using State = the_seed::MsiSigner::SignatureState;
 
 // An unsigned sample, and a sample the other tool signed for its content.
 struct Pair
@@ -96,7 +96,7 @@ TEST_CASE("the check reports no signature for an unsigned package", "[MsiCheckSi
         INFO("sample " << sample);
         const Bytes original = sm::LoadSample(sample);
         const std::string path = msi::CopySample(scratch, sample);
-        const MsiSigner::SignatureCheck check = MsiSigner::CheckSignature(path);
+        const the_seed::MsiSigner::SignatureCheck check = the_seed::MsiSigner::CheckSignature(path);
         CHECK(check.state == State::None);
         CHECK(check.stored_digest.empty());
         CHECK(msi::ToHexString(check.computed_digest) == msi::RecordedFingerprint(sample));
@@ -112,7 +112,7 @@ TEST_CASE("the check reports no signature for a signature of size zero", "[MsiCh
     seedtest::ScratchDir scratch("msi-check-zero");
     const Bytes bytes = cfb::Build(root);
     const std::string path = sm::WriteScratch(scratch, "zero.msi", bytes);
-    const MsiSigner::SignatureCheck check = MsiSigner::CheckSignature(path);
+    const the_seed::MsiSigner::SignatureCheck check = the_seed::MsiSigner::CheckSignature(path);
     CHECK(check.state == State::None);
     CHECK(msi::ToHexString(check.computed_digest) == msi::RecordedFingerprint("tiny.msi"));
     sm::RequireUnchanged(path, bytes);
@@ -125,8 +125,8 @@ TEST_CASE("the check reports an unreadable signature for a package an old versio
     seedtest::ScratchDir scratch("msi-check-legacy");
     const Bytes original = sm::LoadSample("legacy-the-seed-0.6.0.msi");
     const std::string path = msi::CopySample(scratch, "legacy-the-seed-0.6.0.msi");
-    MsiSigner::SignatureCheck check;
-    REQUIRE_NOTHROW(check = MsiSigner::CheckSignature(path));
+    the_seed::MsiSigner::SignatureCheck check;
+    REQUIRE_NOTHROW(check = the_seed::MsiSigner::CheckSignature(path));
     CHECK(check.state == State::Unreadable);
     CHECK_FALSE(check.detail.empty());
     CHECK(msi::ToHexString(check.computed_digest) == msi::RecordedFingerprint("legacy-the-seed-0.6.0.msi"));
@@ -142,13 +142,13 @@ TEST_CASE("the check reports a match for a signature that holds the fingerprint 
         {
             INFO("sample " << pair.signed_sample);
             const std::string path = msi::CopySample(scratch, pair.signed_sample);
-            const MsiSigner::SignatureCheck check = MsiSigner::CheckSignature(path);
+            const the_seed::MsiSigner::SignatureCheck check = the_seed::MsiSigner::CheckSignature(path);
             CHECK(check.state == State::Matches);
             CHECK(msi::ToHexString(check.stored_digest) == msi::RecordedFingerprint(pair.signed_sample));
             CHECK(check.stored_digest == check.computed_digest);
         }
         const std::string path = msi::CopySample(scratch, "two-neighbours.msi");
-        CHECK(MsiSigner::CheckSignature(path).state == State::Matches);
+        CHECK(the_seed::MsiSigner::CheckSignature(path).state == State::Matches);
     }
     SECTION("the same signature embedded by the library")
     {
@@ -157,12 +157,12 @@ TEST_CASE("the check reports a match for a signature that holds the fingerprint 
             INFO("package " << pair.unsigned_sample << " with the signature of " << pair.signed_sample);
             const Bytes blob = msi::SampleSignature(pair.signed_sample);
             const std::string path = msi::CopySample(scratch, pair.unsigned_sample);
-            REQUIRE_NOTHROW(MsiSigner::EmbedSignature(path, blob));
-            const MsiSigner::SignatureCheck check = MsiSigner::CheckSignature(path);
+            REQUIRE_NOTHROW(the_seed::MsiSigner::EmbedSignature(path, blob));
+            const the_seed::MsiSigner::SignatureCheck check = the_seed::MsiSigner::CheckSignature(path);
             CHECK(check.state == State::Matches);
             CHECK(msi::ToHexString(check.stored_digest) == msi::RecordedFingerprint(pair.unsigned_sample));
             CHECK(check.stored_digest == check.computed_digest);
-            CHECK(check.computed_digest == MsiSigner::ComputeAuthenticodeDigest(path).digest);
+            CHECK(check.computed_digest == the_seed::MsiSigner::ComputeAuthenticodeDigest(path).digest);
         }
     }
 }
@@ -176,8 +176,8 @@ TEST_CASE("the check reports a mismatch for a signature with another fingerprint
         const std::string recorded = msi::RecordedFingerprint(pair.unsigned_sample);
         const Bytes blob = WithWrongFingerprint(msi::SampleSignature(pair.signed_sample), recorded);
         const std::string path = msi::CopySample(scratch, pair.unsigned_sample);
-        REQUIRE_NOTHROW(MsiSigner::EmbedSignature(path, blob));
-        const MsiSigner::SignatureCheck check = MsiSigner::CheckSignature(path);
+        REQUIRE_NOTHROW(the_seed::MsiSigner::EmbedSignature(path, blob));
+        const the_seed::MsiSigner::SignatureCheck check = the_seed::MsiSigner::CheckSignature(path);
         CHECK(check.state == State::Mismatch);
         CHECK(check.stored_digest.size() == 32);
         CHECK(check.stored_digest != check.computed_digest);
@@ -196,8 +196,8 @@ TEST_CASE("the check reports a mismatch when a stream is changed after signing",
     {
         INFO("package " << pair.unsigned_sample);
         const std::string path = msi::CopySample(scratch, pair.unsigned_sample);
-        REQUIRE_NOTHROW(MsiSigner::EmbedSignature(path, msi::SampleSignature(pair.signed_sample)));
-        REQUIRE(MsiSigner::CheckSignature(path).state == State::Matches);
+        REQUIRE_NOTHROW(the_seed::MsiSigner::EmbedSignature(path, msi::SampleSignature(pair.signed_sample)));
+        REQUIRE(the_seed::MsiSigner::CheckSignature(path).state == State::Matches);
 
         // Change one byte of the first non-empty stream of the package (not the signature).
         Bytes bytes = sm::ReadAll(path);
@@ -215,14 +215,14 @@ TEST_CASE("the check reports a mismatch when a stream is changed after signing",
         bytes[at] ^= 0x01;
         const std::string tampered = sm::WriteScratch(scratch, "tampered.msi", bytes);
 
-        const MsiSigner::SignatureCheck check = MsiSigner::CheckSignature(tampered);
+        const the_seed::MsiSigner::SignatureCheck check = the_seed::MsiSigner::CheckSignature(tampered);
         CHECK(check.state == State::Mismatch);
         CHECK(msi::ToHexString(check.stored_digest) == msi::RecordedFingerprint(pair.unsigned_sample));
         CHECK(check.stored_digest != check.computed_digest);
         CHECK(msi::ToHexString(check.computed_digest) == cfb::Fingerprint(bytes));
         CHECK(check.detail.find("does not match") != std::string::npos);
         // Present and readable, but not a match: the signature is still there.
-        CHECK(MsiSigner::HasEmbeddedSignature(tampered));
+        CHECK(the_seed::MsiSigner::HasEmbeddedSignature(tampered));
         sm::RequireUnchanged(tampered, bytes);
     }
 }
@@ -248,10 +248,10 @@ TEST_CASE("the check reports an unreadable signature", "[MsiCheckSignature][unre
     {
         INFO(item.label);
         const std::string path = msi::CopySample(scratch, "tiny.msi");
-        REQUIRE_NOTHROW(MsiSigner::EmbedSignature(path, item.blob));
+        REQUIRE_NOTHROW(the_seed::MsiSigner::EmbedSignature(path, item.blob));
         const Bytes written = sm::ReadAll(path);
-        MsiSigner::SignatureCheck check;
-        REQUIRE_NOTHROW(check = MsiSigner::CheckSignature(path));
+        the_seed::MsiSigner::SignatureCheck check;
+        REQUIRE_NOTHROW(check = the_seed::MsiSigner::CheckSignature(path));
         CHECK(check.state == State::Unreadable);
         CHECK(check.stored_digest.empty());
         CHECK(msi::ToHexString(check.computed_digest) == msi::RecordedFingerprint("tiny.msi"));
@@ -275,8 +275,8 @@ TEST_CASE("the check reports an unreadable signature whose chain disagrees with 
         Bytes bytes = original;
         sm::PatchLE<std::uint64_t>(bytes, package.EntryOffset(*found) + 120, size);
         const std::string path = sm::WriteScratch(scratch, "chain.msi", bytes);
-        MsiSigner::SignatureCheck check;
-        REQUIRE_NOTHROW(check = MsiSigner::CheckSignature(path));
+        the_seed::MsiSigner::SignatureCheck check;
+        REQUIRE_NOTHROW(check = the_seed::MsiSigner::CheckSignature(path));
         CHECK(check.state == State::Unreadable);
         CHECK_FALSE(check.detail.empty());
         sm::RequireUnchanged(path, bytes);
@@ -286,12 +286,12 @@ TEST_CASE("the check reports an unreadable signature whose chain disagrees with 
 TEST_CASE("the check throws only for a package that cannot be read", "[MsiCheckSignature][package]")
 {
     seedtest::ScratchDir scratch("msi-check-package");
-    CHECK_THROWS_AS(MsiSigner::CheckSignature(seedtest::FixturePath("plain.txt")), std::runtime_error);
-    CHECK_THROWS_AS(MsiSigner::CheckSignature(scratch.File("absent.msi")), std::runtime_error);
+    CHECK_THROWS_AS(the_seed::MsiSigner::CheckSignature(seedtest::FixturePath("plain.txt")), std::runtime_error);
+    CHECK_THROWS_AS(the_seed::MsiSigner::CheckSignature(scratch.File("absent.msi")), std::runtime_error);
 
     const Bytes tiny = sm::LoadSample("tiny.msi");
     const std::string cut = sm::WriteScratch(scratch, "cut.msi", sm::Truncate(tiny, tiny.size() - 200));
-    CHECK_THROWS_AS(MsiSigner::CheckSignature(cut), std::runtime_error);
+    CHECK_THROWS_AS(the_seed::MsiSigner::CheckSignature(cut), std::runtime_error);
 
     // Two entries with one name: the package has no fingerprint.
     Bytes twins = tiny;
@@ -302,7 +302,7 @@ TEST_CASE("the check throws only for a package that cannot be read", "[MsiCheckS
         twins[second + i] = twins[first + i];
     }
     const std::string path = sm::WriteScratch(scratch, "twins.msi", twins);
-    CHECK_THROWS_AS(MsiSigner::CheckSignature(path), std::runtime_error);
+    CHECK_THROWS_AS(the_seed::MsiSigner::CheckSignature(path), std::runtime_error);
     sm::RequireUnchanged(path, twins);
 }
 
@@ -319,7 +319,7 @@ TEST_CASE("embedding with the digest check refuses a signature with another fing
 
         try
         {
-            MsiSigner::EmbedSignature(path, wrong, true);
+            the_seed::MsiSigner::EmbedSignature(path, wrong, true);
             FAIL("a signature with another fingerprint was embedded");
         }
         catch(const std::runtime_error &error)
@@ -335,9 +335,9 @@ TEST_CASE("embedding with the digest check refuses a signature with another fing
 
         // The same refusal when the package already holds a signature: it stays as it was.
         const Bytes good = msi::SampleSignature(pair.signed_sample);
-        REQUIRE_NOTHROW(MsiSigner::EmbedSignature(path, good, true));
+        REQUIRE_NOTHROW(the_seed::MsiSigner::EmbedSignature(path, good, true));
         const Bytes signed_bytes = sm::ReadAll(path);
-        CHECK_THROWS_AS(MsiSigner::EmbedSignature(path, wrong, true), std::runtime_error);
+        CHECK_THROWS_AS(the_seed::MsiSigner::EmbedSignature(path, wrong, true), std::runtime_error);
         sm::RequireUnchanged(path, signed_bytes);
     }
 }
@@ -350,7 +350,7 @@ TEST_CASE("embedding with the digest check refuses a signature it cannot read", 
     for(const Bytes &blob : {cfb::PatternBytes(300, 3), Bytes{0x30, 0x03, 0x02, 0x01, 0x00}, WithOtherAlgorithm(msi::SampleSignature("tiny-osslsig-small.msi"))})
     {
         INFO("blob of " << blob.size() << " bytes");
-        CHECK_THROWS_AS(MsiSigner::EmbedSignature(path, blob, true), std::runtime_error);
+        CHECK_THROWS_AS(the_seed::MsiSigner::EmbedSignature(path, blob, true), std::runtime_error);
         sm::RequireUnchanged(path, original);
     }
 }
@@ -364,12 +364,12 @@ TEST_CASE("embedding with the digest check accepts a signature that matches", "[
         const Bytes blob = msi::SampleSignature(pair.signed_sample);
         const std::string checked = msi::CopySample(scratch, pair.unsigned_sample, "checked.msi");
         const std::string plain = msi::CopySample(scratch, pair.unsigned_sample, "plain.msi");
-        REQUIRE_NOTHROW(MsiSigner::EmbedSignature(checked, blob, true));
-        REQUIRE_NOTHROW(MsiSigner::EmbedSignature(plain, blob));
+        REQUIRE_NOTHROW(the_seed::MsiSigner::EmbedSignature(checked, blob, true));
+        REQUIRE_NOTHROW(the_seed::MsiSigner::EmbedSignature(plain, blob));
         // The check changes nothing about what is written.
         CHECK(sm::ReadAll(checked) == sm::ReadAll(plain));
-        CHECK(MsiSigner::CheckSignature(checked).state == State::Matches);
-        const auto extracted = MsiSigner::ExtractSignature(checked);
+        CHECK(the_seed::MsiSigner::CheckSignature(checked).state == State::Matches);
+        const auto extracted = the_seed::MsiSigner::ExtractSignature(checked);
         REQUIRE(extracted.has_value());
         CHECK(*extracted == blob);
     }
@@ -380,19 +380,19 @@ TEST_CASE("embedding with two arguments accepts any non-empty signature", "[MsiC
     seedtest::ScratchDir scratch("msi-check-two");
     const std::string path = msi::CopySample(scratch, "tiny.msi");
     const Bytes garbage = cfb::PatternBytes(500, 8);
-    REQUIRE_NOTHROW(MsiSigner::EmbedSignature(path, garbage));
-    const auto extracted = MsiSigner::ExtractSignature(path);
+    REQUIRE_NOTHROW(the_seed::MsiSigner::EmbedSignature(path, garbage));
+    const auto extracted = the_seed::MsiSigner::ExtractSignature(path);
     REQUIRE(extracted.has_value());
     CHECK(*extracted == garbage);
-    CHECK(MsiSigner::CheckSignature(path).state == State::Unreadable);
+    CHECK(the_seed::MsiSigner::CheckSignature(path).state == State::Unreadable);
 
     // A signature with another fingerprint is accepted without the check, and reported as a mismatch.
     const Bytes wrong = WithWrongFingerprint(msi::SampleSignature("tiny-osslsig-small.msi"), msi::RecordedFingerprint("tiny.msi"));
-    REQUIRE_NOTHROW(MsiSigner::EmbedSignature(path, wrong));
-    CHECK(MsiSigner::CheckSignature(path).state == State::Mismatch);
+    REQUIRE_NOTHROW(the_seed::MsiSigner::EmbedSignature(path, wrong));
+    CHECK(the_seed::MsiSigner::CheckSignature(path).state == State::Mismatch);
     // Explicitly turned off, the same.
-    REQUIRE_NOTHROW(MsiSigner::EmbedSignature(path, wrong, false));
-    CHECK(MsiSigner::CheckSignature(path).state == State::Mismatch);
+    REQUIRE_NOTHROW(the_seed::MsiSigner::EmbedSignature(path, wrong, false));
+    CHECK(the_seed::MsiSigner::CheckSignature(path).state == State::Mismatch);
 }
 
 TEST_CASE("replacing a signature made by another tool is checked as well", "[MsiCheckSignature][embed]")
@@ -407,25 +407,25 @@ TEST_CASE("replacing a signature made by another tool is checked as well", "[Msi
         const std::string path = msi::CopySample(scratch, sample);
         const Bytes original = sm::ReadAll(path);
         const Bytes wrong = WithWrongFingerprint(msi::SampleSignature("tiny-osslsig-small.msi"), msi::RecordedFingerprint("tiny.msi"));
-        CHECK_THROWS_AS(MsiSigner::EmbedSignature(path, wrong, true), std::runtime_error);
+        CHECK_THROWS_AS(the_seed::MsiSigner::EmbedSignature(path, wrong, true), std::runtime_error);
         sm::RequireUnchanged(path, original);
 
         const Bytes good = msi::SampleSignature("tiny-osslsig-small.msi");
-        REQUIRE_NOTHROW(MsiSigner::EmbedSignature(path, good, true));
-        CHECK(MsiSigner::CheckSignature(path).state == State::Matches);
+        REQUIRE_NOTHROW(the_seed::MsiSigner::EmbedSignature(path, good, true));
+        CHECK(the_seed::MsiSigner::CheckSignature(path).state == State::Matches);
         CHECK_FALSE(msi::HasExtendedStream(sm::ReadAll(path)));
     }
 }
 
 TEST_CASE("the check carries the stored and computed fingerprints as bytes", "[MsiCheckSignature][types]")
 {
-    static_assert(std::is_same_v<decltype(MsiSigner::CheckSignature(std::declval<const std::string &>())),
-                                 MsiSigner::SignatureCheck>);
-    static_assert(std::is_same_v<decltype(MsiSigner::SignatureCheck::stored_digest), std::vector<std::uint8_t>>);
-    static_assert(std::is_same_v<decltype(MsiSigner::SignatureCheck::computed_digest), std::vector<std::uint8_t>>);
-    static_assert(std::is_same_v<decltype(MsiSigner::SignatureCheck::detail), std::string>);
-    static_assert(std::is_enum_v<MsiSigner::SignatureState>);
-    const MsiSigner::SignatureCheck fresh;
+    static_assert(std::is_same_v<decltype(the_seed::MsiSigner::CheckSignature(std::declval<const std::string &>())),
+                                 the_seed::MsiSigner::SignatureCheck>);
+    static_assert(std::is_same_v<decltype(the_seed::MsiSigner::SignatureCheck::stored_digest), std::vector<std::uint8_t>>);
+    static_assert(std::is_same_v<decltype(the_seed::MsiSigner::SignatureCheck::computed_digest), std::vector<std::uint8_t>>);
+    static_assert(std::is_same_v<decltype(the_seed::MsiSigner::SignatureCheck::detail), std::string>);
+    static_assert(std::is_enum_v<the_seed::MsiSigner::SignatureState>);
+    const the_seed::MsiSigner::SignatureCheck fresh;
     CHECK(fresh.state == State::None);
     CHECK(fresh.stored_digest.empty());
     CHECK(fresh.computed_digest.empty());

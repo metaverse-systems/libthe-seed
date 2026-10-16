@@ -164,7 +164,7 @@ void RequireSignatureIs(const std::string &path, const Bytes &blob)
     const auto found = msi::FoundSignature(bytes);
     REQUIRE(found.has_value());
     REQUIRE(*found == blob);
-    const auto extracted = MsiSigner::ExtractSignature(path);
+    const auto extracted = the_seed::MsiSigner::ExtractSignature(path);
     REQUIRE(extracted.has_value());
     REQUIRE(*extracted == blob);
 }
@@ -197,7 +197,7 @@ TEST_CASE("the writer keeps every entry of generated shapes in every layout", "[
                 const std::string path = sm::WriteScratch(scratch, "shape.msi", original);
                 const Bytes blob = cfb::PatternBytes(size, 21);
 
-                REQUIRE_NOTHROW(MsiSigner::EmbedSignature(path, blob));
+                REQUIRE_NOTHROW(the_seed::MsiSigner::EmbedSignature(path, blob));
                 const Bytes signed_bytes = sm::ReadAll(path);
                 RequireCanonical(original, signed_bytes, label + " signed");
                 RequireSignatureIs(path, blob);
@@ -206,18 +206,18 @@ TEST_CASE("the writer keeps every entry of generated shapes in every layout", "[
                       cfb::CountBelowRoot(cfb::Package(original)) + 1);
                 CHECK(signed_bytes.size() <= IndependentSize(signed_bytes, layout));
 
-                REQUIRE_NOTHROW(MsiSigner::StripSignature(path));
+                REQUIRE_NOTHROW(the_seed::MsiSigner::StripSignature(path));
                 const Bytes stripped = sm::ReadAll(path);
                 RequireCanonical(original, stripped, label + " stripped");
                 CHECK_FALSE(msi::FoundSignature(stripped).has_value());
                 CHECK(cfb::CountBelowRoot(cfb::Package(stripped)) == cfb::CountBelowRoot(cfb::Package(original)));
-                CHECK_FALSE(MsiSigner::HasEmbeddedSignature(path));
+                CHECK_FALSE(the_seed::MsiSigner::HasEmbeddedSignature(path));
 
                 // The output does not depend on what was signed before: the same
                 // package signed with another blob and stripped is the same bytes.
                 const std::string other = sm::WriteScratch(scratch, "shape-other.msi", original);
-                REQUIRE_NOTHROW(MsiSigner::EmbedSignature(other, cfb::PatternBytes(size == 100u ? 4097u : 99u, 22)));
-                REQUIRE_NOTHROW(MsiSigner::StripSignature(other));
+                REQUIRE_NOTHROW(the_seed::MsiSigner::EmbedSignature(other, cfb::PatternBytes(size == 100u ? 4097u : 99u, 22)));
+                REQUIRE_NOTHROW(the_seed::MsiSigner::StripSignature(other));
                 CHECK(sm::ReadAll(other) == stripped);
             }
         }
@@ -235,7 +235,7 @@ TEST_CASE("the writer keeps the layout of the samples in versions 3 and 4", "[Ms
         const std::string path = msi::CopySample(scratch, sample);
         const Bytes blob = cfb::PatternBytes(1426, 5);
 
-        REQUIRE_NOTHROW(MsiSigner::EmbedSignature(path, blob));
+        REQUIRE_NOTHROW(the_seed::MsiSigner::EmbedSignature(path, blob));
         const Bytes signed_bytes = sm::ReadAll(path);
         RequireCanonical(original, signed_bytes, sample + " signed");
         const cfb::Package after(signed_bytes);
@@ -244,7 +244,7 @@ TEST_CASE("the writer keeps the layout of the samples in versions 3 and 4", "[Ms
         CHECK(after.Cutoff() == 4096);
         RequireSignatureIs(path, blob);
 
-        REQUIRE_NOTHROW(MsiSigner::StripSignature(path));
+        REQUIRE_NOTHROW(the_seed::MsiSigner::StripSignature(path));
         RequireCanonical(original, sm::ReadAll(path), sample + " stripped");
     }
 }
@@ -268,13 +268,13 @@ TEST_CASE("a version 4 package records its directory sector count as the directo
     REQUIRE(msi::HeaderField(original, msi::kHeaderDirectorySectors) == 1);
 
     const std::string path = sm::WriteScratch(scratch, "v4dir.msi", original);
-    REQUIRE_NOTHROW(MsiSigner::EmbedSignature(path, cfb::PatternBytes(300, 1)));
+    REQUIRE_NOTHROW(the_seed::MsiSigner::EmbedSignature(path, cfb::PatternBytes(300, 1)));
     const Bytes grown = sm::ReadAll(path);
     CHECK(cfb::Package(grown).Entries().size() == 64);
     CHECK(msi::HeaderField(grown, msi::kHeaderDirectorySectors) == 2);
     RequireCanonical(original, grown, "grown");
 
-    REQUIRE_NOTHROW(MsiSigner::StripSignature(path));
+    REQUIRE_NOTHROW(the_seed::MsiSigner::StripSignature(path));
     const Bytes shrunk = sm::ReadAll(path);
     CHECK(cfb::Package(shrunk).Entries().size() == 32);
     CHECK(msi::HeaderField(shrunk, msi::kHeaderDirectorySectors) == 1);
@@ -299,7 +299,7 @@ TEST_CASE("the directory grows by a sector when the signature does not fit and i
         const std::string path = sm::WriteScratch(scratch, "dir.msi", original);
         const std::size_t slots_before = cfb::Package(original).Entries().size();
 
-        REQUIRE_NOTHROW(MsiSigner::EmbedSignature(path, cfb::PatternBytes(200, 4)));
+        REQUIRE_NOTHROW(the_seed::MsiSigner::EmbedSignature(path, cfb::PatternBytes(200, 4)));
         const Bytes signed_bytes = sm::ReadAll(path);
         RequireCanonical(original, signed_bytes, "signed");
         CHECK(cfb::Package(signed_bytes).Entries().size() == CeilDiv(children + 2, 4) * 4);
@@ -309,7 +309,7 @@ TEST_CASE("the directory grows by a sector when the signature does not fit and i
             CHECK(cfb::Package(signed_bytes).Entries().size() == 8);
         }
 
-        REQUIRE_NOTHROW(MsiSigner::StripSignature(path));
+        REQUIRE_NOTHROW(the_seed::MsiSigner::StripSignature(path));
         const Bytes stripped = sm::ReadAll(path);
         RequireCanonical(original, stripped, "stripped");
         CHECK(cfb::Package(stripped).Entries().size() == slots_before);
@@ -336,7 +336,7 @@ TEST_CASE("the mini stream grows and shrinks with a consistent index and recorde
         {
             INFO("signature of " << size << " bytes");
             const Bytes blob = cfb::PatternBytes(size, 9);
-            REQUIRE_NOTHROW(MsiSigner::EmbedSignature(path, blob));
+            REQUIRE_NOTHROW(the_seed::MsiSigner::EmbedSignature(path, blob));
             const Bytes now = sm::ReadAll(path);
             RequireCanonical(original, now, "signature of " + std::to_string(size));
             RequireSignatureIs(path, blob);
@@ -350,11 +350,11 @@ TEST_CASE("the mini stream grows and shrinks with a consistent index and recorde
 
             // The file is no larger than one signing needs: the same as signing the original directly.
             const std::string direct = sm::WriteScratch(scratch, "direct.msi", original);
-            REQUIRE_NOTHROW(MsiSigner::EmbedSignature(direct, blob));
+            REQUIRE_NOTHROW(the_seed::MsiSigner::EmbedSignature(direct, blob));
             CHECK(sm::ReadAll(direct) == now);
         }
 
-        REQUIRE_NOTHROW(MsiSigner::StripSignature(path));
+        REQUIRE_NOTHROW(the_seed::MsiSigner::StripSignature(path));
         RequireCanonical(original, sm::ReadAll(path), "stripped");
     }
 }
@@ -377,7 +377,7 @@ TEST_CASE("a package without a mini stream gets one for a small signature and dr
         const std::string path = sm::WriteScratch(scratch, "nomini.msi", original);
 
         // A signature at the cut-off needs no mini stream.
-        REQUIRE_NOTHROW(MsiSigner::EmbedSignature(path, cfb::PatternBytes(4096, 3)));
+        REQUIRE_NOTHROW(the_seed::MsiSigner::EmbedSignature(path, cfb::PatternBytes(4096, 3)));
         {
             const Bytes now = sm::ReadAll(path);
             RequireCanonical(original, now, "4096 bytes");
@@ -387,7 +387,7 @@ TEST_CASE("a package without a mini stream gets one for a small signature and dr
 
         // A smaller one creates it: 100 bytes are two mini sectors.
         const Bytes blob = cfb::PatternBytes(100, 4);
-        REQUIRE_NOTHROW(MsiSigner::EmbedSignature(path, blob));
+        REQUIRE_NOTHROW(the_seed::MsiSigner::EmbedSignature(path, blob));
         {
             const Bytes now = sm::ReadAll(path);
             RequireCanonical(original, now, "100 bytes");
@@ -397,7 +397,7 @@ TEST_CASE("a package without a mini stream gets one for a small signature and dr
         }
 
         // Stripping it removes the only mini stream, and the container with it.
-        REQUIRE(MsiSigner::StripSignature(path) == true);
+        REQUIRE(the_seed::MsiSigner::StripSignature(path) == true);
         const Bytes stripped = sm::ReadAll(path);
         RequireCanonical(original, stripped, "stripped");
         CHECK(cfb::Package(stripped).Entries()[0].size == 0);
@@ -422,7 +422,7 @@ TEST_CASE("the extended index appears and disappears at 109 allocation sectors",
     const std::string path = sm::WriteScratch(scratch, "extended.msi", original);
 
     const Bytes blob = cfb::PatternBytes(50000, 7);
-    REQUIRE_NOTHROW(MsiSigner::EmbedSignature(path, blob));
+    REQUIRE_NOTHROW(the_seed::MsiSigner::EmbedSignature(path, blob));
     {
         const Bytes now = sm::ReadAll(path);
         const cfb::Package package(now);
@@ -432,7 +432,7 @@ TEST_CASE("the extended index appears and disappears at 109 allocation sectors",
         RequireSignatureIs(path, blob);
     }
 
-    REQUIRE_NOTHROW(MsiSigner::StripSignature(path));
+    REQUIRE_NOTHROW(the_seed::MsiSigner::StripSignature(path));
     {
         const Bytes now = sm::ReadAll(path);
         const cfb::Package package(now);
@@ -459,14 +459,14 @@ TEST_CASE("a package with an extended index keeps it and its content", "[MsiLayo
     {
         INFO("signature of " << size << " bytes");
         const Bytes blob = cfb::PatternBytes(size, 11);
-        REQUIRE_NOTHROW(MsiSigner::EmbedSignature(path, blob));
+        REQUIRE_NOTHROW(the_seed::MsiSigner::EmbedSignature(path, blob));
         const Bytes now = sm::ReadAll(path);
         CHECK(cfb::Package(now).DifatSectorCount() >= 1);
         RequireCanonical(original, now, "signed");
         RequireSignatureIs(path, blob);
         CHECK(cfb::Fingerprint(now) == cfb::Fingerprint(original));
     }
-    REQUIRE(MsiSigner::StripSignature(path) == true);
+    REQUIRE(the_seed::MsiSigner::StripSignature(path) == true);
     RequireCanonical(original, sm::ReadAll(path), "stripped");
 }
 
@@ -546,7 +546,7 @@ TEST_CASE("a refused embed or strip leaves the file byte for byte unchanged", "[
         const std::string path = sm::WriteScratch(scratch, "refuse.msi", item.bytes);
         try
         {
-            MsiSigner::EmbedSignature(path, cfb::PatternBytes(300, 1));
+            the_seed::MsiSigner::EmbedSignature(path, cfb::PatternBytes(300, 1));
             FAIL("embed accepted " << item.label);
         }
         catch(const std::runtime_error &error)
@@ -559,7 +559,7 @@ TEST_CASE("a refused embed or strip leaves the file byte for byte unchanged", "[
 
         try
         {
-            MsiSigner::StripSignature(path);
+            the_seed::MsiSigner::StripSignature(path);
             FAIL("strip accepted " << item.label);
         }
         catch(const std::runtime_error &error)
@@ -580,9 +580,9 @@ TEST_CASE("an empty signature is refused and the file is unchanged", "[MsiLayout
         INFO("sample " << sample);
         const Bytes original = sm::LoadSample(sample);
         const std::string path = msi::CopySample(scratch, sample);
-        CHECK_THROWS_AS(MsiSigner::EmbedSignature(path, Bytes()), std::runtime_error);
+        CHECK_THROWS_AS(the_seed::MsiSigner::EmbedSignature(path, Bytes()), std::runtime_error);
         sm::RequireUnchanged(path, original);
-        CHECK_THROWS_AS(MsiSigner::EmbedSignature(path, Bytes(), true), std::runtime_error);
+        CHECK_THROWS_AS(the_seed::MsiSigner::EmbedSignature(path, Bytes(), true), std::runtime_error);
         sm::RequireUnchanged(path, original);
     }
 }

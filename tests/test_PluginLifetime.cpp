@@ -44,16 +44,16 @@ namespace
         return scene.dump();
     }
 
-    std::unique_ptr<ComponentLoader> ComponentLoaderMake()
+    std::unique_ptr<the_seed::ComponentLoader> ComponentLoaderMake()
     {
-        auto loader = std::make_unique<ComponentLoader>();
+        auto loader = std::make_unique<the_seed::ComponentLoader>();
         loader->PathAdd(seedtest::ModuleDir());
         return loader;
     }
 
-    std::unique_ptr<SystemLoader> SystemLoaderMake()
+    std::unique_ptr<the_seed::SystemLoader> SystemLoaderMake()
     {
-        auto loader = std::make_unique<SystemLoader>();
+        auto loader = std::make_unique<the_seed::SystemLoader>();
         loader->PathAdd(seedtest::ModuleDir());
         return loader;
     }
@@ -94,8 +94,8 @@ TEST_CASE("A system is used and destroyed after its loader", "[PluginLifetime]")
 TEST_CASE("A creator from Get works after its loader is destroyed", "[PluginLifetime]")
 {
     DestructionCounter destroyed{0};
-    ComponentLoader::ComponentCreator componentCreator = nullptr;
-    SystemLoader::SystemCreator systemCreator = nullptr;
+    the_seed::ComponentLoader::ComponentCreator componentCreator = nullptr;
+    the_seed::SystemLoader::SystemCreator systemCreator = nullptr;
     {
         auto components = ComponentLoaderMake();
         auto systems = SystemLoaderMake();
@@ -120,7 +120,7 @@ TEST_CASE("A creator from Get works after its loader is destroyed", "[PluginLife
 #ifndef _WIN32
 TEST_CASE("A creator still names its plugin file after its loader is gone", "[PluginLifetime]")
 {
-    ComponentLoader::ComponentCreator creator = nullptr;
+    the_seed::ComponentLoader::ComponentCreator creator = nullptr;
     {
         auto loader = ComponentLoaderMake();
         creator = loader->Get("testmodule");
@@ -142,7 +142,7 @@ TEST_CASE("A scene survives both loaders being destroyed before the container", 
         ecs::Container *world = manager.Container("world");
         {
             auto components = ComponentLoaderMake();
-            auto sceneLoader = std::make_unique<JSONLoader>(world, *components);
+            auto sceneLoader = std::make_unique<the_seed::JSONLoader>(world, *components);
             sceneLoader->StringParse(SceneText({"a", "b", "c"}, destroyed));
             REQUIRE(world->ComponentHas("a", "TestModule"));
             sceneLoader.reset();
@@ -236,7 +236,7 @@ TEST_CASE("The container is destroyed before the loaders", "[PluginLifetime]")
     {
         ecs::Manager manager;
         ecs::Container *world = manager.Container("world");
-        JSONLoader sceneLoader(world, *components);
+        the_seed::JSONLoader sceneLoader(world, *components);
         sceneLoader.StringParse(SceneText({"a", "b"}, destroyed));
         world->System(systems->Create("testsystem", &destroyed));
     }
@@ -254,7 +254,7 @@ TEST_CASE("Loaders and objects and the container are destroyed interleaved", "[P
     auto manager = std::make_unique<ecs::Manager>();
     ecs::Container *world = manager->Container("world");
     {
-        JSONLoader sceneLoader(world, *components);
+        the_seed::JSONLoader sceneLoader(world, *components);
         sceneLoader.StringParse(SceneText({"a", "b"}, destroyed));
     }
     world->System(systems->Create("testsystem", &destroyed));

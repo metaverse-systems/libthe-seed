@@ -7,6 +7,8 @@
 #include <vector>
 #include <optional>
 
+namespace the_seed
+{
 /**
  * Authenticode PE binary signature operations.
  * All methods are static — no instance state required.
@@ -99,3 +101,8 @@ private:
         std::size_t checksum_offset
     );
 };
+} // namespace the_seed
+
+#ifdef THE_SEED_LEGACY_NAMES
+using PeSigner [[deprecated("use the_seed::PeSigner")]] = the_seed::PeSigner;
+#endif

@@ -10,6 +10,9 @@
 #include <exception>
 #include <future>
 
+namespace the_seed
+{
+
 PakLoader::PakLoader() = default;
 
 using namespace the_seed::internal;
@@ -210,3 +213,4 @@ std::vector<std::string> PakLoader::SearchPathsGet(const std::string &pak_name, 
     std::shared_lock lock(this->mutex);
     return the_seed::internal::SearchListBuild(this->paths, parsed.org, parsed.library, true, configured_count);
 }
+} // namespace the_seed

@@ -12,6 +12,8 @@ namespace the_seed::internal
 template <typename Creator> class PluginCache;
 }
 
+namespace the_seed
+{
 /**
  * @brief Loads component plugins by name.
  *
@@ -64,3 +66,8 @@ class THE_SEED_API ComponentLoader
   private:
     std::unique_ptr<the_seed::internal::PluginCache<ComponentCreator>> cache;
 };
+} // namespace the_seed
+
+#ifdef THE_SEED_LEGACY_NAMES
+using ComponentLoader [[deprecated("use the_seed::ComponentLoader")]] = the_seed::ComponentLoader;
+#endif

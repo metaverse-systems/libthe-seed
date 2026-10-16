@@ -35,7 +35,7 @@ bool Contains(const std::string &text, const std::string &part)
     return text.find(part) != std::string::npos;
 }
 
-std::set<std::string> Keys(const DependencyResult &result)
+std::set<std::string> Keys(const the_seed::DependencyResult &result)
 {
     std::set<std::string> keys;
     for(const auto &entry : result.dependencies)
@@ -45,7 +45,7 @@ std::set<std::string> Keys(const DependencyResult &result)
     return keys;
 }
 
-std::set<std::string> Slice(const DependencyResult &result, const std::string &input)
+std::set<std::string> Slice(const the_seed::DependencyResult &result, const std::string &input)
 {
     std::set<std::string> keys;
     for(const auto &entry : result.dependencies)
@@ -149,7 +149,7 @@ const KindCase kKinds[] = {
 };
 
 // The check of a reason: it starts with the path of the library.
-void RequireReasonFor(const LibraryError &error, const std::string &key, Kind kind)
+void RequireReasonFor(const the_seed::LibraryError &error, const std::string &key, Kind kind)
 {
     INFO("reason: " << error.reason);
     REQUIRE(StartsWith(error.reason, key));
@@ -178,16 +178,16 @@ TEST_CASE("An unreadable library is listed and reported with its path and reason
             }
             const std::string app = site.Program("app", {"libx.so"});
             const std::string key = BrokenKey(site, entry.kind, "libx.so");
-            DependencyLister lister;
+            the_seed::DependencyLister lister;
 
-            const DependencyResult result = lister.ListDependencies({app}, site.Search());
+            const the_seed::DependencyResult result = lister.ListDependencies({app}, site.Search());
 
             REQUIRE(result.errors.empty());
             REQUIRE(result.dependencies.count(key) == 1);
             REQUIRE(result.dependencies.at(key) == Names{app});
             REQUIRE(result.libraryErrors.size() == 1);
             REQUIRE(result.libraryErrors.count(key) == 1);
-            const LibraryError &error = result.libraryErrors.at(key);
+            const the_seed::LibraryError &error = result.libraryErrors.at(key);
             REQUIRE(error.inputs == Names{app});
             RequireReasonFor(error, key, entry.kind);
         }
@@ -211,9 +211,9 @@ TEST_CASE("One unreadable library needed by three programs is reported once nami
             const std::string app_a = site.Program("appA", {"libmid.so"});
             const std::string app_b = site.Program("appB", {"libmid.so", "libx.so"});
             const std::string key = BrokenKey(site, entry.kind, "libx.so");
-            DependencyLister lister;
+            the_seed::DependencyLister lister;
 
-            const DependencyResult result = lister.ListDependencies({app_c, app_a, app_b}, site.Search());
+            const the_seed::DependencyResult result = lister.ListDependencies({app_c, app_a, app_b}, site.Search());
 
             REQUIRE(result.errors.empty());
             REQUIRE(result.libraryErrors.size() == 1);
@@ -238,9 +238,9 @@ TEST_CASE("A library without read permission is reported", "[DependencyReporting
     std::error_code ec;
     fs::permissions(library, fs::perms::none, ec);
     REQUIRE_FALSE(ec);
-    DependencyLister lister;
+    the_seed::DependencyLister lister;
 
-    const DependencyResult result = lister.ListDependencies({app}, site.Search());
+    const the_seed::DependencyResult result = lister.ListDependencies({app}, site.Search());
 
     const std::string key = Canon(library);
     REQUIRE(result.errors.empty());
@@ -257,9 +257,9 @@ TEST_CASE("A request whose libraries are all readable has an empty report", "[De
 {
     seedtest::ScratchDir scratch;
     const fs::path folder = dep::CopyElfChain(scratch.Path() / "chain");
-    DependencyLister lister;
+    the_seed::DependencyLister lister;
 
-    const DependencyResult result = lister.ListDependencies(
+    const the_seed::DependencyResult result = lister.ListDependencies(
         {(folder / "appA").string(), (folder / "appB").string()}, {folder.string()});
 
     REQUIRE(result.errors.empty());
@@ -277,9 +277,9 @@ TEST_CASE("An unreadable library behind another unreadable library is reported o
     dep::WriteFile(site.folder, "libnext.so", PlainText());
     const std::string app_a = site.Program("appA", {"libfoo.so"});
     const std::string app_b = site.Program("appB", {"libfoo.so"});
-    DependencyLister lister;
+    the_seed::DependencyLister lister;
 
-    const DependencyResult result = lister.ListDependencies({app_a, app_b}, site.Search());
+    const the_seed::DependencyResult result = lister.ListDependencies({app_a, app_b}, site.Search());
 
     const std::string bad = Canon(site.folder / "libbad.so");
     REQUIRE(result.errors.empty());
@@ -304,9 +304,9 @@ TEST_CASE("The report keys are keys of the dependencies", "[DependencyReporting]
             site.Library("libgood.so", {});
             const std::string app_a = site.Program("appA", {"libx.so", "libgood.so"});
             const std::string app_b = site.Program("appB", {"libgood.so"});
-            DependencyLister lister;
+            the_seed::DependencyLister lister;
 
-            const DependencyResult result = lister.ListDependencies({app_a, app_b}, site.Search());
+            const the_seed::DependencyResult result = lister.ListDependencies({app_a, app_b}, site.Search());
 
             REQUIRE_FALSE(result.libraryErrors.empty());
             for(const auto &error : result.libraryErrors)
@@ -336,9 +336,9 @@ TEST_CASE("An unreadable library leaves the other libraries and programs unaffec
             const std::string key = BrokenKey(site, entry.kind, "libx.so");
             const std::string good = Canon(site.folder / "libgood.so");
             const std::string deep = Canon(site.folder / "libdeep.so");
-            DependencyLister lister;
+            the_seed::DependencyLister lister;
 
-            const DependencyResult result = lister.ListDependencies({app_a, app_b}, site.Search());
+            const the_seed::DependencyResult result = lister.ListDependencies({app_a, app_b}, site.Search());
 
             const Names both{app_a, app_b};
             REQUIRE(result.dependencies.at(good) == both);
@@ -361,9 +361,9 @@ TEST_CASE("A named input that cannot be read goes to errors and not to libraryEr
     const std::string text = dep::WriteFile(site.folder, "notes.txt", PlainText()).string();
     const std::string missing = (site.folder / "missing").string();
     const std::string app = site.Program("app", {});
-    DependencyLister lister;
+    the_seed::DependencyLister lister;
 
-    const DependencyResult result = lister.ListDependencies({broken, text, missing, app}, site.Search());
+    const the_seed::DependencyResult result = lister.ListDependencies({broken, text, missing, app}, site.Search());
 
     REQUIRE(result.errors.size() == 3);
     REQUIRE(result.errors.count(broken) == 1);
@@ -395,10 +395,10 @@ TEST_CASE("A program that ignores libraryErrors sees the same keys and errors as
             const Names needs{"libx.so", "libgood.so", "libabsent.so"};
             const std::string app_broken = broken.Program("app", needs);
             const std::string app_healthy = healthy.Program("app", needs);
-            DependencyLister lister;
+            the_seed::DependencyLister lister;
 
-            const DependencyResult with_broken = lister.ListDependencies({app_broken}, broken.Search());
-            const DependencyResult with_healthy = lister.ListDependencies({app_healthy}, healthy.Search());
+            const the_seed::DependencyResult with_broken = lister.ListDependencies({app_broken}, broken.Search());
+            const the_seed::DependencyResult with_healthy = lister.ListDependencies({app_healthy}, healthy.Search());
 
             // Same kinds of keys: the broken library, the good one and the absent name.
             REQUIRE(with_broken.dependencies.size() == with_healthy.dependencies.size());
@@ -452,8 +452,8 @@ std::set<std::string> ListedNames(const dep::Bytes &program)
 {
     PeSite site;
     const std::string app = site.Program(program);
-    DependencyLister lister;
-    const DependencyResult result = lister.ListDependencies({app}, {});
+    the_seed::DependencyLister lister;
+    const the_seed::DependencyResult result = lister.ListDependencies({app}, {});
     REQUIRE(result.errors.empty());
     REQUIRE(result.libraryErrors.empty());
     for(const auto &entry : result.dependencies)
@@ -537,9 +537,9 @@ TEST_CASE("A delay-loaded library found in the search folder has its own depende
             PeSite site;
             dep::CopyPeChain(site.folder);
             const std::string app = site.Program(dep::PeImporting({}, {"libfoo.dll"}, form));
-            DependencyLister lister;
+            the_seed::DependencyLister lister;
 
-            const DependencyResult result = lister.ListDependencies({app}, {site.folder.string()});
+            const the_seed::DependencyResult result = lister.ListDependencies({app}, {site.folder.string()});
 
             REQUIRE(result.errors.empty());
             REQUIRE(result.libraryErrors.empty());
@@ -560,9 +560,9 @@ TEST_CASE("A delay-loaded library reached from two programs is credited to both"
     dep::CopyPeChain(site.folder);
     const std::string first = dep::WriteFile(site.folder, "first.exe", dep::PeImporting({}, {"libfoo.dll"})).string();
     const std::string second = dep::WriteFile(site.folder, "second.exe", dep::PeImporting({"libbar.dll"}, {"ext1.dll"})).string();
-    DependencyLister lister;
+    the_seed::DependencyLister lister;
 
-    const DependencyResult result = lister.ListDependencies({first, second}, {site.folder.string()});
+    const the_seed::DependencyResult result = lister.ListDependencies({first, second}, {site.folder.string()});
 
     REQUIRE(result.errors.empty());
     CHECK(Slice(result, first) == NameSet{Canon(site.folder / "libfoo.dll"), Canon(site.folder / "libbar.dll"),
@@ -649,7 +649,7 @@ std::string WriteMac(Site &site, const std::string &name, const Names &needed)
     return dep::WriteFile(site.folder, name, MacNeeding(needed)).string();
 }
 
-void RequireDeclined(const DependencyResult &result, const std::string &path, const std::string &text)
+void RequireDeclined(const the_seed::DependencyResult &result, const std::string &path, const std::string &text)
 {
     REQUIRE(result.errors.size() == 1);
     REQUIRE(result.errors.count(path) == 1);
@@ -663,9 +663,9 @@ TEST_CASE("A Mach-O program given alone is listed under its recorded names", "[D
 {
     Site site;
     const std::string mac = WriteMac(site, "mac.bin", {kLibSystem, "@rpath/libtwo.dylib"});
-    DependencyLister lister;
+    the_seed::DependencyLister lister;
 
-    const DependencyResult result = lister.ListDependencies({mac}, site.Search());
+    const the_seed::DependencyResult result = lister.ListDependencies({mac}, site.Search());
 
     CHECK(result.errors.empty());
     CHECK(result.libraryErrors.empty());
@@ -682,9 +682,9 @@ TEST_CASE("A Mach-O file of a declined shape given alone is an error with the re
         {
             Site site;
             const std::string mac = dep::WriteFile(site.folder, "mac.bin", shape.bytes).string();
-            DependencyLister lister;
+            the_seed::DependencyLister lister;
 
-            const DependencyResult result = lister.ListDependencies({mac}, site.Search());
+            const the_seed::DependencyResult result = lister.ListDependencies({mac}, site.Search());
 
             RequireDeclined(result, mac, DeclineText(mac, shape.kind));
         }
@@ -697,9 +697,9 @@ TEST_CASE("A declined slice of a universal file makes the input an error naming 
     const dep::Bytes good = MacNeeding({kLibSystem});
     const std::string mac =
         dep::WriteFile(site.folder, "mac.bin", mr::Universal({good, mr::BigEndian32()}, false, 14)).string();
-    DependencyLister lister;
+    the_seed::DependencyLister lister;
 
-    const DependencyResult result = lister.ListDependencies({mac}, site.Search());
+    const the_seed::DependencyResult result = lister.ListDependencies({mac}, site.Search());
 
     RequireDeclined(result, mac, SliceDeclineText(mac, 1, "cpu 0x12", "32-bit big-endian"));
 }
@@ -716,9 +716,9 @@ TEST_CASE("A declined Mach-O input among other inputs leaves the others listed f
             const std::string first = site.Program("first", {"libgood.so", "libabsent.so"});
             const std::string second = site.Program("second", {"libdeep.so"});
             const std::string mac = dep::WriteFile(site.folder, "mac.bin", shape.bytes).string();
-            DependencyLister lister;
+            the_seed::DependencyLister lister;
 
-            const DependencyResult result = lister.ListDependencies({first, mac, second}, site.Search());
+            const the_seed::DependencyResult result = lister.ListDependencies({first, mac, second}, site.Search());
 
             REQUIRE(result.errors.size() == 1);
             CHECK(result.errors.at(mac) == DeclineText(mac, shape.kind));
@@ -739,9 +739,9 @@ TEST_CASE("A Mach-O input among other inputs is listed with the others", "[Depen
     site.Library("libgood.so", {});
     const std::string first = site.Program("first", {"libgood.so"});
     const std::string mac = WriteMac(site, "mac.bin", {kLibSystem});
-    DependencyLister lister;
+    the_seed::DependencyLister lister;
 
-    const DependencyResult result = lister.ListDependencies({mac, first}, site.Search());
+    const the_seed::DependencyResult result = lister.ListDependencies({mac, first}, site.Search());
 
     CHECK(result.errors.empty());
     CHECK(result.libraryErrors.empty());
@@ -762,9 +762,9 @@ TEST_CASE("A declined Mach-O file found as a library is listed and reported thro
             const std::string first = site.Program("first", {"libmac.dylib", "libgood.so"});
             const std::string second = site.Program("second", {"libmac.dylib"});
             const std::string key = Canon(site.folder / "libmac.dylib");
-            DependencyLister lister;
+            the_seed::DependencyLister lister;
 
-            const DependencyResult result = lister.ListDependencies({second, first}, site.Search());
+            const the_seed::DependencyResult result = lister.ListDependencies({second, first}, site.Search());
 
             CHECK(result.errors.empty());
             CHECK(Keys(result) == NameSet{key, Canon(site.folder / "libgood.so")});
@@ -785,9 +785,9 @@ TEST_CASE("A declined slice in a Mach-O library is reported through libraryError
                    mr::Universal({mr::Little32(), MacNeeding({kLibSystem})}, false, 14));
     const std::string app = WriteMac(site, "app", {"libmac.dylib"});
     const std::string key = Canon(site.folder / "libmac.dylib");
-    DependencyLister lister;
+    the_seed::DependencyLister lister;
 
-    const DependencyResult result = lister.ListDependencies({app}, site.Search());
+    const the_seed::DependencyResult result = lister.ListDependencies({app}, site.Search());
 
     CHECK(result.errors.empty());
     CHECK(Keys(result) == NameSet{key});
@@ -802,9 +802,9 @@ TEST_CASE("A bare name in a Mach-O program is resolved by exact match in the sea
     WriteMac(site, "libone.dylib", {});
     WriteMac(site, "libCase.dylib", {});
     const std::string app = WriteMac(site, "app", {"libone.dylib", "libcase.dylib", "libabsent.dylib"});
-    DependencyLister lister;
+    the_seed::DependencyLister lister;
 
-    const DependencyResult result = lister.ListDependencies({app}, site.Search());
+    const the_seed::DependencyResult result = lister.ListDependencies({app}, site.Search());
 
     CHECK(result.errors.empty());
     CHECK(result.libraryErrors.empty());
@@ -818,9 +818,9 @@ TEST_CASE("A Mach-O program needing a library that is not in the folder lists it
 {
     Site site;
     const std::string app = WriteMac(site, "app", {"libmissing.dylib", kLibSystem});
-    DependencyLister lister;
+    the_seed::DependencyLister lister;
 
-    const DependencyResult result = lister.ListDependencies({app}, site.Search());
+    const the_seed::DependencyResult result = lister.ListDependencies({app}, site.Search());
 
     CHECK(result.errors.empty());
     CHECK(result.libraryErrors.empty());
@@ -843,9 +843,9 @@ TEST_CASE("Names with a separator or a loader prefix are listed as recorded and 
         kLibSystem,
     };
     const std::string app = WriteMac(site, "app", recorded);
-    DependencyLister lister;
+    the_seed::DependencyLister lister;
 
-    const DependencyResult result = lister.ListDependencies({app}, site.Search());
+    const the_seed::DependencyResult result = lister.ListDependencies({app}, site.Search());
 
     CHECK(result.errors.empty());
     CHECK(result.libraryErrors.empty());
@@ -867,9 +867,9 @@ TEST_CASE("A Mach-O library in the folder is expanded and its chain is credited 
     const std::string top = Canon(site.folder / "libtop.dylib");
     const std::string mid = Canon(site.folder / "libmid.dylib");
     const std::string bottom = Canon(site.folder / "libbottom.dylib");
-    DependencyLister lister;
+    the_seed::DependencyLister lister;
 
-    const DependencyResult result = lister.ListDependencies({app}, site.Search());
+    const the_seed::DependencyResult result = lister.ListDependencies({app}, site.Search());
 
     CHECK(result.errors.empty());
     CHECK(result.libraryErrors.empty());
@@ -888,9 +888,9 @@ TEST_CASE("A shared Mach-O library chain is credited to every program that reach
     const std::string shared = Canon(site.folder / "libshared.dylib");
     const std::string deep = Canon(site.folder / "libdeep.dylib");
     const std::string own = Canon(site.folder / "libown.dylib");
-    DependencyLister lister;
+    the_seed::DependencyLister lister;
 
-    const DependencyResult result = lister.ListDependencies({second, first}, site.Search());
+    const the_seed::DependencyResult result = lister.ListDependencies({second, first}, site.Search());
 
     CHECK(result.errors.empty());
     CHECK(result.libraryErrors.empty());
@@ -909,9 +909,9 @@ TEST_CASE("Mach-O libraries that need each other end the walk and are each liste
     const std::string app = WriteMac(site, "app", {"liba.dylib"});
     const std::string a = Canon(site.folder / "liba.dylib");
     const std::string b = Canon(site.folder / "libb.dylib");
-    DependencyLister lister;
+    the_seed::DependencyLister lister;
 
-    const DependencyResult result = lister.ListDependencies({app}, site.Search());
+    const the_seed::DependencyResult result = lister.ListDependencies({app}, site.Search());
 
     CHECK(result.errors.empty());
     CHECK(result.libraryErrors.empty());
@@ -929,9 +929,9 @@ TEST_CASE("A universal file lists the union over its slices without duplicates",
     WriteMac(site, "libcommon.dylib", {});
     const std::string mac =
         dep::WriteFile(site.folder, "mac.bin", mr::Universal({first, second}, false, 14)).string();
-    DependencyLister lister;
+    the_seed::DependencyLister lister;
 
-    const DependencyResult result = lister.ListDependencies({mac}, site.Search());
+    const the_seed::DependencyResult result = lister.ListDependencies({mac}, site.Search());
 
     CHECK(result.errors.empty());
     CHECK(result.libraryErrors.empty());
@@ -949,9 +949,9 @@ TEST_CASE("A Mach-O file found as a library may be named by an ELF program", "[D
     WriteMac(site, "libmac.so", {kLibSystem});
     const std::string app = site.Program("app", {"libmac.so"});
     const std::string key = Canon(site.folder / "libmac.so");
-    DependencyLister lister;
+    the_seed::DependencyLister lister;
 
-    const DependencyResult result = lister.ListDependencies({app}, site.Search());
+    const the_seed::DependencyResult result = lister.ListDependencies({app}, site.Search());
 
     CHECK(result.errors.empty());
     CHECK(result.libraryErrors.empty());
@@ -971,9 +971,9 @@ TEST_CASE("A Java class file is still an unsupported format and not a Mac file",
     java[3] = 0xBE;
     java[7] = 52;
     const std::string klass = dep::WriteFile(site.folder, "Thing.class", java).string();
-    DependencyLister lister;
+    the_seed::DependencyLister lister;
 
-    const DependencyResult result = lister.ListDependencies({klass}, site.Search());
+    const the_seed::DependencyResult result = lister.ListDependencies({klass}, site.Search());
 
     REQUIRE(result.errors.count(klass) == 1);
     CHECK(Contains(result.errors.at(klass), "Unsupported binary format"));
@@ -1007,13 +1007,13 @@ TEST_CASE("A universal header is read as a Mac file up to 30 architectures and n
         SECTION(big_endian ? "big-endian count" : "little-endian count")
         {
             Site site;
-            DependencyLister lister;
+            the_seed::DependencyLister lister;
             for(const std::uint32_t count : {1u, 2u, 30u})
             {
                 INFO("count " << count);
                 const std::string mac = dep::WriteFile(site.folder, "mac" + std::to_string(count),
                                                        FatHeaderWithCount(big_endian, count)).string();
-                const DependencyResult result = lister.ListDependencies({mac}, site.Search());
+                const the_seed::DependencyResult result = lister.ListDependencies({mac}, site.Search());
                 REQUIRE(result.errors.count(mac) == 1);
                 CHECK_FALSE(Contains(result.errors.at(mac), "Unsupported binary format"));
                 CHECK(result.dependencies.empty());
@@ -1023,7 +1023,7 @@ TEST_CASE("A universal header is read as a Mac file up to 30 architectures and n
                 INFO("count " << count);
                 const std::string other = dep::WriteFile(site.folder, "other" + std::to_string(count),
                                                          FatHeaderWithCount(big_endian, count)).string();
-                const DependencyResult result = lister.ListDependencies({other}, site.Search());
+                const the_seed::DependencyResult result = lister.ListDependencies({other}, site.Search());
                 REQUIRE(result.errors.count(other) == 1);
                 CHECK(Contains(result.errors.at(other), "Unsupported binary format"));
             }
@@ -1043,9 +1043,9 @@ TEST_CASE("A Java class file found as a library is reported as an unsupported fo
     dep::WriteFile(site.folder, "libjava.so", java);
     const std::string app = site.Program("app", {"libjava.so"});
     const std::string key = Canon(site.folder / "libjava.so");
-    DependencyLister lister;
+    the_seed::DependencyLister lister;
 
-    const DependencyResult result = lister.ListDependencies({app}, site.Search());
+    const the_seed::DependencyResult result = lister.ListDependencies({app}, site.Search());
 
     CHECK(result.errors.empty());
     REQUIRE(result.libraryErrors.count(key) == 1);

@@ -112,11 +112,11 @@ inline std::vector<Bytes> CountingCms(std::size_t slices, std::size_t size = Kno
 
 // Prepares and completes with the identity, capacity and CMS of the known
 // answers. Returns what PrepareSignature returned.
-inline MachOSigner::PreparedSignature SignWithKnownInputs(const std::string &path)
+inline the_seed::MachOSigner::PreparedSignature SignWithKnownInputs(const std::string &path)
 {
-    MachOSigner::PreparedSignature prepared =
-        MachOSigner::PrepareSignature(path, KnownIdentity(), KnownCapacity);
-    MachOSigner::CompleteSignature(path, prepared, CountingCms(prepared.slices.size()));
+    the_seed::MachOSigner::PreparedSignature prepared =
+        the_seed::MachOSigner::PrepareSignature(path, KnownIdentity(), KnownCapacity);
+    the_seed::MachOSigner::CompleteSignature(path, prepared, CountingCms(prepared.slices.size()));
     return prepared;
 }
 
@@ -156,7 +156,7 @@ inline std::string JoinProblems(const mr::FileReport &report)
 // CompleteSignature, `prepared` what PrepareSignature returned and `cms` the
 // CMS bytes handed to CompleteSignature (one per slice, in order).
 inline void ExpectFinished(const Bytes &original, const Bytes &finished,
-                           const MachOSigner::PreparedSignature &prepared, const std::vector<Bytes> &cms)
+                           const the_seed::MachOSigner::PreparedSignature &prepared, const std::vector<Bytes> &cms)
 {
     const mr::FileReport before = mr::CheckFile(original);
     const mr::FileReport after = mr::CheckFile(finished);
@@ -171,9 +171,9 @@ inline void ExpectFinished(const Bytes &original, const Bytes &finished,
         INFO("slice " << i);
         const mr::SliceReport &o = before.slices[i];
         const mr::SliceReport &s = after.slices[i];
-        const MachOSigner::PreparedSlice &p = prepared.slices[i];
-        const Bytes blob = MachOSigner::BuildSuperBlob(p.code_directory, cms[i]);
-        const Bytes reserved_blob = MachOSigner::BuildSuperBlob(p.code_directory, Bytes(prepared.cms_capacity));
+        const the_seed::MachOSigner::PreparedSlice &p = prepared.slices[i];
+        const Bytes blob = the_seed::MachOSigner::BuildSuperBlob(p.code_directory, cms[i]);
+        const Bytes reserved_blob = the_seed::MachOSigner::BuildSuperBlob(p.code_directory, Bytes(prepared.cms_capacity));
 
         CHECK(s.cputype == p.cpu_type);
         CHECK(s.cpusubtype == p.cpu_subtype);
@@ -212,7 +212,7 @@ inline void ExpectFinished(const Bytes &original, const Bytes &finished,
         CHECK(written == blob);
         // What was returned by PrepareSignature is what is in the file.
         CHECK(p.cd_hash == mr::Sha256(p.code_directory.data(), p.code_directory.size()));
-        const auto stored = MachOSigner::ExtractCodeDirectoryFromSuperBlob(written);
+        const auto stored = the_seed::MachOSigner::ExtractCodeDirectoryFromSuperBlob(written);
         REQUIRE(stored.has_value());
         CHECK(*stored == p.code_directory);
     }

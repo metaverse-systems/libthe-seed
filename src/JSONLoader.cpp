@@ -12,6 +12,9 @@
 #include <utility>
 #include <vector>
 
+namespace the_seed
+{
+
 namespace
 {
     const char *const textName = "scene text";
@@ -192,3 +195,4 @@ void JSONLoader::Load(const std::string &data, const std::string &source)
     }
     this->scene = std::move(document);
 }
+} // namespace the_seed

@@ -218,7 +218,7 @@ TEST_CASE("Paks from the-seed's pak writer load unchanged", "[PakWriterCompat]")
 
             SECTION("through ResourcePak")
             {
-                ResourcePak loaded(pak.string());
+                the_seed::ResourcePak loaded(pak.string());
 
                 std::vector<std::string> expected_names;
                 for(const seedtest::PakResourceSpec &resource : test.spec.resources)
@@ -236,7 +236,7 @@ TEST_CASE("Paks from the-seed's pak writer load unchanged", "[PakWriterCompat]")
 
             SECTION("through PakLoader")
             {
-                PakLoader loader;
+                the_seed::PakLoader loader;
                 loader.PathAdd(package.string());
                 const auto resources = loader.Load(test.spec.name);
 

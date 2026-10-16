@@ -206,7 +206,7 @@ Bytes SignedTiny(std::size_t signature_size = 128)
 {
     seedtest::ScratchDir scratch;
     const std::string path = sm::WriteScratch(scratch, "signed.msi", Tiny());
-    MsiSigner::EmbedSignature(path, FakeSignature(signature_size));
+    the_seed::MsiSigner::EmbedSignature(path, FakeSignature(signature_size));
     return sm::ReadAll(path);
 }
 
@@ -288,19 +288,19 @@ void RunOp(Op op, const std::string &path)
     switch(op)
     {
     case kDigest:
-        (void)MsiSigner::ComputeAuthenticodeDigest(path);
+        (void)the_seed::MsiSigner::ComputeAuthenticodeDigest(path);
         break;
     case kPresence:
-        (void)MsiSigner::HasEmbeddedSignature(path);
+        (void)the_seed::MsiSigner::HasEmbeddedSignature(path);
         break;
     case kExtract:
-        (void)MsiSigner::ExtractSignature(path);
+        (void)the_seed::MsiSigner::ExtractSignature(path);
         break;
     case kEmbed:
-        MsiSigner::EmbedSignature(path, FakeSignature(kEmbedSignatureSize));
+        the_seed::MsiSigner::EmbedSignature(path, FakeSignature(kEmbedSignatureSize));
         break;
     case kStrip:
-        MsiSigner::StripSignature(path);
+        the_seed::MsiSigner::StripSignature(path);
         break;
     default:
         FAIL("unknown operation");
@@ -400,7 +400,7 @@ std::vector<std::uint8_t> DigestOf(const Bytes &input)
 {
     seedtest::ScratchDir scratch;
     const std::string path = sm::WriteScratch(scratch, "input.msi", input);
-    return MsiSigner::ComputeAuthenticodeDigest(path).digest;
+    return the_seed::MsiSigner::ComputeAuthenticodeDigest(path).digest;
 }
 
 std::vector<std::uint8_t> FromHex(const std::string &hex)
@@ -425,22 +425,22 @@ TEST_CASE("ok: MSI sample answers as before", "[MalformedMsi][ok]")
     const Bytes original = Tiny();
     const std::string path = sm::WriteScratch(scratch, "tiny.msi", original);
 
-    CHECK(MsiSigner::IsMsi(path));
-    CHECK_FALSE(MsiSigner::HasEmbeddedSignature(path));
-    CHECK_FALSE(MsiSigner::ExtractSignature(path).has_value());
-    CHECK(MsiSigner::ComputeAuthenticodeDigest(path).digest ==
+    CHECK(the_seed::MsiSigner::IsMsi(path));
+    CHECK_FALSE(the_seed::MsiSigner::HasEmbeddedSignature(path));
+    CHECK_FALSE(the_seed::MsiSigner::ExtractSignature(path).has_value());
+    CHECK(the_seed::MsiSigner::ComputeAuthenticodeDigest(path).digest ==
           FromHex("4244b8292b29b2397d1d45950372db7d46a7437544570f21386a58babae992b9"));
     sm::RequireUnchanged(path, original);
 }
 
 TEST_CASE("ok: MSI IsMsi on other files", "[MalformedMsi][ok]")
 {
-    CHECK_FALSE(MsiSigner::IsMsi(seedtest::FixturePath("tiny.exe")));
-    CHECK_FALSE(MsiSigner::IsMsi(seedtest::FixturePath("plain.txt")));
+    CHECK_FALSE(the_seed::MsiSigner::IsMsi(seedtest::FixturePath("tiny.exe")));
+    CHECK_FALSE(the_seed::MsiSigner::IsMsi(seedtest::FixturePath("plain.txt")));
     seedtest::ScratchDir scratch;
-    CHECK_FALSE(MsiSigner::IsMsi(sm::WriteScratch(scratch, "empty.msi", Bytes{})));
-    CHECK_FALSE(MsiSigner::IsMsi(sm::WriteScratch(scratch, "seven.msi", sm::Truncate(Tiny(), 7))));
-    CHECK_FALSE(MsiSigner::IsMsi(scratch.File("missing.msi")));
+    CHECK_FALSE(the_seed::MsiSigner::IsMsi(sm::WriteScratch(scratch, "empty.msi", Bytes{})));
+    CHECK_FALSE(the_seed::MsiSigner::IsMsi(sm::WriteScratch(scratch, "seven.msi", sm::Truncate(Tiny(), 7))));
+    CHECK_FALSE(the_seed::MsiSigner::IsMsi(scratch.File("missing.msi")));
 }
 
 TEST_CASE("ok: MSI embed then presence extract and strip", "[MalformedMsi][ok]")
@@ -449,16 +449,16 @@ TEST_CASE("ok: MSI embed then presence extract and strip", "[MalformedMsi][ok]")
     const std::string path = sm::WriteScratch(scratch, "tiny.msi", Tiny());
     const Bytes signature = FakeSignature();
 
-    MsiSigner::EmbedSignature(path, signature);
+    the_seed::MsiSigner::EmbedSignature(path, signature);
 
-    CHECK(MsiSigner::HasEmbeddedSignature(path));
-    const auto extracted = MsiSigner::ExtractSignature(path);
+    CHECK(the_seed::MsiSigner::HasEmbeddedSignature(path));
+    const auto extracted = the_seed::MsiSigner::ExtractSignature(path);
     REQUIRE(extracted.has_value());
     CHECK(*extracted == signature);
 
-    MsiSigner::StripSignature(path);
-    CHECK_FALSE(MsiSigner::HasEmbeddedSignature(path));
-    CHECK_FALSE(MsiSigner::ExtractSignature(path).has_value());
+    the_seed::MsiSigner::StripSignature(path);
+    CHECK_FALSE(the_seed::MsiSigner::HasEmbeddedSignature(path));
+    CHECK_FALSE(the_seed::MsiSigner::ExtractSignature(path).has_value());
 }
 
 TEST_CASE("ok: MSI signed copy has the digest of the unsigned file", "[MalformedMsi][ok]")
@@ -475,11 +475,11 @@ TEST_CASE("ok: MSI childless root", "[MalformedMsi][ok]")
 
     // No stream is reachable: the fingerprint is that of the root's class
     // identifier alone (the independent value), never the hash of no data.
-    const auto digest = MsiSigner::ComputeAuthenticodeDigest(path).digest;
+    const auto digest = the_seed::MsiSigner::ComputeAuthenticodeDigest(path).digest;
     CHECK(digest == FromHex(cfb::Fingerprint(bytes)));
     CHECK(digest != FromHex("e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"));
-    CHECK_FALSE(MsiSigner::HasEmbeddedSignature(path));
-    CHECK_FALSE(MsiSigner::ExtractSignature(path).has_value());
+    CHECK_FALSE(the_seed::MsiSigner::HasEmbeddedSignature(path));
+    CHECK_FALSE(the_seed::MsiSigner::ExtractSignature(path).has_value());
 }
 
 TEST_CASE("ok: MSI with bytes appended", "[MalformedMsi][ok]")
@@ -796,11 +796,11 @@ TEST_CASE("edge: MSI zero-length and 511-byte files", "[MalformedMsi][edge]")
     // of a header carries the magic, so IsMsi still says yes.
     seedtest::ScratchDir scratch;
     const Bytes empty;
-    CHECK_FALSE(MsiSigner::IsMsi(sm::WriteScratch(scratch, "empty.msi", empty)));
+    CHECK_FALSE(the_seed::MsiSigner::IsMsi(sm::WriteScratch(scratch, "empty.msi", empty)));
     RequireOpsRejected(empty, {"too small"}, kAllOps);
 
     const Bytes short_header = sm::Truncate(Tiny(), 511);
-    CHECK(MsiSigner::IsMsi(sm::WriteScratch(scratch, "short.msi", short_header)));
+    CHECK(the_seed::MsiSigner::IsMsi(sm::WriteScratch(scratch, "short.msi", short_header)));
     RequireOpsRejected(short_header, {"too small"}, kAllOps);
 }
 
@@ -962,9 +962,9 @@ TEST_CASE("ok: MSI storages nested four deep", "[MalformedMsi][ok][depth]")
     const Bytes bytes = cfb::Build(cfb::shapes::Nested());
     seedtest::ScratchDir scratch;
     const std::string path = sm::WriteScratch(scratch, "nested.msi", bytes);
-    CHECK(MsiSigner::ComputeAuthenticodeDigest(path).digest == FromHex(cfb::Fingerprint(bytes)));
-    CHECK_FALSE(MsiSigner::HasEmbeddedSignature(path));
-    CHECK_FALSE(MsiSigner::ExtractSignature(path).has_value());
+    CHECK(the_seed::MsiSigner::ComputeAuthenticodeDigest(path).digest == FromHex(cfb::Fingerprint(bytes)));
+    CHECK_FALSE(the_seed::MsiSigner::HasEmbeddedSignature(path));
+    CHECK_FALSE(the_seed::MsiSigner::ExtractSignature(path).has_value());
     sm::RequireUnchanged(path, bytes);
 }
 
@@ -1068,18 +1068,18 @@ TEST_CASE("ok: MSI signature of size zero is an existing signature to replace", 
         const std::string path = sm::WriteScratch(scratch, "empty-signature.msi", bytes);
 
         // Reading: an empty signature is no signature, and not a malformed package.
-        CHECK_FALSE(MsiSigner::HasEmbeddedSignature(path));
-        CHECK_FALSE(MsiSigner::ExtractSignature(path).has_value());
-        CHECK(MsiSigner::ComputeAuthenticodeDigest(path).digest == FromHex(cfb::Fingerprint(bytes)));
+        CHECK_FALSE(the_seed::MsiSigner::HasEmbeddedSignature(path));
+        CHECK_FALSE(the_seed::MsiSigner::ExtractSignature(path).has_value());
+        CHECK(the_seed::MsiSigner::ComputeAuthenticodeDigest(path).digest == FromHex(cfb::Fingerprint(bytes)));
 
         // Signing replaces it; stripping removes it.
         const Bytes blob = cfb::PatternBytes(1426, 7);
-        MsiSigner::EmbedSignature(path, blob);
-        const auto extracted = MsiSigner::ExtractSignature(path);
+        the_seed::MsiSigner::EmbedSignature(path, blob);
+        const auto extracted = the_seed::MsiSigner::ExtractSignature(path);
         REQUIRE(extracted.has_value());
         CHECK(*extracted == blob);
-        MsiSigner::StripSignature(path);
-        CHECK_FALSE(MsiSigner::HasEmbeddedSignature(path));
+        the_seed::MsiSigner::StripSignature(path);
+        CHECK_FALSE(the_seed::MsiSigner::HasEmbeddedSignature(path));
     }
 }
 
@@ -1094,12 +1094,12 @@ TEST_CASE("ok: MSI signature chain that ends at once is replaced and stripped", 
     seedtest::ScratchDir scratch;
     const std::string path = sm::WriteScratch(scratch, "end-of-chain.msi", bytes);
     const Bytes blob = cfb::PatternBytes(1426, 8);
-    MsiSigner::EmbedSignature(path, blob);
-    const auto extracted = MsiSigner::ExtractSignature(path);
+    the_seed::MsiSigner::EmbedSignature(path, blob);
+    const auto extracted = the_seed::MsiSigner::ExtractSignature(path);
     REQUIRE(extracted.has_value());
     CHECK(*extracted == blob);
 
     const std::string path2 = sm::WriteScratch(scratch, "end-of-chain-2.msi", bytes);
-    MsiSigner::StripSignature(path2);
-    CHECK_FALSE(MsiSigner::HasEmbeddedSignature(path2));
+    the_seed::MsiSigner::StripSignature(path2);
+    CHECK_FALSE(the_seed::MsiSigner::HasEmbeddedSignature(path2));
 }

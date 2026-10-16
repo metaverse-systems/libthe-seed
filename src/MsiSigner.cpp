@@ -15,6 +15,9 @@
 #include <string>
 #include <vector>
 
+namespace the_seed
+{
+
 namespace {
 
 using the_seed::internal::AuthenticodeDigestField;
@@ -287,3 +290,4 @@ MsiSigner::SignatureCheck MsiSigner::CheckSignature(const std::string &file_path
         return check;
     });
 }
+} // namespace the_seed

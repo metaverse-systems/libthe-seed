@@ -17,13 +17,13 @@ namespace
 
     // Parses the name and returns the LoadError it throws; fails the test if
     // it does not throw one.
-    LoadError InvalidNameCatch(const std::string &name)
+    the_seed::LoadError InvalidNameCatch(const std::string &name)
     {
         try
         {
             NameParser parser(name, kind);
         }
-        catch(const LoadError &error)
+        catch(const the_seed::LoadError &error)
         {
             return error;
         }
@@ -33,9 +33,9 @@ namespace
 
     void InvalidNameCheck(const std::string &name, const std::string &rule)
     {
-        LoadError error = InvalidNameCatch(name);
+        the_seed::LoadError error = InvalidNameCatch(name);
 
-        REQUIRE(error.ReasonGet() == LoadError::Reason::InvalidName);
+        REQUIRE(error.ReasonGet() == the_seed::LoadError::Reason::InvalidName);
         REQUIRE(Contains(error.what(), kind));
         REQUIRE(Contains(error.what(), rule));
         REQUIRE(error.LocationsGet().empty());
@@ -90,8 +90,8 @@ TEST_CASE("NameParser throws LoadError with invalid input", "[NameParser]") {
     }
 
     SECTION("Throws when input contains multiple consecutive slashes") {
-        LoadError error = InvalidNameCatch("invalid//name");
-        REQUIRE(error.ReasonGet() == LoadError::Reason::InvalidName);
+        the_seed::LoadError error = InvalidNameCatch("invalid//name");
+        REQUIRE(error.ReasonGet() == the_seed::LoadError::Reason::InvalidName);
         REQUIRE((Contains(error.what(), "empty part") || Contains(error.what(), "more than one \"/\"")));
     }
 
@@ -142,8 +142,8 @@ TEST_CASE("NameParser rejects names that could leave the plugin directory", "[Na
 
 TEST_CASE("NameParser rejects control characters and escapes them in the message", "[NameParser]") {
     SECTION("Newline") {
-        LoadError error = InvalidNameCatch("lib\nname");
-        REQUIRE(error.ReasonGet() == LoadError::Reason::InvalidName);
+        the_seed::LoadError error = InvalidNameCatch("lib\nname");
+        REQUIRE(error.ReasonGet() == the_seed::LoadError::Reason::InvalidName);
         REQUIRE(Contains(error.what(), "control character"));
         REQUIRE(Contains(error.what(), "lib"));
         REQUIRE(Contains(error.what(), "name"));
@@ -159,7 +159,7 @@ TEST_CASE("NameParser rejects control characters and escapes them in the message
         std::string name("a");
         name.push_back('\x01');
         name += "b";
-        LoadError error = InvalidNameCatch(name);
+        the_seed::LoadError error = InvalidNameCatch(name);
         REQUIRE(Contains(error.what(), "control character"));
         REQUIRE_FALSE(Contains(error.what(), name));
     }
@@ -168,7 +168,7 @@ TEST_CASE("NameParser rejects control characters and escapes them in the message
         std::string name("a");
         name.push_back('\0');
         name += "b";
-        LoadError error = InvalidNameCatch(name);
+        the_seed::LoadError error = InvalidNameCatch(name);
         REQUIRE(Contains(error.what(), "control character"));
         REQUIRE(std::string(error.what()).find('\0') == std::string::npos);
     }
@@ -177,7 +177,7 @@ TEST_CASE("NameParser rejects control characters and escapes them in the message
         std::string name("a");
         name.push_back('\x7f');
         name += "b";
-        LoadError error = InvalidNameCatch(name);
+        the_seed::LoadError error = InvalidNameCatch(name);
         REQUIRE(Contains(error.what(), "control character"));
         REQUIRE_FALSE(Contains(error.what(), name));
     }
@@ -190,14 +190,14 @@ TEST_CASE("NameParser names the kind and the name in its error", "[NameParser]")
             NameParser parser("..", "resource pak");
             FAIL("no LoadError");
         }
-        catch(const LoadError &error)
+        catch(const the_seed::LoadError &error)
         {
             REQUIRE(Contains(error.what(), "resource pak"));
         }
     }
 
     SECTION("Name is kept") {
-        LoadError error = InvalidNameCatch("../escape");
+        the_seed::LoadError error = InvalidNameCatch("../escape");
         REQUIRE(error.NameGet() == "../escape");
         REQUIRE(Contains(error.what(), "../escape"));
     }

@@ -28,7 +28,7 @@ namespace
     {
         int init_data = 0;
         // --- begin README text
-        ComponentLoader loader;
+        the_seed::ComponentLoader loader;
         loader.PathAdd("/usr/lib/the-seed/components");
 
         auto component = loader.Create("org/my-component");
@@ -45,7 +45,7 @@ namespace
     void SystemLoaderExample()
     {
         // --- begin README text
-        SystemLoader loader;
+        the_seed::SystemLoader loader;
         loader.PathAdd("/usr/lib/the-seed/systems");
 
         auto system = loader.Create("org/my-system");
@@ -56,7 +56,7 @@ namespace
     void DevelopmentLocationsExample()
     {
         // --- begin README text
-        ComponentLoader loader;
+        the_seed::ComponentLoader loader;
         loader.PathAdd("/usr/lib/the-seed/components");
 
         for(const auto &location : loader.SearchPathsGet("org/my-component"))
@@ -69,7 +69,7 @@ namespace
     void PakLoaderExample()
     {
         // --- begin README text
-        PakLoader loader;
+        the_seed::PakLoader loader;
         loader.PathAdd("/usr/share/the-seed/paks");
 
         // Load all resources from a pak
@@ -85,7 +85,7 @@ namespace
     void PakErrorsExample(const std::string &install_dir, ecs::Container *world)
     {
         // --- begin README text
-        PakLoader paks;
+        the_seed::PakLoader paks;
         paks.PathAdd(install_dir + "/paks");
 
         try
@@ -94,13 +94,13 @@ namespace
                                                                    // then only these two resources
             world->Resources(some);                                // shared, no copy (libecs-cpp)
         }
-        catch(const LoadError &e)
+        catch(const the_seed::LoadError &e)
         {
-            if(e.ReasonGet() == LoadError::Reason::ResourceMissing)
+            if(e.ReasonGet() == the_seed::LoadError::Reason::ResourceMissing)
             {
                 // e.MissingGet() lists the requested names the pak lacks; nothing was returned
             }
-            else if(e.ReasonGet() == LoadError::Reason::NotLoadable)
+            else if(e.ReasonGet() == the_seed::LoadError::Reason::NotLoadable)
             {
                 // e.DetailGet() starts with "damaged:" for a broken pak, else the system's reason
             }
@@ -111,7 +111,7 @@ namespace
     void ResourcePakExample(const std::string &install_dir)
     {
         // --- begin README text
-        ResourcePak pak(install_dir + "/paks/art.pak");
+        the_seed::ResourcePak pak(install_dir + "/paks/art.pak");
         for(const auto &name : pak.ResourceNames())
         {
             ecs::Resource resource = pak.Load(name);
@@ -137,10 +137,10 @@ namespace
         // --- begin README text
         ecs::Manager manager;
         ecs::Container *container = manager.Container("world");
-        ComponentLoader comp_loader;
+        the_seed::ComponentLoader comp_loader;
         comp_loader.PathAdd("/usr/lib/the-seed/components");
 
-        JSONLoader json(container, comp_loader);
+        the_seed::JSONLoader json(container, comp_loader);
         json.FileParse("scene.json");
         // The container, json and comp_loader may be destroyed in any order.
         // Or parse from a string:
@@ -151,7 +151,7 @@ namespace
     [[maybe_unused]] void ThreadSafetyExample()
     {
         // --- begin README text
-        ComponentLoader loader;
+        the_seed::ComponentLoader loader;
         loader.PathAdd("/usr/lib/the-seed/components");
 
         std::thread t1([&]() { auto c = loader.Create("org/comp-a"); });
@@ -163,12 +163,12 @@ namespace
 
     void ErrorHandlingExample()
     {
-        ComponentLoader loader;
+        the_seed::ComponentLoader loader;
         // --- begin README text
         try {
             auto component = loader.Create("nonexistent/component");
-        } catch (const LoadError &e) {
-            if(e.ReasonGet() == LoadError::Reason::NotFound)
+        } catch (const the_seed::LoadError &e) {
+            if(e.ReasonGet() == the_seed::LoadError::Reason::NotFound)
             {
                 // e.what() lists every location that was searched
             }
@@ -184,7 +184,7 @@ namespace
         {
             example();
         }
-        catch(const LoadError &)
+        catch(const the_seed::LoadError &)
         {
         }
     }
@@ -202,13 +202,13 @@ TEST_CASE("README examples run in the order written without a crash", "[README]"
 
 TEST_CASE("README not-found text for a loader with no locations", "[README]")
 {
-    ComponentLoader loader;
+    the_seed::ComponentLoader loader;
     try
     {
         loader.Create("org/my-component");
         FAIL("expected a LoadError");
     }
-    catch(const LoadError &e)
+    catch(const the_seed::LoadError &e)
     {
         const std::string text = e.what();
         REQUIRE(text.find("component plugin \"org/my-component\" not found: no location holds libmy-component") == 0);
@@ -250,6 +250,6 @@ TEST_CASE("README pak examples run against a generated pak", "[README]")
         std::filesystem::resize_file(file, std::filesystem::file_size(file) - 1);
         PakErrorsExample(scratch.Path().string(), world);
         REQUIRE(world->ResourceGet("logo") == nullptr);
-        REQUIRE_THROWS_AS(ResourcePakExample(scratch.Path().string()), LoadError);
+        REQUIRE_THROWS_AS(ResourcePakExample(scratch.Path().string()), the_seed::LoadError);
     }
 }

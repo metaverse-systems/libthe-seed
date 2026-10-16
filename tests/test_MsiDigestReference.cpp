@@ -155,7 +155,7 @@ const std::string &RecordedFingerprint(const std::string &sample)
 
 std::string LibraryDigest(const std::string &path)
 {
-    const auto result = MsiSigner::ComputeAuthenticodeDigest(path);
+    const auto result = the_seed::MsiSigner::ComputeAuthenticodeDigest(path);
     return cfb::ToHex(result.digest.data(), result.digest.size());
 }
 
@@ -359,7 +359,7 @@ TEST_CASE("fingerprint is the same after removing a signature", "[MsiDigestRefer
     {
         INFO("sample " << sample);
         const std::string path = sm::WriteScratch(scratch, sample, sm::LoadSample(sample));
-        REQUIRE_NOTHROW(MsiSigner::StripSignature(path));
+        REQUIRE_NOTHROW(the_seed::MsiSigner::StripSignature(path));
         CHECK(LibraryDigest(path) == RecordedFingerprint(sample));
     }
 }
@@ -373,7 +373,7 @@ TEST_CASE("fingerprint is the same after the library signs", "[MsiDigestReferenc
         {
             INFO("sample " << sample << " blob of " << size << " bytes");
             const std::string path = sm::WriteScratch(scratch, sample, sm::LoadSample(sample));
-            REQUIRE_NOTHROW(MsiSigner::EmbedSignature(path, cfb::PatternBytes(size, 9)));
+            REQUIRE_NOTHROW(the_seed::MsiSigner::EmbedSignature(path, cfb::PatternBytes(size, 9)));
             CHECK(LibraryDigest(path) == RecordedFingerprint(sample));
         }
     }
@@ -602,12 +602,12 @@ TEST_CASE("the package the library writes has the recorded hash", "[MsiDigestRef
         }
 
         const std::string path = sm::WriteScratch(scratch, sample, sm::LoadSample(sample));
-        REQUIRE_NOTHROW(MsiSigner::EmbedSignature(path, blob));
+        REQUIRE_NOTHROW(the_seed::MsiSigner::EmbedSignature(path, blob));
         CHECK(cfb::Sha256Hex(sm::ReadAll(path)) == recorded_hash);
 
         // The same input always gives the same bytes.
         const std::string again = sm::WriteScratch(scratch, "again-" + sample, sm::LoadSample(sample));
-        REQUIRE_NOTHROW(MsiSigner::EmbedSignature(again, blob));
+        REQUIRE_NOTHROW(the_seed::MsiSigner::EmbedSignature(again, blob));
         CHECK(sm::ReadAll(again) == sm::ReadAll(path));
     }
 }

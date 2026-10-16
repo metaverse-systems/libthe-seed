@@ -310,8 +310,8 @@ void ExpectOnlyNamedChanges(const Bytes &original, const Bytes &changed)
 // One signing with the given capacity and a CMS of `cms_size` bytes.
 void SignOnce(const std::string &path, std::uint32_t capacity, std::size_t cms_size)
 {
-    const auto prepared = MachOSigner::PrepareSignature(path, ms::KnownIdentity(), capacity);
-    MachOSigner::CompleteSignature(path, prepared, ms::CountingCms(prepared.slices.size(), cms_size));
+    const auto prepared = the_seed::MachOSigner::PrepareSignature(path, ms::KnownIdentity(), capacity);
+    the_seed::MachOSigner::CompleteSignature(path, prepared, ms::CountingCms(prepared.slices.size(), cms_size));
 }
 
 } // namespace
@@ -327,7 +327,7 @@ TEST_CASE("MachONoRoom a program with no header space is refused with the exact 
     const Aged before = AgeFile(path);
 
     const std::string message =
-        ms::ErrorOf([&] { (void)MachOSigner::PrepareSignature(path, ms::KnownIdentity(), ms::KnownCapacity); });
+        ms::ErrorOf([&] { (void)the_seed::MachOSigner::PrepareSignature(path, ms::KnownIdentity(), ms::KnownCapacity); });
     CHECK(message == path + ": " + NoRoomText(0, 680, 680));
     ExpectUntouched(before, scratch, 1);
 }
@@ -339,10 +339,10 @@ TEST_CASE("MachONoRoom signing in two calls is refused at the first call", "[Mac
     const Aged before = AgeFile(path);
     // A signature prepared from a program with room cannot be completed here.
     const std::string other = ms::CopyFixture(scratch, "tiny-macho-x86_64-exactfit", "other");
-    const auto prepared = MachOSigner::PrepareSignature(other, ms::KnownIdentity(), ms::KnownCapacity);
+    const auto prepared = the_seed::MachOSigner::PrepareSignature(other, ms::KnownIdentity(), ms::KnownCapacity);
 
     const std::string message = ms::ErrorOf(
-        [&] { MachOSigner::CompleteSignature(path, prepared, ms::CountingCms(prepared.slices.size())); });
+        [&] { the_seed::MachOSigner::CompleteSignature(path, prepared, ms::CountingCms(prepared.slices.size())); });
     CHECK(message.rfind(path + ": ", 0) == 0);
     ExpectUntouched(before, scratch, 2);
 }
@@ -354,7 +354,7 @@ TEST_CASE("MachONoRoom the refusal states the bytes available when some room is 
     const Aged before = AgeFile(path);
 
     const std::string message =
-        ms::ErrorOf([&] { (void)MachOSigner::PrepareSignature(path, ms::KnownIdentity(), ms::KnownCapacity); });
+        ms::ErrorOf([&] { (void)the_seed::MachOSigner::PrepareSignature(path, ms::KnownIdentity(), ms::KnownCapacity); });
     CHECK(message == path + ": " + NoRoomText(8, 688, 696));
     ExpectUntouched(before, scratch, 1);
 }
@@ -368,7 +368,7 @@ TEST_CASE("MachONoRoom the space ends at the section data and not at the end of 
     const Aged before = AgeFile(path);
 
     const std::string message =
-        ms::ErrorOf([&] { (void)MachOSigner::PrepareSignature(path, ms::KnownIdentity(), ms::KnownCapacity); });
+        ms::ErrorOf([&] { (void)the_seed::MachOSigner::PrepareSignature(path, ms::KnownIdentity(), ms::KnownCapacity); });
     CHECK(message == path + ": " + NoRoomText(0, 680, 680));
     ExpectUntouched(before, scratch, 1);
 }
@@ -385,7 +385,7 @@ TEST_CASE("MachONoRoom the refusal of every unsigned sample without room leaves 
         {
             INFO("capacity " << capacity);
             const std::string message =
-                ms::ErrorOf([&] { (void)MachOSigner::PrepareSignature(path, "x", capacity); });
+                ms::ErrorOf([&] { (void)the_seed::MachOSigner::PrepareSignature(path, "x", capacity); });
             CHECK(Contains(message, "no room for the code signature command: 16 bytes needed, 0 available"));
         }
         ExpectUntouched(before, scratch, 1);
@@ -402,9 +402,9 @@ TEST_CASE("MachONoRoom exactly 16 free bytes are enough and the first section is
     const std::string path = ms::CopyFixture(scratch, "tiny-macho-x86_64-exactfit");
     const Bytes original = ms::ReadAll(path);
 
-    const auto prepared = MachOSigner::PrepareSignature(path, ms::KnownIdentity(), ms::KnownCapacity);
+    const auto prepared = the_seed::MachOSigner::PrepareSignature(path, ms::KnownIdentity(), ms::KnownCapacity);
     const std::vector<Bytes> cms = ms::CountingCms(prepared.slices.size());
-    MachOSigner::CompleteSignature(path, prepared, cms);
+    the_seed::MachOSigner::CompleteSignature(path, prepared, cms);
     const Bytes finished = ms::ReadAll(path);
     ms::ExpectFinished(original, finished, prepared, cms);
 
@@ -486,7 +486,7 @@ TEST_CASE("MachONoRoom a universal file with one refusing slice is refused whole
         const Aged before = AgeFile(path);
 
         const std::string message =
-            ms::ErrorOf([&] { (void)MachOSigner::PrepareSignature(path, ms::KnownIdentity(), ms::KnownCapacity); });
+            ms::ErrorOf([&] { (void)the_seed::MachOSigner::PrepareSignature(path, ms::KnownIdentity(), ms::KnownCapacity); });
         CHECK(Contains(message, path + ": slice " + std::to_string(c.refused) + " (" + c.arch + "): " +
                                     "no room for the code signature command: 16 bytes needed, 0 available between "
                                     "the end of the load commands (offset 680) and the first section (offset 680); "
@@ -502,9 +502,9 @@ TEST_CASE("MachONoRoom a universal file with room in every slice signs and the o
     seedtest::ScratchDir scratch;
     const Bytes fat = mr::Universal({exact, roomy}, false, 14);
     const std::string path = ms::WriteScratch(scratch, "fat", fat);
-    const auto prepared = MachOSigner::PrepareSignature(path, ms::KnownIdentity(), ms::KnownCapacity);
+    const auto prepared = the_seed::MachOSigner::PrepareSignature(path, ms::KnownIdentity(), ms::KnownCapacity);
     const auto cms = ms::CountingCms(prepared.slices.size());
-    MachOSigner::CompleteSignature(path, prepared, cms);
+    the_seed::MachOSigner::CompleteSignature(path, prepared, cms);
     ms::ExpectFinished(fat, ms::ReadAll(path), prepared, cms);
     ExpectOnlyNamedChanges(fat, ms::ReadAll(path));
 }
@@ -518,16 +518,16 @@ TEST_CASE("MachONoRoom signing succeeds after the program is relinked with room"
     seedtest::ScratchDir scratch;
     const std::string path = ms::CopyFixture(scratch, "tiny-macho-x86_64-nospace", "program");
     const Aged before = AgeFile(path);
-    (void)ms::ErrorOf([&] { (void)MachOSigner::PrepareSignature(path, ms::KnownIdentity(), ms::KnownCapacity); });
+    (void)ms::ErrorOf([&] { (void)the_seed::MachOSigner::PrepareSignature(path, ms::KnownIdentity(), ms::KnownCapacity); });
     ExpectUntouched(before, scratch, 1);
 
     // The same program linked with -headerpad 0x10 takes the place of the file.
     std::filesystem::copy_file(seedtest::FixturePath("tiny-macho-x86_64-exactfit"), path,
                                std::filesystem::copy_options::overwrite_existing);
     const Bytes relinked = ms::ReadAll(path);
-    const auto prepared = MachOSigner::PrepareSignature(path, ms::KnownIdentity(), ms::KnownCapacity);
+    const auto prepared = the_seed::MachOSigner::PrepareSignature(path, ms::KnownIdentity(), ms::KnownCapacity);
     const auto cms = ms::CountingCms(prepared.slices.size());
-    MachOSigner::CompleteSignature(path, prepared, cms);
+    the_seed::MachOSigner::CompleteSignature(path, prepared, cms);
     ms::ExpectFinished(relinked, ms::ReadAll(path), prepared, cms);
     CHECK(CountEntries(scratch.Path()) == 1);
 }
@@ -544,9 +544,9 @@ TEST_CASE("MachONoRoom signing changes only the named bytes of every unsigned sa
         seedtest::ScratchDir scratch;
         const std::string path = ms::CopyFixture(scratch, name);
         const Bytes original = ms::ReadAll(path);
-        const auto prepared = MachOSigner::PrepareSignature(path, ms::KnownIdentity(), ms::KnownCapacity);
+        const auto prepared = the_seed::MachOSigner::PrepareSignature(path, ms::KnownIdentity(), ms::KnownCapacity);
         const auto cms = ms::CountingCms(prepared.slices.size());
-        MachOSigner::CompleteSignature(path, prepared, cms);
+        the_seed::MachOSigner::CompleteSignature(path, prepared, cms);
         const Bytes finished = ms::ReadAll(path);
         ms::ExpectFinished(original, finished, prepared, cms);
         ExpectOnlyNamedChanges(original, finished);
@@ -575,9 +575,9 @@ TEST_CASE("MachONoRoom repeated signings change only the named bytes of every sa
         {
             ++round;
             INFO("signing " << round << " with capacity " << capacity);
-            const auto prepared = MachOSigner::PrepareSignature(path, ms::KnownIdentity(), capacity);
+            const auto prepared = the_seed::MachOSigner::PrepareSignature(path, ms::KnownIdentity(), capacity);
             const auto cms = ms::CountingCms(prepared.slices.size(), capacity - capacity / 4);
-            MachOSigner::CompleteSignature(path, prepared, cms);
+            the_seed::MachOSigner::CompleteSignature(path, prepared, cms);
             const Bytes finished = ms::ReadAll(path);
             if(unsigned_sample)
             {
@@ -602,7 +602,7 @@ TEST_CASE("MachONoRoom stripping and signing again changes only the named bytes"
             INFO("round " << round);
             SignOnce(path, 64, 64);
             ExpectOnlyNamedChanges(original, ms::ReadAll(path));
-            MachOSigner::StripSignature(path);
+            the_seed::MachOSigner::StripSignature(path);
             // After a strip the signature command is gone; the rest is the
             // original except for the link-edit sizes and the length.
             const Bytes stripped = ms::ReadAll(path);

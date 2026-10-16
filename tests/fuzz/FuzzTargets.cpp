@@ -135,8 +135,8 @@ void Call(const char *operation, std::size_t input_size, std::size_t extra, F &&
 void ListDependencies(const std::string &path, std::size_t size)
 {
     Call("DependencyLister::ListDependencies", size, 0, [&] {
-        DependencyLister lister;
-        const DependencyResult result = lister.ListDependencies({path}, {});
+        the_seed::DependencyLister lister;
+        const the_seed::DependencyResult result = lister.ListDependencies({path}, {});
         for(const auto &entry : result.errors)
         {
             CheckMessage("DependencyLister::ListDependencies", entry.second);
@@ -231,7 +231,7 @@ std::vector<std::uint8_t> SuperBlobSeed()
     code_directory[5] = 0;
     code_directory[6] = 0;
     code_directory[7] = static_cast<std::uint8_t>(code_directory.size());
-    return MachOSigner::BuildSuperBlob(code_directory, std::vector<std::uint8_t>(70, 0xA5));
+    return the_seed::MachOSigner::BuildSuperBlob(code_directory, std::vector<std::uint8_t>(70, 0xA5));
 }
 
 void FuzzElf(const std::uint8_t *data, std::size_t size)
@@ -249,16 +249,16 @@ void FuzzPe(const std::uint8_t *data, std::size_t size)
 
     ListDependencies(path, size);
     Call("PeSigner::ComputeAuthenticodeDigest", size, 0,
-         [&] { (void)PeSigner::ComputeAuthenticodeDigest(path); });
+         [&] { (void)the_seed::PeSigner::ComputeAuthenticodeDigest(path); });
     Call("PeSigner::HasEmbeddedSignature", size, 0,
-         [&] { (void)PeSigner::HasEmbeddedSignature(path); });
-    Call("PeSigner::ExtractSignature", size, 0, [&] { (void)PeSigner::ExtractSignature(path); });
+         [&] { (void)the_seed::PeSigner::HasEmbeddedSignature(path); });
+    Call("PeSigner::ExtractSignature", size, 0, [&] { (void)the_seed::PeSigner::ExtractSignature(path); });
 
     const std::vector<std::uint8_t> blob(64, 0x5A);
     WriteFile(work, data, size);
     Call("PeSigner::EmbedSignature", size, blob.size(),
-         [&] { PeSigner::EmbedSignature(work, blob); });
-    Call("PeSigner::StripSignature", size, blob.size(), [&] { PeSigner::StripSignature(work); });
+         [&] { the_seed::PeSigner::EmbedSignature(work, blob); });
+    Call("PeSigner::StripSignature", size, blob.size(), [&] { the_seed::PeSigner::StripSignature(work); });
 }
 
 void FuzzMachO(const std::uint8_t *data, std::size_t size)
@@ -267,24 +267,24 @@ void FuzzMachO(const std::uint8_t *data, std::size_t size)
     const std::string work = SharedScratch().File("work.bin");
     WriteFile(path, data, size);
 
-    Call("MachOParser::DetectFormat", size, 0, [&] { (void)MachOParser::DetectFormat(path); });
-    Call("MachOParser::GetArchSlices", size, 0, [&] { (void)MachOParser::GetArchSlices(path); });
+    Call("MachOParser::DetectFormat", size, 0, [&] { (void)the_seed::MachOParser::DetectFormat(path); });
+    Call("MachOParser::GetArchSlices", size, 0, [&] { (void)the_seed::MachOParser::GetArchSlices(path); });
     Call("MachOParser::ListDependencies", size, 0,
-         [&] { (void)MachOParser::ListDependencies(path); });
+         [&] { (void)the_seed::MachOParser::ListDependencies(path); });
     Call("MachOSigner::PrepareSignature", size, 0,
-         [&] { (void)MachOSigner::PrepareSignature(path, "fuzz", 64); });
+         [&] { (void)the_seed::MachOSigner::PrepareSignature(path, "fuzz", 64); });
     Call("MachOSigner::HasEmbeddedSignature", size, 0,
-         [&] { (void)MachOSigner::HasEmbeddedSignature(path); });
+         [&] { (void)the_seed::MachOSigner::HasEmbeddedSignature(path); });
     Call("MachOSigner::ExtractSignature", size, 0,
-         [&] { (void)MachOSigner::ExtractSignature(path); });
+         [&] { (void)the_seed::MachOSigner::ExtractSignature(path); });
     Call("MachOSigner::ExtractSignatures", size, 0,
-         [&] { (void)MachOSigner::ExtractSignatures(path); });
+         [&] { (void)the_seed::MachOSigner::ExtractSignatures(path); });
 
     static const std::vector<std::uint8_t> blob = SuperBlobSeed();
     WriteFile(work, data, size);
     Call("MachOSigner::CompleteSignature", size, blob.size(), [&] {
-        const auto prepared = MachOSigner::PrepareSignature(work, "fuzz", static_cast<std::uint32_t>(blob.size()));
-        MachOSigner::CompleteSignature(
+        const auto prepared = the_seed::MachOSigner::PrepareSignature(work, "fuzz", static_cast<std::uint32_t>(blob.size()));
+        the_seed::MachOSigner::CompleteSignature(
             work, prepared, std::vector<std::vector<std::uint8_t>>(prepared.slices.size(), blob));
     });
 }
@@ -293,9 +293,9 @@ void FuzzSuperBlob(const std::uint8_t *data, std::size_t size)
 {
     const std::vector<std::uint8_t> bytes(data, data + size);
     Call("MachOSigner::ExtractCmsFromSuperBlob", size, 0,
-         [&] { (void)MachOSigner::ExtractCmsFromSuperBlob(bytes); });
+         [&] { (void)the_seed::MachOSigner::ExtractCmsFromSuperBlob(bytes); });
     Call("MachOSigner::ExtractCodeDirectoryFromSuperBlob", size, 0,
-         [&] { (void)MachOSigner::ExtractCodeDirectoryFromSuperBlob(bytes); });
+         [&] { (void)the_seed::MachOSigner::ExtractCodeDirectoryFromSuperBlob(bytes); });
 }
 
 void FuzzMsi(const std::uint8_t *data, std::size_t size)
@@ -304,33 +304,33 @@ void FuzzMsi(const std::uint8_t *data, std::size_t size)
     const std::string work = SharedScratch().File("work.bin");
     WriteFile(path, data, size);
 
-    Call("MsiSigner::IsMsi", size, 0, [&] { (void)MsiSigner::IsMsi(path); });
+    Call("MsiSigner::IsMsi", size, 0, [&] { (void)the_seed::MsiSigner::IsMsi(path); });
     Call("MsiSigner::ComputeAuthenticodeDigest", size, 0,
-         [&] { (void)MsiSigner::ComputeAuthenticodeDigest(path); });
+         [&] { (void)the_seed::MsiSigner::ComputeAuthenticodeDigest(path); });
     Call("MsiSigner::HasEmbeddedSignature", size, 0,
-         [&] { (void)MsiSigner::HasEmbeddedSignature(path); });
+         [&] { (void)the_seed::MsiSigner::HasEmbeddedSignature(path); });
     Call("MsiSigner::ExtractSignature", size, 0,
-         [&] { (void)MsiSigner::ExtractSignature(path); });
+         [&] { (void)the_seed::MsiSigner::ExtractSignature(path); });
 
-    Call("MsiSigner::CheckSignature", size, 0, [&] { (void)MsiSigner::CheckSignature(path); });
+    Call("MsiSigner::CheckSignature", size, 0, [&] { (void)the_seed::MsiSigner::CheckSignature(path); });
 
     const std::vector<std::uint8_t> blob(1500, 0x5A);
     WriteFile(work, data, size);
     Call("MsiSigner::EmbedSignature", size, blob.size(),
-         [&] { MsiSigner::EmbedSignature(work, blob); });
+         [&] { the_seed::MsiSigner::EmbedSignature(work, blob); });
     Call("MsiSigner::CheckSignature after embed", size, blob.size(),
-         [&] { (void)MsiSigner::CheckSignature(work); });
+         [&] { (void)the_seed::MsiSigner::CheckSignature(work); });
     Call("MsiSigner::StripSignature", size, blob.size(),
-         [&] { (void)MsiSigner::StripSignature(work); });
+         [&] { (void)the_seed::MsiSigner::StripSignature(work); });
 
     // A signature of the other kind (ordinary sectors), with the digest check
     // (which refuses it: nothing in the blob is a fingerprint).
     const std::vector<std::uint8_t> large(6000, 0xA5);
     WriteFile(work, data, size);
     Call("MsiSigner::EmbedSignature large", size, large.size(),
-         [&] { MsiSigner::EmbedSignature(work, large); });
+         [&] { the_seed::MsiSigner::EmbedSignature(work, large); });
     Call("MsiSigner::EmbedSignature with digest check", size, large.size(),
-         [&] { MsiSigner::EmbedSignature(work, large, true); });
+         [&] { the_seed::MsiSigner::EmbedSignature(work, large, true); });
 }
 
 } // namespace seedfuzz

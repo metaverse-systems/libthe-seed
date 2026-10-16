@@ -1,0 +1,15 @@
+# The headers the library installs, one file name per line.
+# check-public-headers.sh compares the installed set with this list.
+ComponentLoader.hpp
+DependencyLister.hpp
+Export.hpp
+JSONLoader.hpp
+LibraryLoader.hpp
+LoadError.hpp
+MachOParser.hpp
+MachOSigner.hpp
+MsiSigner.hpp
+PakLoader.hpp
+PeSigner.hpp
+ResourcePak.hpp
+SystemLoader.hpp

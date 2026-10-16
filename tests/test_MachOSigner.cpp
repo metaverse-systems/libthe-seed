@@ -214,11 +214,11 @@ TEST_CASE("MachOSigner::BuildSuperBlob creates valid blob", "[MachOSigner]")
 {
     seedtest::ScratchDir scratch;
     const std::string path = ms::CopyFixture(scratch, "tiny-macho-x86_64");
-    const auto prepared = MachOSigner::PrepareSignature(path, "test-identity", 64);
+    const auto prepared = the_seed::MachOSigner::PrepareSignature(path, "test-identity", 64);
     REQUIRE(prepared.slices.size() == 1);
 
     const Bytes fakeCms(64, 0xCC);
-    const Bytes superBlob = MachOSigner::BuildSuperBlob(prepared.slices[0].code_directory, fakeCms);
+    const Bytes superBlob = the_seed::MachOSigner::BuildSuperBlob(prepared.slices[0].code_directory, fakeCms);
 
     // The blob starts with the embedded-signature magic and its own length.
     REQUIRE(superBlob.size() >= 12);
@@ -237,8 +237,8 @@ TEST_CASE("MachOSigner::BuildSuperBlob does not touch any file", "[MachOSigner]"
     seedtest::ScratchDir scratch;
     const std::string path = ms::CopyFixture(scratch, "tiny-macho-x86_64");
     const Bytes before = ms::ReadAll(path);
-    const auto prepared = MachOSigner::PrepareSignature(path, "test-identity", 64);
-    (void)MachOSigner::BuildSuperBlob(prepared.slices[0].code_directory, Bytes(64, 1));
+    const auto prepared = the_seed::MachOSigner::PrepareSignature(path, "test-identity", 64);
+    (void)the_seed::MachOSigner::BuildSuperBlob(prepared.slices[0].code_directory, Bytes(64, 1));
     CHECK(ms::ReadAll(path) == before);
 }
 
@@ -247,7 +247,7 @@ TEST_CASE("MachOSigner::HasEmbeddedSignature returns false for unsigned", "[Mach
     for(const std::string &name : ms::SignableSamples())
     {
         INFO(name);
-        CHECK(MachOSigner::HasEmbeddedSignature(seedtest::FixturePath(name)) == false);
+        CHECK(the_seed::MachOSigner::HasEmbeddedSignature(seedtest::FixturePath(name)) == false);
     }
 }
 
@@ -255,12 +255,12 @@ TEST_CASE("MachOSigner::ExtractCmsFromSuperBlob extracts CMS blob", "[MachOSigne
 {
     seedtest::ScratchDir scratch;
     const std::string path = ms::CopyFixture(scratch, "tiny-macho-x86_64");
-    const auto prepared = MachOSigner::PrepareSignature(path, "test", 48);
+    const auto prepared = the_seed::MachOSigner::PrepareSignature(path, "test", 48);
 
     const Bytes fakeCms(48, 0xEE);
-    const Bytes superBlob = MachOSigner::BuildSuperBlob(prepared.slices[0].code_directory, fakeCms);
+    const Bytes superBlob = the_seed::MachOSigner::BuildSuperBlob(prepared.slices[0].code_directory, fakeCms);
 
-    const auto cms = MachOSigner::ExtractCmsFromSuperBlob(superBlob);
+    const auto cms = the_seed::MachOSigner::ExtractCmsFromSuperBlob(superBlob);
     REQUIRE(cms.has_value());
     CHECK(*cms == fakeCms);
 }
@@ -269,12 +269,12 @@ TEST_CASE("MachOSigner::ExtractCodeDirectoryFromSuperBlob extracts CD", "[MachOS
 {
     seedtest::ScratchDir scratch;
     const std::string path = ms::CopyFixture(scratch, "tiny-macho-x86_64");
-    const auto prepared = MachOSigner::PrepareSignature(path, "test", 32);
+    const auto prepared = the_seed::MachOSigner::PrepareSignature(path, "test", 32);
 
     const Bytes fakeCms(32, 0xFF);
-    const Bytes superBlob = MachOSigner::BuildSuperBlob(prepared.slices[0].code_directory, fakeCms);
+    const Bytes superBlob = the_seed::MachOSigner::BuildSuperBlob(prepared.slices[0].code_directory, fakeCms);
 
-    const auto cd = MachOSigner::ExtractCodeDirectoryFromSuperBlob(superBlob);
+    const auto cd = the_seed::MachOSigner::ExtractCodeDirectoryFromSuperBlob(superBlob);
     REQUIRE(cd.has_value());
     CHECK(*cd == prepared.slices[0].code_directory);
 }
@@ -285,25 +285,25 @@ TEST_CASE("MachOSigner::EmbedSignature and ExtractSignature round-trip", "[MachO
 {
     seedtest::ScratchDir scratch;
     const std::string path = ms::CopyFixture(scratch, "tiny-macho-x86_64");
-    REQUIRE(MachOSigner::HasEmbeddedSignature(path) == false);
+    REQUIRE(the_seed::MachOSigner::HasEmbeddedSignature(path) == false);
 
-    const auto prepared = MachOSigner::PrepareSignature(path, "test-identity", 64);
+    const auto prepared = the_seed::MachOSigner::PrepareSignature(path, "test-identity", 64);
     const Bytes fakeCms(64, 0xDD);
-    MachOSigner::CompleteSignature(path, prepared, {fakeCms});
+    the_seed::MachOSigner::CompleteSignature(path, prepared, {fakeCms});
 
-    CHECK(MachOSigner::HasEmbeddedSignature(path) == true);
+    CHECK(the_seed::MachOSigner::HasEmbeddedSignature(path) == true);
 
-    const Bytes expected = MachOSigner::BuildSuperBlob(prepared.slices[0].code_directory, fakeCms);
-    const auto extracted = MachOSigner::ExtractSignature(path);
+    const Bytes expected = the_seed::MachOSigner::BuildSuperBlob(prepared.slices[0].code_directory, fakeCms);
+    const auto extracted = the_seed::MachOSigner::ExtractSignature(path);
     REQUIRE(extracted.has_value());
     // The SuperBlob alone, not the zero bytes that follow it.
     CHECK(extracted->size() == expected.size());
     CHECK(*extracted == expected);
 
-    const auto cms = MachOSigner::ExtractCmsFromSuperBlob(*extracted);
+    const auto cms = the_seed::MachOSigner::ExtractCmsFromSuperBlob(*extracted);
     REQUIRE(cms.has_value());
     CHECK(*cms == fakeCms);
-    const auto cd = MachOSigner::ExtractCodeDirectoryFromSuperBlob(*extracted);
+    const auto cd = the_seed::MachOSigner::ExtractCodeDirectoryFromSuperBlob(*extracted);
     REQUIRE(cd.has_value());
     CHECK(*cd == prepared.slices[0].code_directory);
 }
@@ -317,13 +317,13 @@ TEST_CASE("MachOSigner signing finishes every sample and slice", "[MachOSigner]"
         const std::string path = ms::CopyFixture(scratch, name);
         const Bytes original = ms::ReadAll(path);
 
-        const auto prepared = MachOSigner::PrepareSignature(path, "test-identity", 64);
+        const auto prepared = the_seed::MachOSigner::PrepareSignature(path, "test-identity", 64);
         const auto cms = ms::CountingCms(prepared.slices.size());
-        MachOSigner::CompleteSignature(path, prepared, cms);
+        the_seed::MachOSigner::CompleteSignature(path, prepared, cms);
 
         const Bytes finished = ms::ReadAll(path);
         ms::ExpectFinished(original, finished, prepared, cms);
-        CHECK(MachOSigner::HasEmbeddedSignature(path));
+        CHECK(the_seed::MachOSigner::HasEmbeddedSignature(path));
         CHECK(prepared.identity == "test-identity");
         CHECK(prepared.cms_capacity == 64);
     }
@@ -343,12 +343,12 @@ TEST_CASE("MachOSigner signing gives the same result for other identities and ca
                 seedtest::ScratchDir scratch;
                 const std::string path = ms::CopyFixture(scratch, name);
                 const Bytes original = ms::ReadAll(path);
-                const auto prepared = MachOSigner::PrepareSignature(path, identity, capacity);
+                const auto prepared = the_seed::MachOSigner::PrepareSignature(path, identity, capacity);
                 // The CMS is as large as the capacity allows, and in the other
                 // run one byte shorter.
                 const std::size_t size = capacity;
                 const auto cms = ms::CountingCms(prepared.slices.size(), size);
-                MachOSigner::CompleteSignature(path, prepared, cms);
+                the_seed::MachOSigner::CompleteSignature(path, prepared, cms);
                 ms::ExpectFinished(original, ms::ReadAll(path), prepared, cms);
             }
         }
@@ -360,9 +360,9 @@ TEST_CASE("MachOSigner a shorter CMS than reserved leaves zero bytes", "[MachOSi
     seedtest::ScratchDir scratch;
     const std::string path = ms::CopyFixture(scratch, "tiny-macho-arm64");
     const Bytes original = ms::ReadAll(path);
-    const auto prepared = MachOSigner::PrepareSignature(path, "test-identity", 512);
+    const auto prepared = the_seed::MachOSigner::PrepareSignature(path, "test-identity", 512);
     const auto cms = ms::CountingCms(1, 100);
-    MachOSigner::CompleteSignature(path, prepared, cms);
+    the_seed::MachOSigner::CompleteSignature(path, prepared, cms);
     const Bytes finished = ms::ReadAll(path);
     ms::ExpectFinished(original, finished, prepared, cms);
 
@@ -385,7 +385,7 @@ TEST_CASE("MachOSigner PrepareSignature leaves the file byte-identical", "[MachO
         const Bytes before = ms::ReadAll(path);
         const auto modified_before = std::filesystem::last_write_time(path);
 
-        const auto prepared = MachOSigner::PrepareSignature(path, "test-identity", 64);
+        const auto prepared = the_seed::MachOSigner::PrepareSignature(path, "test-identity", 64);
         CHECK_FALSE(prepared.slices.empty());
         CHECK(ms::ReadAll(path) == before);
         CHECK(std::filesystem::last_write_time(path) == modified_before);
@@ -438,7 +438,7 @@ TEST_CASE("MachOSigner PrepareSignature leaves the file byte-identical when it f
         INFO(c.name);
         const bool present = std::filesystem::exists(c.path);
         const Bytes before = present ? ms::ReadAll(c.path) : Bytes();
-        const std::string message = ms::ErrorOf([&] { (void)MachOSigner::PrepareSignature(c.path, c.identity, c.capacity); });
+        const std::string message = ms::ErrorOf([&] { (void)the_seed::MachOSigner::PrepareSignature(c.path, c.identity, c.capacity); });
         CHECK_FALSE(message.empty());
         CHECK(NamesTheFile(message, c.path));
         CHECK(std::filesystem::exists(c.path) == present);
@@ -458,9 +458,9 @@ TEST_CASE("MachOSigner equal inputs give an identical CodeDirectory", "[MachOSig
         const std::string first = ms::CopyFixture(scratch, name, "first");
         const std::string second = ms::CopyFixture(scratch, name, "second");
 
-        const auto a = MachOSigner::PrepareSignature(first, "test-identity", 64);
-        const auto b = MachOSigner::PrepareSignature(first, "test-identity", 64);
-        const auto c = MachOSigner::PrepareSignature(second, "test-identity", 64);
+        const auto a = the_seed::MachOSigner::PrepareSignature(first, "test-identity", 64);
+        const auto b = the_seed::MachOSigner::PrepareSignature(first, "test-identity", 64);
+        const auto c = the_seed::MachOSigner::PrepareSignature(second, "test-identity", 64);
         REQUIRE(a.slices.size() == b.slices.size());
         REQUIRE(a.slices.size() == c.slices.size());
         for(std::size_t i = 0; i < a.slices.size(); ++i)
@@ -473,8 +473,8 @@ TEST_CASE("MachOSigner equal inputs give an identical CodeDirectory", "[MachOSig
         }
 
         // Different inputs give a different CodeDirectory.
-        const auto other_identity = MachOSigner::PrepareSignature(first, "other-identity", 64);
-        const auto other_capacity = MachOSigner::PrepareSignature(first, "test-identity", 128);
+        const auto other_identity = the_seed::MachOSigner::PrepareSignature(first, "other-identity", 64);
+        const auto other_capacity = the_seed::MachOSigner::PrepareSignature(first, "test-identity", 128);
         CHECK(other_identity.slices[0].code_directory != a.slices[0].code_directory);
         CHECK(other_capacity.slices[0].code_directory != a.slices[0].code_directory);
 
@@ -494,9 +494,9 @@ TEST_CASE("MachOSigner CompleteSignature works on an identical copy in another p
     const std::string a = ms::CopyFixture(scratch, "tiny-macho-universal", "a");
     const std::string b = ms::CopyFixture(scratch, "tiny-macho-universal", "b");
     const Bytes original = ms::ReadAll(a);
-    const auto prepared = MachOSigner::PrepareSignature(a, "test-identity", 64);
+    const auto prepared = the_seed::MachOSigner::PrepareSignature(a, "test-identity", 64);
     const auto cms = ms::CountingCms(prepared.slices.size());
-    MachOSigner::CompleteSignature(b, prepared, cms);
+    the_seed::MachOSigner::CompleteSignature(b, prepared, cms);
     ms::ExpectFinished(original, ms::ReadAll(b), prepared, cms);
     CHECK(ms::ReadAll(a) == original);
 }
@@ -505,7 +505,7 @@ TEST_CASE("MachOSigner a stale PreparedSignature is refused", "[MachOSigner]")
 {
     seedtest::ScratchDir scratch;
     const std::string path = ms::CopyFixture(scratch, "tiny-macho-x86_64");
-    const auto prepared = MachOSigner::PrepareSignature(path, "test-identity", 64);
+    const auto prepared = the_seed::MachOSigner::PrepareSignature(path, "test-identity", 64);
     const auto cms = ms::CountingCms(1);
 
     SECTION("one byte of the program changed")
@@ -513,7 +513,7 @@ TEST_CASE("MachOSigner a stale PreparedSignature is refused", "[MachOSigner]")
         Bytes changed = ms::ReadAll(path);
         changed.at(100) ^= 0x40; // inside the load commands: page 0
         ms::WriteAll(path, changed);
-        const std::string message = ms::ErrorOf([&] { MachOSigner::CompleteSignature(path, prepared, cms); });
+        const std::string message = ms::ErrorOf([&] { the_seed::MachOSigner::CompleteSignature(path, prepared, cms); });
         ExpectChanged(message, path);
         CHECK(ms::ReadAll(path) == changed);
     }
@@ -522,7 +522,7 @@ TEST_CASE("MachOSigner a stale PreparedSignature is refused", "[MachOSigner]")
         Bytes changed = ms::ReadAll(path);
         changed.at(4100) ^= 0x01;
         ms::WriteAll(path, changed);
-        const std::string message = ms::ErrorOf([&] { MachOSigner::CompleteSignature(path, prepared, cms); });
+        const std::string message = ms::ErrorOf([&] { the_seed::MachOSigner::CompleteSignature(path, prepared, cms); });
         ExpectChanged(message, path);
         CHECK(ms::ReadAll(path) == changed);
     }
@@ -531,45 +531,45 @@ TEST_CASE("MachOSigner a stale PreparedSignature is refused", "[MachOSigner]")
         Bytes changed = ms::ReadAll(path);
         changed.insert(changed.end(), 16, 0);
         ms::WriteAll(path, changed);
-        const std::string message = ms::ErrorOf([&] { MachOSigner::CompleteSignature(path, prepared, cms); });
+        const std::string message = ms::ErrorOf([&] { the_seed::MachOSigner::CompleteSignature(path, prepared, cms); });
         CHECK(NamesTheFile(message, path));
         CHECK(ms::ReadAll(path) == changed);
     }
     SECTION("the identity differs")
     {
         const Bytes before = ms::ReadAll(path);
-        MachOSigner::PreparedSignature other = prepared;
+        the_seed::MachOSigner::PreparedSignature other = prepared;
         other.identity = "another-identity";
-        const std::string message = ms::ErrorOf([&] { MachOSigner::CompleteSignature(path, other, cms); });
+        const std::string message = ms::ErrorOf([&] { the_seed::MachOSigner::CompleteSignature(path, other, cms); });
         ExpectChanged(message, path);
         CHECK(ms::ReadAll(path) == before);
     }
     SECTION("the capacity differs")
     {
         const Bytes before = ms::ReadAll(path);
-        MachOSigner::PreparedSignature other = prepared;
+        the_seed::MachOSigner::PreparedSignature other = prepared;
         other.cms_capacity = 128;
-        const std::string message = ms::ErrorOf([&] { MachOSigner::CompleteSignature(path, other, cms); });
+        const std::string message = ms::ErrorOf([&] { the_seed::MachOSigner::CompleteSignature(path, other, cms); });
         ExpectChanged(message, path);
         CHECK(ms::ReadAll(path) == before);
     }
     SECTION("the CodeDirectory was altered")
     {
         const Bytes before = ms::ReadAll(path);
-        MachOSigner::PreparedSignature other = prepared;
+        the_seed::MachOSigner::PreparedSignature other = prepared;
         other.slices[0].code_directory.back() ^= 0x01;
-        const std::string message = ms::ErrorOf([&] { MachOSigner::CompleteSignature(path, other, cms); });
+        const std::string message = ms::ErrorOf([&] { the_seed::MachOSigner::CompleteSignature(path, other, cms); });
         ExpectChanged(message, path);
         CHECK(ms::ReadAll(path) == before);
     }
     SECTION("the program was signed in the meantime")
     {
-        MachOSigner::CompleteSignature(path, prepared, cms);
+        the_seed::MachOSigner::CompleteSignature(path, prepared, cms);
         const Bytes signed_once = ms::ReadAll(path);
         // A signed program is signed again in place, and the same inputs give
         // the same CodeDirectory, so the prepared value still describes the
         // result: completing it again changes nothing.
-        MachOSigner::CompleteSignature(path, prepared, cms);
+        the_seed::MachOSigner::CompleteSignature(path, prepared, cms);
         CHECK(ms::ReadAll(path) == signed_once);
     }
 }
@@ -584,13 +584,13 @@ TEST_CASE("MachOSigner a PreparedSignature of another program is refused", "[Mac
     const Bytes arm_before = ms::ReadAll(arm);
     const Bytes fat_before = ms::ReadAll(fat);
 
-    const auto for_x86 = MachOSigner::PrepareSignature(x86, "test-identity", 64);
-    const auto for_arm = MachOSigner::PrepareSignature(arm, "test-identity", 64);
+    const auto for_x86 = the_seed::MachOSigner::PrepareSignature(x86, "test-identity", 64);
+    const auto for_arm = the_seed::MachOSigner::PrepareSignature(arm, "test-identity", 64);
 
-    ExpectChanged(ms::ErrorOf([&] { MachOSigner::CompleteSignature(arm, for_x86, ms::CountingCms(1)); }), arm);
-    ExpectChanged(ms::ErrorOf([&] { MachOSigner::CompleteSignature(x86, for_arm, ms::CountingCms(1)); }), x86);
+    ExpectChanged(ms::ErrorOf([&] { the_seed::MachOSigner::CompleteSignature(arm, for_x86, ms::CountingCms(1)); }), arm);
+    ExpectChanged(ms::ErrorOf([&] { the_seed::MachOSigner::CompleteSignature(x86, for_arm, ms::CountingCms(1)); }), x86);
     // The slice count differs: one prepared slice against a universal file.
-    const std::string fat_message = ms::ErrorOf([&] { MachOSigner::CompleteSignature(fat, for_x86, ms::CountingCms(1)); });
+    const std::string fat_message = ms::ErrorOf([&] { the_seed::MachOSigner::CompleteSignature(fat, for_x86, ms::CountingCms(1)); });
     CHECK(NamesTheFile(fat_message, fat));
 
     CHECK(ms::ReadAll(x86) == x86_before);
@@ -606,20 +606,20 @@ TEST_CASE("MachOSigner a signature larger than the reserved capacity is refused"
         seedtest::ScratchDir scratch;
         const std::string path = ms::CopyFixture(scratch, name);
         const Bytes before = ms::ReadAll(path);
-        const auto prepared = MachOSigner::PrepareSignature(path, "test-identity", 64);
+        const auto prepared = the_seed::MachOSigner::PrepareSignature(path, "test-identity", 64);
 
         auto cms = ms::CountingCms(prepared.slices.size());
         cms.back().push_back(0xAB); // one byte over, in the last slice only
-        const std::string message = ms::ErrorOf([&] { MachOSigner::CompleteSignature(path, prepared, cms); });
+        const std::string message = ms::ErrorOf([&] { the_seed::MachOSigner::CompleteSignature(path, prepared, cms); });
         CHECK(message.rfind(path + ": ", 0) == 0);
         CHECK(Contains(message, "the signature is 65 bytes but only 64 were reserved; "
                                 "prepare again with a larger capacity"));
         CHECK(ms::ReadAll(path) == before);
-        CHECK_FALSE(MachOSigner::HasEmbeddedSignature(path));
+        CHECK_FALSE(the_seed::MachOSigner::HasEmbeddedSignature(path));
 
         // The same value still works with a signature that fits.
         const auto fitting = ms::CountingCms(prepared.slices.size());
-        MachOSigner::CompleteSignature(path, prepared, fitting);
+        the_seed::MachOSigner::CompleteSignature(path, prepared, fitting);
         ms::ExpectFinished(before, ms::ReadAll(path), prepared, fitting);
     }
 }
@@ -631,21 +631,21 @@ TEST_CASE("MachOSigner a wrong number of signatures is refused", "[MachOSigner]"
     const std::string fat = ms::CopyFixture(scratch, "tiny-macho-universal");
     const Bytes thin_before = ms::ReadAll(thin);
     const Bytes fat_before = ms::ReadAll(fat);
-    const auto thin_prepared = MachOSigner::PrepareSignature(thin, "test-identity", 64);
-    const auto fat_prepared = MachOSigner::PrepareSignature(fat, "test-identity", 64);
+    const auto thin_prepared = the_seed::MachOSigner::PrepareSignature(thin, "test-identity", 64);
+    const auto fat_prepared = the_seed::MachOSigner::PrepareSignature(fat, "test-identity", 64);
     REQUIRE(fat_prepared.slices.size() == 2);
 
     for(std::size_t count : {std::size_t(0), std::size_t(2), std::size_t(3)})
     {
         INFO("thin file, signatures: " << count);
-        const std::string message = ms::ErrorOf([&] { MachOSigner::CompleteSignature(thin, thin_prepared, ms::CountingCms(count)); });
+        const std::string message = ms::ErrorOf([&] { the_seed::MachOSigner::CompleteSignature(thin, thin_prepared, ms::CountingCms(count)); });
         CHECK(NamesTheFile(message, thin));
         CHECK(ms::ReadAll(thin) == thin_before);
     }
     for(std::size_t count : {std::size_t(0), std::size_t(1), std::size_t(3)})
     {
         INFO("universal file, signatures: " << count);
-        const std::string message = ms::ErrorOf([&] { MachOSigner::CompleteSignature(fat, fat_prepared, ms::CountingCms(count)); });
+        const std::string message = ms::ErrorOf([&] { the_seed::MachOSigner::CompleteSignature(fat, fat_prepared, ms::CountingCms(count)); });
         CHECK(NamesTheFile(message, fat));
         CHECK(ms::ReadAll(fat) == fat_before);
     }
@@ -657,26 +657,26 @@ TEST_CASE("MachOSigner capacity zero reserves an empty CMS", "[MachOSigner]")
     const std::string path = ms::CopyFixture(scratch, "tiny-macho-x86_64");
     const Bytes original = ms::ReadAll(path);
 
-    const auto prepared = MachOSigner::PrepareSignature(path, "test-identity", 0);
+    const auto prepared = the_seed::MachOSigner::PrepareSignature(path, "test-identity", 0);
     CHECK(prepared.cms_capacity == 0);
 
     SECTION("an empty CMS gives a SuperBlob with a zero-length CMS wrapper")
     {
         const std::vector<Bytes> cms = {Bytes()};
-        MachOSigner::CompleteSignature(path, prepared, cms);
+        the_seed::MachOSigner::CompleteSignature(path, prepared, cms);
         const Bytes finished = ms::ReadAll(path);
         ms::ExpectFinished(original, finished, prepared, cms);
 
-        const auto blob = MachOSigner::ExtractSignature(path);
+        const auto blob = the_seed::MachOSigner::ExtractSignature(path);
         REQUIRE(blob.has_value());
-        CHECK(*blob == MachOSigner::BuildSuperBlob(prepared.slices[0].code_directory, Bytes()));
-        const auto extracted = MachOSigner::ExtractCmsFromSuperBlob(*blob);
+        CHECK(*blob == the_seed::MachOSigner::BuildSuperBlob(prepared.slices[0].code_directory, Bytes()));
+        const auto extracted = the_seed::MachOSigner::ExtractCmsFromSuperBlob(*blob);
         REQUIRE(extracted.has_value());
         CHECK(extracted->empty());
     }
     SECTION("one byte does not fit")
     {
-        const std::string message = ms::ErrorOf([&] { MachOSigner::CompleteSignature(path, prepared, {Bytes(1, 0x30)}); });
+        const std::string message = ms::ErrorOf([&] { the_seed::MachOSigner::CompleteSignature(path, prepared, {Bytes(1, 0x30)}); });
         CHECK(Contains(message, "the signature is 1 bytes but only 0 were reserved; "
                                 "prepare again with a larger capacity"));
         CHECK(ms::ReadAll(path) == original);
@@ -692,14 +692,14 @@ TEST_CASE("MachOSigner a capacity above 2^31 is refused", "[MachOSigner]")
     for(const std::uint32_t capacity : {0x80000001u, 0x90000000u, 0xFFFFFFFFu})
     {
         INFO("capacity " << capacity);
-        CHECK_FALSE(ms::ErrorOf([&] { (void)MachOSigner::PrepareSignature(path, "test-identity", capacity); }).empty());
+        CHECK_FALSE(ms::ErrorOf([&] { (void)the_seed::MachOSigner::PrepareSignature(path, "test-identity", capacity); }).empty());
         CHECK(ms::ReadAll(path) == before);
     }
 
     // A value built by hand is refused by CompleteSignature as well.
-    MachOSigner::PreparedSignature forged = MachOSigner::PrepareSignature(path, "test-identity", 64);
+    the_seed::MachOSigner::PreparedSignature forged = the_seed::MachOSigner::PrepareSignature(path, "test-identity", 64);
     forged.cms_capacity = 0x80000001u;
-    CHECK_FALSE(ms::ErrorOf([&] { MachOSigner::CompleteSignature(path, forged, ms::CountingCms(1)); }).empty());
+    CHECK_FALSE(ms::ErrorOf([&] { the_seed::MachOSigner::CompleteSignature(path, forged, ms::CountingCms(1)); }).empty());
     CHECK(ms::ReadAll(path) == before);
 }
 
@@ -707,9 +707,9 @@ TEST_CASE("MachOSigner CompleteSignature failing on a missing file changes nothi
 {
     seedtest::ScratchDir scratch;
     const std::string path = ms::CopyFixture(scratch, "tiny-macho-x86_64");
-    const auto prepared = MachOSigner::PrepareSignature(path, "test-identity", 64);
+    const auto prepared = the_seed::MachOSigner::PrepareSignature(path, "test-identity", 64);
     const std::string missing = scratch.File("absent");
-    const std::string message = ms::ErrorOf([&] { MachOSigner::CompleteSignature(missing, prepared, ms::CountingCms(1)); });
+    const std::string message = ms::ErrorOf([&] { the_seed::MachOSigner::CompleteSignature(missing, prepared, ms::CountingCms(1)); });
     CHECK(NamesTheFile(message, missing));
     CHECK_FALSE(std::filesystem::exists(missing));
 }
@@ -727,7 +727,7 @@ TEST_CASE("MachOSigner rejects 32-bit Mach-O", "[MachOSigner]")
     seedtest::ScratchDir scratch;
     const std::string path = ms::WriteScratch(scratch, "macho32_reject.bin", macho32);
 
-    REQUIRE_THROWS_AS(MachOSigner::PrepareSignature(path, "test-identity", 64), std::runtime_error);
+    REQUIRE_THROWS_AS(the_seed::MachOSigner::PrepareSignature(path, "test-identity", 64), std::runtime_error);
     CHECK(ms::ReadAll(path) == macho32);
 }
 
@@ -831,13 +831,13 @@ TEST_CASE("MachOSigner universal files keep order alignment and a consistent tab
         const std::vector<TableEntry> table_before = ReadTable(original);
         REQUIRE(table_before.size() == 2);
 
-        const auto prepared = MachOSigner::PrepareSignature(path, "test-identity", 64);
+        const auto prepared = the_seed::MachOSigner::PrepareSignature(path, "test-identity", 64);
         REQUIRE(prepared.slices.size() == 2);
         // Table order: x86-64 first, arm64 second.
         CHECK(prepared.slices[0].cpu_type == 0x01000007);
         CHECK(prepared.slices[1].cpu_type == 0x0100000C);
         const auto cms = ms::CountingCms(2);
-        MachOSigner::CompleteSignature(path, prepared, cms);
+        the_seed::MachOSigner::CompleteSignature(path, prepared, cms);
 
         const Bytes finished = ms::ReadAll(path);
         ms::ExpectFinished(original, finished, prepared, cms);
@@ -888,9 +888,9 @@ TEST_CASE("MachOSigner universal slices are signed as their own programs", "[Mac
     const std::string x86_path = ms::WriteScratch(scratch, "slice-x86_64", x86_bytes);
     const std::string arm_path = ms::WriteScratch(scratch, "slice-arm64", arm_bytes);
 
-    const auto together = MachOSigner::PrepareSignature(fat_path, "test-identity", 64);
-    const auto x86_alone = MachOSigner::PrepareSignature(x86_path, "test-identity", 64);
-    const auto arm_alone = MachOSigner::PrepareSignature(arm_path, "test-identity", 64);
+    const auto together = the_seed::MachOSigner::PrepareSignature(fat_path, "test-identity", 64);
+    const auto x86_alone = the_seed::MachOSigner::PrepareSignature(x86_path, "test-identity", 64);
+    const auto arm_alone = the_seed::MachOSigner::PrepareSignature(arm_path, "test-identity", 64);
     REQUIRE(together.slices.size() == 2);
     CHECK(together.slices[0].code_directory == x86_alone.slices[0].code_directory);
     CHECK(together.slices[1].code_directory == arm_alone.slices[0].code_directory);
@@ -900,25 +900,25 @@ TEST_CASE("MachOSigner universal slices are signed as their own programs", "[Mac
 
     // A different signature for each slice: each ends up in its own slice.
     const std::vector<Bytes> cms = {Bytes(40, 0x11), Bytes(64, 0x22)};
-    MachOSigner::CompleteSignature(fat_path, together, cms);
+    the_seed::MachOSigner::CompleteSignature(fat_path, together, cms);
     const Bytes finished = ms::ReadAll(fat_path);
     ms::ExpectFinished(fat, finished, together, cms);
 
-    const auto signatures = MachOSigner::ExtractSignatures(fat_path);
+    const auto signatures = the_seed::MachOSigner::ExtractSignatures(fat_path);
     REQUIRE(signatures.size() == 2);
     for(std::size_t i = 0; i < 2; ++i)
     {
         INFO("slice " << i);
         REQUIRE(signatures[i].has_value());
-        const auto extracted_cms = MachOSigner::ExtractCmsFromSuperBlob(*signatures[i]);
+        const auto extracted_cms = the_seed::MachOSigner::ExtractCmsFromSuperBlob(*signatures[i]);
         REQUIRE(extracted_cms.has_value());
         CHECK(*extracted_cms == cms[i]);
-        const auto extracted_cd = MachOSigner::ExtractCodeDirectoryFromSuperBlob(*signatures[i]);
+        const auto extracted_cd = the_seed::MachOSigner::ExtractCodeDirectoryFromSuperBlob(*signatures[i]);
         REQUIRE(extracted_cd.has_value());
         CHECK(*extracted_cd == together.slices[i].code_directory);
     }
     // ExtractSignature of a universal file answers for the first slice.
-    const auto first = MachOSigner::ExtractSignature(fat_path);
+    const auto first = the_seed::MachOSigner::ExtractSignature(fat_path);
     REQUIRE(first.has_value());
     CHECK(*first == *signatures[0]);
 
@@ -926,8 +926,8 @@ TEST_CASE("MachOSigner universal slices are signed as their own programs", "[Mac
     for(std::size_t i = 0; i < 2; ++i)
     {
         const std::string alone = i == 0 ? x86_path : arm_path;
-        const auto alone_prepared = MachOSigner::PrepareSignature(alone, "test-identity", 64);
-        MachOSigner::CompleteSignature(alone, alone_prepared, {cms[i]});
+        const auto alone_prepared = the_seed::MachOSigner::PrepareSignature(alone, "test-identity", 64);
+        the_seed::MachOSigner::CompleteSignature(alone, alone_prepared, {cms[i]});
         const Bytes thin = ms::ReadAll(alone);
         const mr::FileReport report = mr::CheckFile(finished);
         const Bytes inside = Slice(finished, report.slices[i].offset, report.slices[i].size);
@@ -943,15 +943,15 @@ TEST_CASE("MachOSigner a refusal in any slice refuses the whole universal file",
     {
         const std::string path = ms::CopyFixture(scratch, "tiny-macho-universal");
         const Bytes before = ms::ReadAll(path);
-        const auto prepared = MachOSigner::PrepareSignature(path, "test-identity", 64);
+        const auto prepared = the_seed::MachOSigner::PrepareSignature(path, "test-identity", 64);
         std::vector<Bytes> cms = ms::CountingCms(2);
         cms[1].resize(65);
-        const std::string message = ms::ErrorOf([&] { MachOSigner::CompleteSignature(path, prepared, cms); });
+        const std::string message = ms::ErrorOf([&] { the_seed::MachOSigner::CompleteSignature(path, prepared, cms); });
         CHECK(Contains(message, "were reserved"));
         // Neither slice was signed, not even the first.
         CHECK(ms::ReadAll(path) == before);
-        CHECK_FALSE(MachOSigner::HasEmbeddedSignature(path));
-        for(const auto &signature : MachOSigner::ExtractSignatures(path))
+        CHECK_FALSE(the_seed::MachOSigner::HasEmbeddedSignature(path));
+        for(const auto &signature : the_seed::MachOSigner::ExtractSignatures(path))
         {
             CHECK_FALSE(signature.has_value());
         }
@@ -959,12 +959,12 @@ TEST_CASE("MachOSigner a refusal in any slice refuses the whole universal file",
     SECTION("the second slice changed after PrepareSignature")
     {
         const std::string path = ms::CopyFixture(scratch, "tiny-macho-universal");
-        const auto prepared = MachOSigner::PrepareSignature(path, "test-identity", 64);
+        const auto prepared = the_seed::MachOSigner::PrepareSignature(path, "test-identity", 64);
         Bytes changed = ms::ReadAll(path);
         const std::vector<TableEntry> table = ReadTable(changed);
         changed.at(static_cast<std::size_t>(table[1].offset + 5000)) ^= 0x01;
         ms::WriteAll(path, changed);
-        ExpectChanged(ms::ErrorOf([&] { MachOSigner::CompleteSignature(path, prepared, ms::CountingCms(2)); }), path);
+        ExpectChanged(ms::ErrorOf([&] { the_seed::MachOSigner::CompleteSignature(path, prepared, ms::CountingCms(2)); }), path);
         CHECK(ms::ReadAll(path) == changed);
     }
     SECTION("a slice with no room for the command")
@@ -973,7 +973,7 @@ TEST_CASE("MachOSigner a refusal in any slice refuses the whole universal file",
         const Bytes tight_slice = ms::LoadFixture("tiny-macho-x86_64-nospace");
         const Bytes fat = mr::Universal({tight_slice, ok_slice}, false, 14);
         const std::string path = ms::WriteScratch(scratch, "mixed", fat);
-        const std::string message = ms::ErrorOf([&] { (void)MachOSigner::PrepareSignature(path, "test-identity", 64); });
+        const std::string message = ms::ErrorOf([&] { (void)the_seed::MachOSigner::PrepareSignature(path, "test-identity", 64); });
         CHECK(NamesTheFile(message, path));
         CHECK(ms::ReadAll(path) == fat);
     }
@@ -982,7 +982,7 @@ TEST_CASE("MachOSigner a refusal in any slice refuses the whole universal file",
         const Bytes ok_slice = ms::LoadFixture("tiny-macho-arm64");
         const Bytes fat = mr::Universal({ok_slice, mr::BigEndian64()}, false, 14);
         const std::string path = ms::WriteScratch(scratch, "mixed", fat);
-        const std::string message = ms::ErrorOf([&] { (void)MachOSigner::PrepareSignature(path, "test-identity", 64); });
+        const std::string message = ms::ErrorOf([&] { (void)the_seed::MachOSigner::PrepareSignature(path, "test-identity", 64); });
         CHECK(NamesTheFile(message, path));
         CHECK(ms::ReadAll(path) == fat);
     }
@@ -998,9 +998,9 @@ TEST_CASE("MachOSigner HasEmbeddedSignature is true for a universal file only wh
 
     const std::string mixed = ms::WriteScratch(scratch, "mixed", mr::Universal({unsigned_x86, signed_arm}, false, 14));
     const std::string both = ms::WriteScratch(scratch, "both", mr::Universal({signed_x86, signed_arm}, false, 14));
-    CHECK_FALSE(MachOSigner::HasEmbeddedSignature(mixed));
-    CHECK(MachOSigner::HasEmbeddedSignature(both));
-    const auto parts = MachOSigner::ExtractSignatures(mixed);
+    CHECK_FALSE(the_seed::MachOSigner::HasEmbeddedSignature(mixed));
+    CHECK(the_seed::MachOSigner::HasEmbeddedSignature(both));
+    const auto parts = the_seed::MachOSigner::ExtractSignatures(mixed);
     REQUIRE(parts.size() == 2);
     CHECK_FALSE(parts[0].has_value());
     CHECK(parts[1].has_value());
@@ -1012,13 +1012,13 @@ TEST_CASE("MachOSigner the lld signatures are read back by ExtractSignature", "[
     {
         INFO(name);
         const std::string path = seedtest::FixturePath(name);
-        REQUIRE(MachOSigner::HasEmbeddedSignature(path));
-        const auto blob = MachOSigner::ExtractSignature(path);
+        REQUIRE(the_seed::MachOSigner::HasEmbeddedSignature(path));
+        const auto blob = the_seed::MachOSigner::ExtractSignature(path);
         REQUIRE(blob.has_value());
         std::uint64_t length = 0;
         REQUIRE(mr::ReadBE(*blob, 4, 4, length));
         CHECK(length == blob->size());
-        CHECK(MachOSigner::ExtractCodeDirectoryFromSuperBlob(*blob).has_value());
+        CHECK(the_seed::MachOSigner::ExtractCodeDirectoryFromSuperBlob(*blob).has_value());
     }
 }
 
@@ -1143,7 +1143,7 @@ Bytes WithoutSignatureSize(Bytes file, const mr::SliceReport &s)
 
 // What a program signed by another tool must look like after it was signed
 // here: same place, same command, new data, nothing else changed.
-void ExpectResigned(const Bytes &old, const Bytes &finished, const MachOSigner::PreparedSignature &prepared,
+void ExpectResigned(const Bytes &old, const Bytes &finished, const the_seed::MachOSigner::PreparedSignature &prepared,
                     const std::vector<Bytes> &cms)
 {
     const mr::FileReport before = mr::CheckFile(old);
@@ -1160,10 +1160,10 @@ void ExpectResigned(const Bytes &old, const Bytes &finished, const MachOSigner::
         INFO("slice " << i);
         const mr::SliceReport &o = before.slices[i];
         const mr::SliceReport &s = after.slices[i];
-        const MachOSigner::PreparedSlice &p = prepared.slices[i];
+        const the_seed::MachOSigner::PreparedSlice &p = prepared.slices[i];
         REQUIRE(o.has_signature);
-        const Bytes blob = MachOSigner::BuildSuperBlob(p.code_directory, cms[i]);
-        const Bytes reserved_blob = MachOSigner::BuildSuperBlob(p.code_directory, Bytes(prepared.cms_capacity));
+        const Bytes blob = the_seed::MachOSigner::BuildSuperBlob(p.code_directory, cms[i]);
+        const Bytes reserved_blob = the_seed::MachOSigner::BuildSuperBlob(p.code_directory, Bytes(prepared.cms_capacity));
 
         CHECK(s.cputype == o.cputype);
         CHECK(s.ncmds == o.ncmds);
@@ -1207,7 +1207,7 @@ void ExpectResigned(const Bytes &old, const Bytes &finished, const MachOSigner::
         const auto begin = finished.begin() + static_cast<std::ptrdiff_t>(s.offset + s.dataoff);
         const auto end = finished.begin() + static_cast<std::ptrdiff_t>(s.offset + s.size);
         CHECK(std::search(begin, end, old_identifier.begin(), old_identifier.end()) == end);
-        const auto cd = MachOSigner::ExtractCodeDirectoryFromSuperBlob(written);
+        const auto cd = the_seed::MachOSigner::ExtractCodeDirectoryFromSuperBlob(written);
         REQUIRE(cd.has_value());
         CHECK(*cd == p.code_directory);
     }
@@ -1312,18 +1312,18 @@ TEST_CASE("MachOSigner signing ten times with changing capacities keeps one comm
         {
             INFO("signing " << number << " capacity " << round.capacity << " identity " << round.identity);
             const Bytes before_prepare = ms::ReadAll(path);
-            const auto prepared = MachOSigner::PrepareSignature(path, round.identity, round.capacity);
+            const auto prepared = the_seed::MachOSigner::PrepareSignature(path, round.identity, round.capacity);
             CHECK(ms::ReadAll(path) == before_prepare); // prepare does not write
             const auto cms = ms::CountingCms(prepared.slices.size(), round.capacity);
-            MachOSigner::CompleteSignature(path, prepared, cms);
+            the_seed::MachOSigner::CompleteSignature(path, prepared, cms);
             const Bytes finished = ms::ReadAll(path);
 
             // The same layout as signing the unsigned sample once.
             ms::ExpectFinished(original, finished, prepared, cms);
             ExpectOneCommandNoZeroEntry(finished, mr::CheckFile(finished));
             const std::string fresh_path = ms::CopyFixture(scratch, name, "fresh-" + std::to_string(number));
-            const auto fresh = MachOSigner::PrepareSignature(fresh_path, round.identity, round.capacity);
-            MachOSigner::CompleteSignature(fresh_path, fresh, cms);
+            const auto fresh = the_seed::MachOSigner::PrepareSignature(fresh_path, round.identity, round.capacity);
+            the_seed::MachOSigner::CompleteSignature(fresh_path, fresh, cms);
             const Bytes fresh_bytes = ms::ReadAll(fresh_path);
             CHECK(finished.size() <= fresh_bytes.size());
             CHECK(finished == fresh_bytes);
@@ -1387,20 +1387,20 @@ TEST_CASE("MachOSigner a program signed by another tool is re-signed with a larg
         const std::string path = ms::CopyFixture(scratch, name);
         const Bytes old = ms::ReadAll(path);
 
-        const auto prepared = MachOSigner::PrepareSignature(path, "test-identity", 4096);
+        const auto prepared = the_seed::MachOSigner::PrepareSignature(path, "test-identity", 4096);
         CHECK(ms::ReadAll(path) == old); // prepare does not write
         const auto cms = ms::CountingCms(prepared.slices.size(), 4096);
-        MachOSigner::CompleteSignature(path, prepared, cms);
+        the_seed::MachOSigner::CompleteSignature(path, prepared, cms);
         const Bytes finished = ms::ReadAll(path);
         ExpectResigned(old, finished, prepared, cms);
         CHECK(finished.size() > old.size());
-        CHECK(MachOSigner::HasEmbeddedSignature(path));
-        const auto parts = MachOSigner::ExtractSignatures(path);
+        CHECK(the_seed::MachOSigner::HasEmbeddedSignature(path));
+        const auto parts = the_seed::MachOSigner::ExtractSignatures(path);
         REQUIRE(parts.size() == prepared.slices.size());
         for(std::size_t i = 0; i < parts.size(); ++i)
         {
             REQUIRE(parts[i].has_value());
-            CHECK(*parts[i] == MachOSigner::BuildSuperBlob(prepared.slices[i].code_directory, cms[i]));
+            CHECK(*parts[i] == the_seed::MachOSigner::BuildSuperBlob(prepared.slices[i].code_directory, cms[i]));
         }
     }
 }
@@ -1418,13 +1418,13 @@ TEST_CASE("MachOSigner a program signed by another tool is re-signed with a smal
             const std::string path = ms::CopyFixture(scratch, name);
             if(via_larger)
             {
-                const auto big = MachOSigner::PrepareSignature(path, "test-identity", 4096);
-                MachOSigner::CompleteSignature(path, big, ms::CountingCms(big.slices.size(), 4096));
+                const auto big = the_seed::MachOSigner::PrepareSignature(path, "test-identity", 4096);
+                the_seed::MachOSigner::CompleteSignature(path, big, ms::CountingCms(big.slices.size(), 4096));
             }
             const Bytes old = ms::ReadAll(path);
-            const auto prepared = MachOSigner::PrepareSignature(path, "test-identity", 0);
+            const auto prepared = the_seed::MachOSigner::PrepareSignature(path, "test-identity", 0);
             const auto cms = ms::CountingCms(prepared.slices.size(), 0);
-            MachOSigner::CompleteSignature(path, prepared, cms);
+            the_seed::MachOSigner::CompleteSignature(path, prepared, cms);
             const Bytes finished = ms::ReadAll(path);
             if(via_larger)
             {
@@ -1479,7 +1479,7 @@ TEST_CASE("MachOSigner a signature followed by other data is refused and the fil
     const std::string path = ms::CopyFixture(scratch, "tiny-macho-x86_64-data-after-sig");
     const Bytes before = ms::ReadAll(path);
 
-    const std::string message = ms::ErrorOf([&] { (void)MachOSigner::PrepareSignature(path, "test-identity", 64); });
+    const std::string message = ms::ErrorOf([&] { (void)the_seed::MachOSigner::PrepareSignature(path, "test-identity", 64); });
     CHECK(message.rfind(path + ": ", 0) == 0);
     CHECK(Contains(message, "the signature data is not at the end of the program (16 bytes follow it); "
                             "signing would have to move them"));
@@ -1488,8 +1488,8 @@ TEST_CASE("MachOSigner a signature followed by other data is refused and the fil
     // A prepared signature of the same program without the extra bytes does not
     // get the file signed either.
     const std::string clean = ms::CopyFixture(scratch, "tiny-macho-x86_64-adhoc");
-    const auto prepared = MachOSigner::PrepareSignature(clean, "test-identity", 64);
-    CHECK_FALSE(ms::ErrorOf([&] { MachOSigner::CompleteSignature(path, prepared, ms::CountingCms(1)); }).empty());
+    const auto prepared = the_seed::MachOSigner::PrepareSignature(clean, "test-identity", 64);
+    CHECK_FALSE(ms::ErrorOf([&] { the_seed::MachOSigner::CompleteSignature(path, prepared, ms::CountingCms(1)); }).empty());
     CHECK(ms::ReadAll(path) == before);
 }
 
@@ -1510,7 +1510,7 @@ TEST_CASE("MachOSigner data after the signature of one slice refuses the whole u
     const std::string path = ms::WriteScratch(scratch, "data-after-in-slice-1", file);
     const Bytes before = ms::ReadAll(path);
 
-    const std::string message = ms::ErrorOf([&] { (void)MachOSigner::PrepareSignature(path, "test-identity", 64); });
+    const std::string message = ms::ErrorOf([&] { (void)the_seed::MachOSigner::PrepareSignature(path, "test-identity", 64); });
     CHECK(message.rfind(path + ": ", 0) == 0);
     CHECK(Contains(message, "slice 1 ("));
     CHECK(Contains(message, "the signature data is not at the end of the program (16 bytes follow it)"));
@@ -1527,11 +1527,11 @@ TEST_CASE("MachOSigner StripSignature removes the signature of every signed samp
         const Bytes original = ms::ReadAll(path);
         ms::SignWithKnownInputs(path);
         const Bytes signed_file = ms::ReadAll(path);
-        REQUIRE(MachOSigner::HasEmbeddedSignature(path));
+        REQUIRE(the_seed::MachOSigner::HasEmbeddedSignature(path));
 
-        MachOSigner::StripSignature(path);
+        the_seed::MachOSigner::StripSignature(path);
         const Bytes stripped = ms::ReadAll(path);
-        CHECK_FALSE(MachOSigner::HasEmbeddedSignature(path));
+        CHECK_FALSE(the_seed::MachOSigner::HasEmbeddedSignature(path));
         ExpectStripped(signed_file, stripped);
 
         // Against the unsigned sample: the same program, with only the sizes
@@ -1570,9 +1570,9 @@ TEST_CASE("MachOSigner StripSignature on an unsigned program changes nothing", "
         seedtest::ScratchDir scratch;
         const std::string path = ms::CopyFixture(scratch, name);
         const Bytes original = ms::ReadAll(path);
-        MachOSigner::StripSignature(path);
+        the_seed::MachOSigner::StripSignature(path);
         CHECK(ms::ReadAll(path) == original);
-        MachOSigner::StripSignature(path);
+        the_seed::MachOSigner::StripSignature(path);
         CHECK(ms::ReadAll(path) == original);
     }
 }
@@ -1588,15 +1588,15 @@ TEST_CASE("MachOSigner signing after a strip gives the file signed once", "[Mach
         const Bytes once = ms::ReadAll(path);
 
         // strip then sign equals sign of the unsigned original
-        MachOSigner::StripSignature(path);
+        the_seed::MachOSigner::StripSignature(path);
         ms::SignWithKnownInputs(path);
         CHECK(ms::ReadAll(path) == once);
 
         // and again, with a different capacity in the middle
-        MachOSigner::StripSignature(path);
-        const auto prepared = MachOSigner::PrepareSignature(path, "test-identity", 4000);
-        MachOSigner::CompleteSignature(path, prepared, ms::CountingCms(prepared.slices.size(), 4000));
-        MachOSigner::StripSignature(path);
+        the_seed::MachOSigner::StripSignature(path);
+        const auto prepared = the_seed::MachOSigner::PrepareSignature(path, "test-identity", 4000);
+        the_seed::MachOSigner::CompleteSignature(path, prepared, ms::CountingCms(prepared.slices.size(), 4000));
+        the_seed::MachOSigner::StripSignature(path);
         ms::SignWithKnownInputs(path);
         CHECK(ms::ReadAll(path) == once);
     }
@@ -1610,18 +1610,18 @@ TEST_CASE("MachOSigner StripSignature removes a signature made by another tool",
         seedtest::ScratchDir scratch;
         const std::string path = ms::CopyFixture(scratch, name);
         const Bytes foreign = ms::ReadAll(path);
-        REQUIRE(MachOSigner::HasEmbeddedSignature(path));
+        REQUIRE(the_seed::MachOSigner::HasEmbeddedSignature(path));
 
-        MachOSigner::StripSignature(path);
+        the_seed::MachOSigner::StripSignature(path);
         const Bytes stripped = ms::ReadAll(path);
-        CHECK_FALSE(MachOSigner::HasEmbeddedSignature(path));
-        CHECK_FALSE(MachOSigner::ExtractSignature(path).has_value());
+        CHECK_FALSE(the_seed::MachOSigner::HasEmbeddedSignature(path));
+        CHECK_FALSE(the_seed::MachOSigner::ExtractSignature(path).has_value());
         ExpectStripped(foreign, stripped);
 
         // The result is an unsigned program that can be signed like any other.
-        const auto prepared = MachOSigner::PrepareSignature(path, "test-identity", 64);
+        const auto prepared = the_seed::MachOSigner::PrepareSignature(path, "test-identity", 64);
         const auto cms = ms::CountingCms(prepared.slices.size());
-        MachOSigner::CompleteSignature(path, prepared, cms);
+        the_seed::MachOSigner::CompleteSignature(path, prepared, cms);
         ms::ExpectFinished(stripped, ms::ReadAll(path), prepared, cms);
     }
 }
@@ -1630,7 +1630,7 @@ TEST_CASE("MachOSigner StripSignature on a missing file names it", "[MachOSigner
 {
     seedtest::ScratchDir scratch;
     const std::string missing = scratch.File("absent");
-    const std::string message = ms::ErrorOf([&] { MachOSigner::StripSignature(missing); });
+    const std::string message = ms::ErrorOf([&] { the_seed::MachOSigner::StripSignature(missing); });
     CHECK(NamesTheFile(message, missing));
     CHECK_FALSE(std::filesystem::exists(missing));
 }
@@ -1649,13 +1649,13 @@ TEST_CASE("MachOSigner non-zero bytes between universal slices refuse signing an
         file.at(static_cast<std::size_t>(gap_start + 1)) = 0x5A;
         const std::string path = ms::WriteScratch(scratch, "padding", file);
 
-        const std::string prepare = ms::ErrorOf([&] { (void)MachOSigner::PrepareSignature(path, "test-identity", 64); });
+        const std::string prepare = ms::ErrorOf([&] { (void)the_seed::MachOSigner::PrepareSignature(path, "test-identity", 64); });
         CHECK(prepare.rfind(path + ": ", 0) == 0);
         CHECK(Contains(prepare, "the bytes between slice 0 ("));
         CHECK(Contains(prepare, "are not all zero (the first is at offset " + std::to_string(gap_start + 1) + ")"));
         CHECK(ms::ReadAll(path) == file);
 
-        const std::string strip = ms::ErrorOf([&] { MachOSigner::StripSignature(path); });
+        const std::string strip = ms::ErrorOf([&] { the_seed::MachOSigner::StripSignature(path); });
         CHECK(Contains(strip, "are not all zero"));
         CHECK(ms::ReadAll(path) == file);
     }
@@ -1684,9 +1684,9 @@ TEST_CASE("MachOSigner a signature command larger than 16 bytes keeps its size w
     PutLE(file, 20, sizeofcmds + 8, 4);
     const std::string path = ms::WriteScratch(scratch, "wide-command", file);
 
-    const auto prepared = MachOSigner::PrepareSignature(path, "test-identity", 64);
+    const auto prepared = the_seed::MachOSigner::PrepareSignature(path, "test-identity", 64);
     const auto cms = ms::CountingCms(1);
-    MachOSigner::CompleteSignature(path, prepared, cms);
+    the_seed::MachOSigner::CompleteSignature(path, prepared, cms);
     const Bytes signed_file = ms::ReadAll(path);
 
     std::uint64_t after_ncmds = 0, after_sizeofcmds = 0, after_size = 0;
@@ -1704,16 +1704,16 @@ TEST_CASE("MachOSigner a signature command larger than 16 bytes keeps its size w
     const mr::FileReport report = mr::CheckFile(signed_file);
     INFO("problems: " << ms::JoinProblems(report));
     CHECK(report.Ok());
-    CHECK(MachOSigner::HasEmbeddedSignature(path));
-    CHECK(MachOParser::GetArchSlices(path).at(0).is_signed);
+    CHECK(the_seed::MachOSigner::HasEmbeddedSignature(path));
+    CHECK(the_seed::MachOParser::GetArchSlices(path).at(0).is_signed);
 
     // Stripping removes all 24 bytes of the command.
-    MachOSigner::StripSignature(path);
+    the_seed::MachOSigner::StripSignature(path);
     const Bytes stripped = ms::ReadAll(path);
     std::uint64_t strip_ncmds = 0, strip_sizeofcmds = 0;
     REQUIRE(mr::ReadLE(stripped, 16, 4, strip_ncmds));
     REQUIRE(mr::ReadLE(stripped, 20, 4, strip_sizeofcmds));
     CHECK(strip_ncmds == ncmds - 1);
     CHECK(strip_sizeofcmds == sizeofcmds + 8 - 24);
-    CHECK_FALSE(MachOSigner::HasEmbeddedSignature(path));
+    CHECK_FALSE(the_seed::MachOSigner::HasEmbeddedSignature(path));
 }

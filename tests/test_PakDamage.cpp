@@ -63,7 +63,7 @@ namespace
         bool prefix = false;
     };
 
-    void DetailCheck(const LoadError &error, const Expected &expected)
+    void DetailCheck(const the_seed::LoadError &error, const Expected &expected)
     {
         const std::string &detail = error.DetailGet();
         REQUIRE(detail.rfind("damaged: ", 0) == 0);
@@ -83,7 +83,7 @@ namespace
     // outcome fails the test.
     void LoaderCheck(const std::filesystem::path &dir, const std::string &file, const Expected &expected)
     {
-        PakLoader loader;
+        the_seed::PakLoader loader;
         loader.PathAdd(dir.string());
         const std::string pak_name = std::filesystem::path(file).stem().string();
         const std::string absolute = (dir / file).string();
@@ -95,16 +95,16 @@ namespace
                 loader.Load(pak_name);
                 FAIL("PakLoader accepted a damaged pak");
             }
-            catch(const LoadError &error)
+            catch(const the_seed::LoadError &error)
             {
-                REQUIRE(error.ReasonGet() == LoadError::Reason::NotLoadable);
+                REQUIRE(error.ReasonGet() == the_seed::LoadError::Reason::NotLoadable);
                 REQUIRE(error.NameGet() == pak_name);
                 REQUIRE(error.FileGet() == absolute);
                 DetailCheck(error, expected);
                 bool found = false;
-                for(const LoadError::Location &location : error.LocationsGet())
+                for(const the_seed::LoadError::Location &location : error.LocationsGet())
                 {
-                    found = found || (location.state == LoadError::LocationState::Found &&
+                    found = found || (location.state == the_seed::LoadError::LocationState::Found &&
                                       location.path == dir.string());
                 }
                 REQUIRE(found);
@@ -122,12 +122,12 @@ namespace
         const std::string absolute = (dir / file).string();
         try
         {
-            ResourcePak pak(absolute);
+            the_seed::ResourcePak pak(absolute);
             FAIL("ResourcePak accepted a damaged pak");
         }
-        catch(const LoadError &error)
+        catch(const the_seed::LoadError &error)
         {
-            REQUIRE(error.ReasonGet() == LoadError::Reason::NotLoadable);
+            REQUIRE(error.ReasonGet() == the_seed::LoadError::Reason::NotLoadable);
             REQUIRE(error.FileGet() == absolute);
             DetailCheck(error, expected);
         }
@@ -460,7 +460,7 @@ TEST_CASE("A damaged pak is never reported as not found", "[PakDamage]")
     seedtest::ScratchDir scratch;
     seedtest::WriteBytes(scratch.Path() / "damaged.pak", {});
 
-    PakLoader loader;
+    the_seed::PakLoader loader;
     loader.PathAdd(scratch.Path().string());
 
     SECTION("A filtered request")
@@ -470,9 +470,9 @@ TEST_CASE("A damaged pak is never reported as not found", "[PakDamage]")
             loader.Load("damaged", {"anything"});
             FAIL("PakLoader accepted a damaged pak");
         }
-        catch(const LoadError &error)
+        catch(const the_seed::LoadError &error)
         {
-            REQUIRE(error.ReasonGet() == LoadError::Reason::NotLoadable);
+            REQUIRE(error.ReasonGet() == the_seed::LoadError::Reason::NotLoadable);
         }
         catch(...)
         {
@@ -487,9 +487,9 @@ TEST_CASE("A damaged pak is never reported as not found", "[PakDamage]")
             loader.Load("damaged", {});
             FAIL("PakLoader accepted a damaged pak");
         }
-        catch(const LoadError &error)
+        catch(const the_seed::LoadError &error)
         {
-            REQUIRE(error.ReasonGet() == LoadError::Reason::NotLoadable);
+            REQUIRE(error.ReasonGet() == the_seed::LoadError::Reason::NotLoadable);
         }
         catch(...)
         {
@@ -502,7 +502,7 @@ TEST_CASE("A pak in no location is still not found", "[PakDamage]")
 {
     seedtest::ScratchDir scratch;
     seedtest::ScratchDir other;
-    PakLoader loader;
+    the_seed::PakLoader loader;
     loader.PathAdd(scratch.Path().string());
     loader.PathAdd(other.Path().string());
 
@@ -511,9 +511,9 @@ TEST_CASE("A pak in no location is still not found", "[PakDamage]")
         loader.Load("absent");
         FAIL("PakLoader found a pak that is not there");
     }
-    catch(const LoadError &error)
+    catch(const the_seed::LoadError &error)
     {
-        REQUIRE(error.ReasonGet() == LoadError::Reason::NotFound);
+        REQUIRE(error.ReasonGet() == the_seed::LoadError::Reason::NotFound);
         REQUIRE(error.NameGet() == "absent");
         REQUIRE(error.LocationsGet().size() >= 2);
     }

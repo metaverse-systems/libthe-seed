@@ -30,7 +30,8 @@ AM_TESTS_ENVIRONMENT = \
     top_builddir='$(abs_top_builddir)'; export top_builddir; \
     top_srcdir='$(abs_top_srcdir)'; export top_srcdir; \
     host='$(host)'; export host; \
-    CROSS_COMPILING='$(cross_compiling_flag)'; export CROSS_COMPILING;
+    CROSS_COMPILING='$(cross_compiling_flag)'; export CROSS_COMPILING; \
+    MAKE='$(MAKE)'; export MAKE;
 
 # Bare program names: run-test.sh compares them with known-gaps.txt, and
 # check_PROGRAMS gets $(EXEEXT) appended when cross-compiling for Windows.
@@ -46,20 +47,12 @@ check_PROGRAMS = $(seed_test_programs)
 
 if CROSS_COMPILING
 cross_compiling_flag = yes
-TESTS = check-fixtures.sh check-style.sh check-exports.sh
-# check-exports.sh is expected to fail until the public classes are in the
-# the_seed namespace; the entry is removed then, so an unexpected pass is
-# reported.
-XFAIL_TESTS = check-exports.sh
+TESTS = check-fixtures.sh check-style.sh check-exports.sh check-public-headers.sh
 check-local:
 	@echo "Test programs were built but not run: cross-compiling."
 else
 cross_compiling_flag = no
-TESTS = $(seed_test_programs) run-test-selftest.sh check-fixtures.sh check-style.sh check-exports.sh
-# check-exports.sh is expected to fail until the public classes are in the
-# the_seed namespace; the entry is removed then, so an unexpected pass is
-# reported.
-XFAIL_TESTS = check-exports.sh
+TESTS = $(seed_test_programs) run-test-selftest.sh check-fixtures.sh check-style.sh check-exports.sh check-public-headers.sh
 endif
 
 check_LTLIBRARIES = libtestmodule.la libtestmodulealt.la libtestsystem.la libcatch.la
@@ -252,7 +245,7 @@ test_ReadmeExamples_LDFLAGS = $(AM_LDFLAGS) -pthread
 
 EXTRA_DIST = TestPaths.hpp LoaderTestSupport.hpp PakTestSupport.hpp CfbReference.hpp MsiTestSupport.hpp ToolSupport.hpp MachOReference.hpp MachOSigningSupport.hpp HeapCounter.hpp MalformedInput.hpp ReplaceTestSupport.hpp \
              reference/reference-dump.cpp reference/compare-reference.sh \
-             reference/make-generated-references.sh run-test.sh run-test-selftest.sh check-fixtures.sh check-style.sh check-exports.sh public-symbols.txt \
+             reference/make-generated-references.sh run-test.sh run-test-selftest.sh check-fixtures.sh check-style.sh check-exports.sh public-symbols.txt check-public-headers.sh public-headers.txt \
              fuzz/FuzzTargets.hpp fuzz/FuzzTargets.cpp fuzz/fuzz_entry.cpp \
              fuzz/build-fuzzers.sh fuzz/run-fuzzers.sh \
              fuzz/corpus \

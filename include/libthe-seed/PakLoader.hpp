@@ -18,6 +18,8 @@ class PakFile;
 struct PakIndex;
 } // namespace the_seed::internal
 
+namespace the_seed
+{
 /**
  * @brief Loads resource paks by name.
  *
@@ -120,3 +122,8 @@ class THE_SEED_API PakLoader
     std::map<std::string, std::shared_ptr<InFlight>> in_flight;
     mutable std::shared_mutex mutex;
 };
+} // namespace the_seed
+
+#ifdef THE_SEED_LEGACY_NAMES
+using PakLoader [[deprecated("use the_seed::PakLoader")]] = the_seed::PakLoader;
+#endif

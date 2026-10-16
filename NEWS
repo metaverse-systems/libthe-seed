@@ -1,5 +1,20 @@
 libthe-seed (unreleased)
 
+* Breaking: every public class moved into the `the_seed` namespace
+  (the_seed::ComponentLoader, SystemLoader, JSONLoader, PakLoader,
+  ResourcePak, LoadError, LibraryLoader, DependencyLister, DependencyResult,
+  LibraryError, MachOParser, PeSigner, MachOSigner, MsiSigner). Applications
+  must be rebuilt and either use the new names or define
+  THE_SEED_LEGACY_NAMES, which brings back the old global names as deprecated
+  aliases until the next incompatible release. Plugins that do not link the
+  library load unchanged.
+
+* The shared library exports only the public classes (new installed header
+  libthe-seed/Export.hpp defines THE_SEED_API). Internal helpers are hidden.
+
+* LibraryLoader.hpp no longer includes <windows.h> or <dlfcn.h>, LibraryDeleter
+  is removed, and a LibraryLoader can be neither copied nor moved.
+
 * Plugins are pinned. Every plugin that ComponentLoader, SystemLoader and
   LibraryLoader open stays loaded until the process ends, so components,
   systems, creators and scene contents stay valid and destructible after their

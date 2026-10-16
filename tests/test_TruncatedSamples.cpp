@@ -102,8 +102,8 @@ Result OptionalBytes(const std::optional<Bytes> &value)
 // the sample so the rejection can be checked like the others.
 Result ListerResult(const std::string &path, const std::string &format)
 {
-    DependencyLister lister;
-    const DependencyResult answer = lister.ListDependencies({path}, {});
+    the_seed::DependencyLister lister;
+    const the_seed::DependencyResult answer = lister.ListDependencies({path}, {});
     if(!answer.errors.empty())
     {
         const std::string &message = answer.errors.begin()->second;
@@ -231,7 +231,7 @@ std::vector<ReadOperation> PeReads()
          [](const std::string &path) { return ListerResult(path, "PE"); }, true},
         {"PeSigner::ComputeAuthenticodeDigest", "PE",
          [](const std::string &path) {
-             const auto digest = PeSigner::ComputeAuthenticodeDigest(path);
+             const auto digest = the_seed::PeSigner::ComputeAuthenticodeDigest(path);
              Result result = digest.digest;
              result.push_back(digest.is_pe32_plus ? 1 : 0);
              return result;
@@ -239,11 +239,11 @@ std::vector<ReadOperation> PeReads()
          false},
         {"PeSigner::HasEmbeddedSignature", "PE",
          [](const std::string &path) {
-             return Result{static_cast<std::uint8_t>(PeSigner::HasEmbeddedSignature(path))};
+             return Result{static_cast<std::uint8_t>(the_seed::PeSigner::HasEmbeddedSignature(path))};
          },
          true},
         {"PeSigner::ExtractSignature", "PE",
-         [](const std::string &path) { return OptionalBytes(PeSigner::ExtractSignature(path)); },
+         [](const std::string &path) { return OptionalBytes(the_seed::PeSigner::ExtractSignature(path)); },
          true},
     };
 }
@@ -252,9 +252,9 @@ std::vector<ChangeOperation> PeChanges()
 {
     return {
         {"PeSigner::EmbedSignature", "PE",
-         [](const std::string &path) { PeSigner::EmbedSignature(path, Bytes(64, 0x5A)); }},
+         [](const std::string &path) { the_seed::PeSigner::EmbedSignature(path, Bytes(64, 0x5A)); }},
         {"PeSigner::StripSignature", "PE",
-         [](const std::string &path) { PeSigner::StripSignature(path); }},
+         [](const std::string &path) { the_seed::PeSigner::StripSignature(path); }},
     };
 }
 
@@ -263,21 +263,21 @@ std::vector<ReadOperation> MachOReads()
     return {
         {"MachOParser::DetectFormat", "Mach-O",
          [](const std::string &path) {
-             return Result{static_cast<std::uint8_t>(MachOParser::DetectFormat(path))};
+             return Result{static_cast<std::uint8_t>(the_seed::MachOParser::DetectFormat(path))};
          },
          false},
         {"MachOParser::IsMachO", "Mach-O",
-         [](const std::string &path) { return Result{static_cast<std::uint8_t>(MachOParser::IsMachO(path))}; },
+         [](const std::string &path) { return Result{static_cast<std::uint8_t>(the_seed::MachOParser::IsMachO(path))}; },
          false},
         {"MachOParser::IsFatBinary", "Mach-O",
          [](const std::string &path) {
-             return Result{static_cast<std::uint8_t>(MachOParser::IsFatBinary(path))};
+             return Result{static_cast<std::uint8_t>(the_seed::MachOParser::IsFatBinary(path))};
          },
          false},
         {"MachOParser::GetArchSlices", "Mach-O",
          [](const std::string &path) {
              Result result;
-             for(const auto &slice : MachOParser::GetArchSlices(path))
+             for(const auto &slice : the_seed::MachOParser::GetArchSlices(path))
              {
                  Append(result, std::to_string(slice.cpu_type) + "/" +
                                     std::to_string(slice.cpu_subtype) + "/" +
@@ -290,7 +290,7 @@ std::vector<ReadOperation> MachOReads()
         {"MachOParser::ListDependencies", "Mach-O",
          [](const std::string &path) {
              Result result;
-             for(const auto &name : MachOParser::ListDependencies(path))
+             for(const auto &name : the_seed::MachOParser::ListDependencies(path))
              {
                  Append(result, name);
              }
@@ -300,7 +300,7 @@ std::vector<ReadOperation> MachOReads()
         {"MachOSigner::PrepareSignature", "Mach-O",
          [](const std::string &path) {
              Result result;
-             for(const auto &slice : MachOSigner::PrepareSignature(path, "sweep", 64).slices)
+             for(const auto &slice : the_seed::MachOSigner::PrepareSignature(path, "sweep", 64).slices)
              {
                  result.insert(result.end(), slice.code_directory.begin(), slice.code_directory.end());
                  result.insert(result.end(), slice.cd_hash.begin(), slice.cd_hash.end());
@@ -310,11 +310,11 @@ std::vector<ReadOperation> MachOReads()
          false},
         {"MachOSigner::HasEmbeddedSignature", "Mach-O",
          [](const std::string &path) {
-             return Result{static_cast<std::uint8_t>(MachOSigner::HasEmbeddedSignature(path))};
+             return Result{static_cast<std::uint8_t>(the_seed::MachOSigner::HasEmbeddedSignature(path))};
          },
          false},
         {"MachOSigner::ExtractSignature", "Mach-O",
-         [](const std::string &path) { return OptionalBytes(MachOSigner::ExtractSignature(path)); },
+         [](const std::string &path) { return OptionalBytes(the_seed::MachOSigner::ExtractSignature(path)); },
          false},
     };
 }
@@ -326,8 +326,8 @@ std::vector<ChangeOperation> MachOChanges()
          [](const std::string &path) {
              const auto blob = seedfuzz::SuperBlobSeed();
              const auto prepared =
-                 MachOSigner::PrepareSignature(path, "sweep", static_cast<std::uint32_t>(blob.size()));
-             MachOSigner::CompleteSignature(
+                 the_seed::MachOSigner::PrepareSignature(path, "sweep", static_cast<std::uint32_t>(blob.size()));
+             the_seed::MachOSigner::CompleteSignature(
                  path, prepared, std::vector<std::vector<std::uint8_t>>(prepared.slices.size(), blob));
          }},
     };
@@ -337,18 +337,18 @@ std::vector<ReadOperation> MsiReads()
 {
     return {
         {"MsiSigner::IsMsi", "MSI",
-         [](const std::string &path) { return Result{static_cast<std::uint8_t>(MsiSigner::IsMsi(path))}; },
+         [](const std::string &path) { return Result{static_cast<std::uint8_t>(the_seed::MsiSigner::IsMsi(path))}; },
          false},
         {"MsiSigner::ComputeAuthenticodeDigest", "MSI",
-         [](const std::string &path) { return MsiSigner::ComputeAuthenticodeDigest(path).digest; },
+         [](const std::string &path) { return the_seed::MsiSigner::ComputeAuthenticodeDigest(path).digest; },
          false},
         {"MsiSigner::HasEmbeddedSignature", "MSI",
          [](const std::string &path) {
-             return Result{static_cast<std::uint8_t>(MsiSigner::HasEmbeddedSignature(path))};
+             return Result{static_cast<std::uint8_t>(the_seed::MsiSigner::HasEmbeddedSignature(path))};
          },
          false},
         {"MsiSigner::ExtractSignature", "MSI",
-         [](const std::string &path) { return OptionalBytes(MsiSigner::ExtractSignature(path)); },
+         [](const std::string &path) { return OptionalBytes(the_seed::MsiSigner::ExtractSignature(path)); },
          false},
     };
 }
@@ -357,9 +357,9 @@ std::vector<ChangeOperation> MsiChanges()
 {
     return {
         {"MsiSigner::EmbedSignature", "MSI",
-         [](const std::string &path) { MsiSigner::EmbedSignature(path, Bytes(1500, 0x5A)); }},
+         [](const std::string &path) { the_seed::MsiSigner::EmbedSignature(path, Bytes(1500, 0x5A)); }},
         {"MsiSigner::StripSignature", "MSI",
-         [](const std::string &path) { MsiSigner::StripSignature(path); }},
+         [](const std::string &path) { the_seed::MsiSigner::StripSignature(path); }},
     };
 }
 
@@ -409,18 +409,18 @@ TEST_CASE("truncated: BuildSuperBlob output", "[TruncatedSamples]")
 {
     const Bytes blob = seedfuzz::SuperBlobSeed();
     const std::string format = "Mach-O code signature";
-    const Result whole_cms = OptionalBytes(MachOSigner::ExtractCmsFromSuperBlob(blob));
-    const Result whole_cd = OptionalBytes(MachOSigner::ExtractCodeDirectoryFromSuperBlob(blob));
+    const Result whole_cms = OptionalBytes(the_seed::MachOSigner::ExtractCmsFromSuperBlob(blob));
+    const Result whole_cd = OptionalBytes(the_seed::MachOSigner::ExtractCodeDirectoryFromSuperBlob(blob));
 
     for(const std::size_t length : Lengths(blob.size()))
     {
         const Bytes prefix = Truncate(blob, length);
         INFO("prefix of " << length << " bytes");
         seedtest::malformed::RequireRejectedOrSameAsBefore(
-            [&] { return OptionalBytes(MachOSigner::ExtractCmsFromSuperBlob(prefix)); }, format,
+            [&] { return OptionalBytes(the_seed::MachOSigner::ExtractCmsFromSuperBlob(prefix)); }, format,
             whole_cms, length);
         seedtest::malformed::RequireRejectedOrSameAsBefore(
-            [&] { return OptionalBytes(MachOSigner::ExtractCodeDirectoryFromSuperBlob(prefix)); },
+            [&] { return OptionalBytes(the_seed::MachOSigner::ExtractCodeDirectoryFromSuperBlob(prefix)); },
             format, whole_cd, length);
     }
 }

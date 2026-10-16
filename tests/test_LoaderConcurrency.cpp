@@ -18,7 +18,7 @@
 static constexpr int NUM_THREADS = 8;
 
 TEST_CASE("ComponentLoader concurrent PathAdd is thread-safe", "[concurrency]") {
-    ComponentLoader loader;
+    the_seed::ComponentLoader loader;
     std::barrier sync(NUM_THREADS);
 
     std::vector<std::thread> threads;
@@ -38,7 +38,7 @@ TEST_CASE("ComponentLoader concurrent PathAdd is thread-safe", "[concurrency]") 
 }
 
 TEST_CASE("SystemLoader concurrent PathAdd is thread-safe", "[concurrency]") {
-    SystemLoader loader;
+    the_seed::SystemLoader loader;
     std::barrier sync(NUM_THREADS);
 
     std::vector<std::thread> threads;
@@ -58,7 +58,7 @@ TEST_CASE("SystemLoader concurrent PathAdd is thread-safe", "[concurrency]") {
 }
 
 TEST_CASE("PakLoader concurrent PathAdd is thread-safe", "[concurrency]") {
-    PakLoader loader;
+    the_seed::PakLoader loader;
     std::barrier sync(NUM_THREADS);
 
     std::vector<std::thread> threads;
@@ -78,7 +78,7 @@ TEST_CASE("PakLoader concurrent PathAdd is thread-safe", "[concurrency]") {
 }
 
 TEST_CASE("ComponentLoader concurrent PathsGet while PathAdd", "[concurrency]") {
-    ComponentLoader loader;
+    the_seed::ComponentLoader loader;
     loader.PathAdd("/initial");
     std::barrier sync(NUM_THREADS);
     std::atomic<bool> reader_saw_empty{false};
@@ -111,7 +111,7 @@ TEST_CASE("ComponentLoader concurrent PathsGet while PathAdd", "[concurrency]") 
 }
 
 TEST_CASE("ComponentLoader concurrent Create for nonexistent libraries", "[concurrency]") {
-    ComponentLoader loader;
+    the_seed::ComponentLoader loader;
     loader.PathAdd("/nonexistent");
     std::barrier sync(NUM_THREADS);
 
@@ -136,7 +136,7 @@ TEST_CASE("ComponentLoader concurrent Create for nonexistent libraries", "[concu
 }
 
 TEST_CASE("SystemLoader concurrent Create for nonexistent libraries", "[concurrency]") {
-    SystemLoader loader;
+    the_seed::SystemLoader loader;
     loader.PathAdd("/nonexistent");
     std::barrier sync(NUM_THREADS);
 
@@ -159,7 +159,7 @@ TEST_CASE("SystemLoader concurrent Create for nonexistent libraries", "[concurre
 }
 
 TEST_CASE("PakLoader concurrent Load for nonexistent paks", "[concurrency]") {
-    PakLoader loader;
+    the_seed::PakLoader loader;
     loader.PathAdd("/nonexistent");
     std::barrier sync(NUM_THREADS);
 
@@ -182,9 +182,9 @@ TEST_CASE("PakLoader concurrent Load for nonexistent paks", "[concurrency]") {
 }
 
 TEST_CASE("Mixed read/write operations across all loaders", "[concurrency]") {
-    ComponentLoader comp;
-    SystemLoader sys;
-    PakLoader pak;
+    the_seed::ComponentLoader comp;
+    the_seed::SystemLoader sys;
+    the_seed::PakLoader pak;
     std::barrier sync(NUM_THREADS);
     std::atomic<bool> any_empty{false};
 
@@ -272,8 +272,8 @@ TEST_CASE("Concurrent Create of an existing plugin opens it once per loader", "[
 
     for(int round = 0; round < ROUNDS; ++round)
     {
-        ComponentLoader components;
-        SystemLoader systems;
+        the_seed::ComponentLoader components;
+        the_seed::SystemLoader systems;
         components.PathAdd(moduleDir);
         systems.PathAdd(moduleDir);
 
@@ -310,8 +310,8 @@ TEST_CASE("Concurrent Create of an existing plugin opens it once per loader", "[
     // Every thread of the group asks the same loader for the same plugin.
     for(int round = 0; round < ROUNDS; ++round)
     {
-        ComponentLoader components;
-        SystemLoader systems;
+        the_seed::ComponentLoader components;
+        the_seed::SystemLoader systems;
         components.PathAdd(moduleDir);
         systems.PathAdd(moduleDir);
 
@@ -349,8 +349,8 @@ TEST_CASE("Concurrent Create of a missing plugin gives every thread the same Not
 
     for(int round = 0; round < 20; ++round)
     {
-        ComponentLoader components;
-        SystemLoader systems;
+        the_seed::ComponentLoader components;
+        the_seed::SystemLoader systems;
         components.PathAdd(empty);
         systems.PathAdd(empty);
 
@@ -372,9 +372,9 @@ TEST_CASE("Concurrent Create of a missing plugin gives every thread the same Not
                 }
                 ++wrong;
             }
-            catch(const LoadError &error)
+            catch(const the_seed::LoadError &error)
             {
-                if(error.ReasonGet() != LoadError::Reason::NotFound)
+                if(error.ReasonGet() != the_seed::LoadError::Reason::NotFound)
                 {
                     ++wrong;
                     return;
@@ -410,7 +410,7 @@ TEST_CASE("Names that resolve to one file share one open", "[concurrency]")
 
     SECTION("one after the other")
     {
-        ComponentLoader loader;
+        the_seed::ComponentLoader loader;
         loader.PathAdd(moduleDir);
         the_seed::internal::ResetPluginOpenCallCount();
 
@@ -425,7 +425,7 @@ TEST_CASE("Names that resolve to one file share one open", "[concurrency]")
 
     SECTION("systems one after the other")
     {
-        SystemLoader loader;
+        the_seed::SystemLoader loader;
         loader.PathAdd(moduleDir);
         the_seed::internal::ResetPluginOpenCallCount();
 
@@ -439,7 +439,7 @@ TEST_CASE("Names that resolve to one file share one open", "[concurrency]")
     {
         for(int round = 0; round < ROUNDS; ++round)
         {
-            ComponentLoader loader;
+            the_seed::ComponentLoader loader;
             loader.PathAdd(moduleDir);
             std::atomic<int> working{0};
             std::atomic<int> broken{0};
@@ -478,7 +478,7 @@ TEST_CASE("Names that resolve to different files stay apart", "[concurrency]")
                "testmodule");
     WorkingDirectoryGuard guard(project);
 
-    ComponentLoader loader;
+    the_seed::ComponentLoader loader;
     REQUIRE(loader.PathsGet().empty());
 
     SECTION("one after the other")
@@ -524,7 +524,7 @@ TEST_CASE("PathAdd while other threads load the same plugin", "[concurrency]")
 
     for(int round = 0; round < 20; ++round)
     {
-        ComponentLoader loader;
+        the_seed::ComponentLoader loader;
         loader.PathAdd(early);
 
         std::atomic<bool> added{false};
@@ -554,9 +554,9 @@ TEST_CASE("PathAdd while other threads load the same plugin", "[concurrency]")
                             ++wrong;
                         }
                     }
-                    catch(const LoadError &error)
+                    catch(const the_seed::LoadError &error)
                     {
-                        if(error.ReasonGet() != LoadError::Reason::NotFound)
+                        if(error.ReasonGet() != the_seed::LoadError::Reason::NotFound)
                         {
                             ++wrong;
                         }

@@ -126,7 +126,7 @@ struct ElfChain
 TEST_CASE("DependencyLister extracts direct dependencies from ELF", "[DependencyLister][US1]")
 {
     ElfChain chain;
-    DependencyLister lister;
+    the_seed::DependencyLister lister;
 
     const auto result = lister.ListDependencies({chain.app_a}, chain.Search());
 
@@ -139,7 +139,7 @@ TEST_CASE("DependencyLister reports missing file errors", "[DependencyLister][US
 {
     seedtest::ScratchDir scratch;
     const std::string missing = scratch.File("file-that-does-not-exist");
-    DependencyLister lister;
+    the_seed::DependencyLister lister;
 
     const auto result = lister.ListDependencies({missing}, {scratch.Path().string()});
 
@@ -156,7 +156,7 @@ TEST_CASE("DependencyLister reports non-binary file errors", "[DependencyLister]
         output << "not a binary";
     }
 
-    DependencyLister lister;
+    the_seed::DependencyLister lister;
     const auto result = lister.ListDependencies({text_file.string()}, {scratch.Path().string()});
 
     REQUIRE(result.dependencies.empty());
@@ -167,7 +167,7 @@ TEST_CASE("DependencyLister continues processing after per-file errors", "[Depen
 {
     ElfChain chain;
     const std::string missing = chain.scratch.File("missing-binary-for-dependency-lister");
-    DependencyLister lister;
+    the_seed::DependencyLister lister;
 
     const auto result = lister.ListDependencies({missing, chain.app_a}, chain.Search());
 
@@ -181,7 +181,7 @@ TEST_CASE("ELF file without PT_DYNAMIC produces empty dependencies", "[Dependenc
     seedtest::ScratchDir scratch;
     const auto static_like_elf = WriteStaticLikeElf(scratch, "dependency_lister_static_like.elf");
 
-    DependencyLister lister;
+    the_seed::DependencyLister lister;
     const auto result = lister.ListDependencies({static_like_elf.string()}, {scratch.Path().string()});
 
     REQUIRE(result.errors.empty());
@@ -191,7 +191,7 @@ TEST_CASE("ELF file without PT_DYNAMIC produces empty dependencies", "[Dependenc
 TEST_CASE("DependencyLister resolves transitive dependencies", "[DependencyLister][US2]")
 {
     ElfChain chain;
-    DependencyLister lister;
+    the_seed::DependencyLister lister;
 
     const auto result = lister.ListDependencies({chain.app_a}, chain.Search());
 
@@ -207,7 +207,7 @@ TEST_CASE("DependencyLister uses canonical absolute keys when resolvable", "[Dep
     // Reach the folder through a spelling with a dot segment: the key is
     // still the canonical path of the file.
     const std::string indirect = (chain.folder / ".").string();
-    DependencyLister lister;
+    the_seed::DependencyLister lister;
 
     const auto result = lister.ListDependencies({chain.app_a}, {indirect});
 
@@ -227,7 +227,7 @@ TEST_CASE("DependencyLister uses canonical absolute keys when resolvable", "[Dep
 TEST_CASE("DependencyLister aggregates shared dependencies", "[DependencyLister][US2]")
 {
     ElfChain chain;
-    DependencyLister lister;
+    the_seed::DependencyLister lister;
 
     const auto result = lister.ListDependencies({chain.app_a, chain.app_b}, chain.Search());
 
@@ -239,7 +239,7 @@ TEST_CASE("DependencyLister aggregates shared dependencies", "[DependencyLister]
 TEST_CASE("DependencyLister uses recorded name when unresolved", "[DependencyLister][US2]")
 {
     ElfChain chain;
-    DependencyLister lister;
+    the_seed::DependencyLister lister;
 
     const auto result = lister.ListDependencies({chain.app_a}, {});
 
@@ -259,7 +259,7 @@ TEST_CASE("DependencyLister searches only the given folders", "[DependencyLister
     seedtest::dep::CopyElfChain(chain.scratch.Path() / "decoy");
     const std::string empty = (chain.scratch.Path() / "empty").string();
     std::filesystem::create_directories(empty);
-    DependencyLister lister;
+    the_seed::DependencyLister lister;
 
     const auto result = lister.ListDependencies({chain.app_a}, {empty, chain.folder.string()});
 
@@ -300,7 +300,7 @@ TEST_CASE("PeParser reads DLL dependencies from fixture", "[DependencyLister][US
 
 TEST_CASE("DependencyLister auto-detects PE format", "[DependencyLister][US3]")
 {
-    DependencyLister lister;
+    the_seed::DependencyLister lister;
 
     const auto result = lister.ListDependencies({seedtest::FixturePath("test.dll")}, {});
 
@@ -314,7 +314,7 @@ TEST_CASE("DependencyLister resolves the PE fixture chain", "[DependencyLister][
     seedtest::ScratchDir scratch;
     const auto folder = seedtest::dep::CopyPeChain(scratch.Path() / "pe");
     const std::string app = (folder / "appA.exe").string();
-    DependencyLister lister;
+    the_seed::DependencyLister lister;
 
     const auto result = lister.ListDependencies({app}, {folder.string()});
 
@@ -330,7 +330,7 @@ TEST_CASE("DependencyLister reports errors for truncated PE files", "[Dependency
     seedtest::ScratchDir scratch;
     const auto corrupt_file = WriteTempFile(scratch, "dependency_lister_truncated.dll", {'M', 'Z'});
 
-    DependencyLister lister;
+    the_seed::DependencyLister lister;
     const auto result = lister.ListDependencies({corrupt_file.string()}, {});
 
     REQUIRE(result.dependencies.empty());
@@ -353,7 +353,7 @@ TEST_CASE("DependencyLister lists the genuine Mach-O samples", "[DependencyListe
         {
             seedtest::ScratchDir scratch;
             const std::string mac = seedtest::dep::CopyFixture(scratch.Path() / "mac", sample).string();
-            DependencyLister lister;
+            the_seed::DependencyLister lister;
 
             const auto result = lister.ListDependencies({mac}, {(scratch.Path() / "mac").string()});
 
@@ -372,7 +372,7 @@ TEST_CASE("DependencyLister lists several genuine Mach-O samples together", "[De
     const auto folder = scratch.Path() / "mac";
     const std::string arm = seedtest::dep::CopyFixture(folder, "tiny-macho-arm64").string();
     const std::string universal = seedtest::dep::CopyFixture(folder, "tiny-macho-universal").string();
-    DependencyLister lister;
+    the_seed::DependencyLister lister;
 
     const auto result = lister.ListDependencies({universal, arm}, {folder.string()});
 
@@ -391,7 +391,7 @@ TEST_CASE("DependencyLister finds a genuine Mach-O library by its bare name", "[
     const std::string app = seedtest::dep::WriteFile(
         folder, "app", seedtest::dep::MachOReferencing({{seedtest::dep::kLoadDylib, "libtiny.dylib"}},
                                                        seedtest::dep::MachOFields::LittleAfterMagic)).string();
-    DependencyLister lister;
+    the_seed::DependencyLister lister;
 
     const auto result = lister.ListDependencies({app}, {folder.string()});
 

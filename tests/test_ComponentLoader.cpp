@@ -5,13 +5,13 @@
 
 TEST_CASE("ComponentLoader instance isolation", "[ComponentLoader]") {
     SECTION("Default construction creates empty state") {
-        ComponentLoader loader;
+        the_seed::ComponentLoader loader;
         REQUIRE(loader.PathsGet().empty());
     }
 
     SECTION("PathAdd and PathsGet are per-instance") {
-        ComponentLoader a;
-        ComponentLoader b;
+        the_seed::ComponentLoader a;
+        the_seed::ComponentLoader b;
 
         a.PathAdd("/path/a");
         b.PathAdd("/path/b1");
@@ -29,43 +29,43 @@ TEST_CASE("ComponentLoader instance isolation", "[ComponentLoader]") {
     }
 
     SECTION("Instances do not share search paths") {
-        ComponentLoader first;
+        the_seed::ComponentLoader first;
         first.PathAdd("/shared/test/path");
 
-        ComponentLoader second;
+        the_seed::ComponentLoader second;
         REQUIRE(second.PathsGet().empty());
     }
 }
 
 TEST_CASE("ComponentLoader Create error handling", "[ComponentLoader]") {
     SECTION("Create throws runtime_error for nonexistent component") {
-        ComponentLoader loader;
+        the_seed::ComponentLoader loader;
         loader.PathAdd("/nonexistent/path");
         REQUIRE_THROWS_AS(loader.Create("nonexistent/component"), std::runtime_error);
-        REQUIRE_THROWS_AS(loader.Create("nonexistent/component"), LoadError);
+        REQUIRE_THROWS_AS(loader.Create("nonexistent/component"), the_seed::LoadError);
     }
 
     SECTION("Create with data throws runtime_error for nonexistent component") {
-        ComponentLoader loader;
+        the_seed::ComponentLoader loader;
         loader.PathAdd("/nonexistent/path");
         int data = 42;
         REQUIRE_THROWS_AS(loader.Create("nonexistent/component", &data), std::runtime_error);
-        REQUIRE_THROWS_AS(loader.Create("nonexistent/component", &data), LoadError);
+        REQUIRE_THROWS_AS(loader.Create("nonexistent/component", &data), the_seed::LoadError);
     }
 }
 
 TEST_CASE("ComponentLoader Get error handling", "[ComponentLoader]") {
     SECTION("Get throws runtime_error for nonexistent component") {
-        ComponentLoader loader;
+        the_seed::ComponentLoader loader;
         loader.PathAdd("/nonexistent/path");
         REQUIRE_THROWS_AS(loader.Get("nonexistent/component"), std::runtime_error);
-        REQUIRE_THROWS_AS(loader.Get("nonexistent/component"), LoadError);
+        REQUIRE_THROWS_AS(loader.Get("nonexistent/component"), the_seed::LoadError);
     }
 }
 
 TEST_CASE("ComponentLoader destruction completes and unloads nothing", "[ComponentLoader]") {
     SECTION("Destruction completes without error") {
-        auto loader = std::make_unique<ComponentLoader>();
+        auto loader = std::make_unique<the_seed::ComponentLoader>();
         loader->PathAdd("/some/path");
         REQUIRE_NOTHROW(loader.reset());
     }

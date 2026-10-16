@@ -8,6 +8,8 @@
 #include <libecs-cpp/ecs.hpp>
 #include <libecs-cpp/json.hpp>
 
+namespace the_seed
+{
 /**
  * @brief Loads resources (images, sounds, etc.) from .pak files.
  *
@@ -72,3 +74,8 @@ class THE_SEED_API ResourcePak
     const std::string filename;
     std::shared_ptr<State> state;
 };
+} // namespace the_seed
+
+#ifdef THE_SEED_LEGACY_NAMES
+using ResourcePak [[deprecated("use the_seed::ResourcePak")]] = the_seed::ResourcePak;
+#endif

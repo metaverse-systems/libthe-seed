@@ -113,7 +113,7 @@ TEST_CASE("PakLoader requests from 8 threads parse the description once", "[PakC
     const Contents contents = VersionContents(1);
     seedtest::WritePak(scratch.Path(), "shared", contents);
 
-    PakLoader loader;
+    the_seed::PakLoader loader;
     loader.PathAdd(scratch.Path().string());
 
     ResetPakDescriptionParseCount();
@@ -162,7 +162,7 @@ TEST_CASE("PakLoader results during replacement by rename are each one version i
     const Contents version_b = VersionContents(2);
     const std::filesystem::path target = seedtest::WritePak(location, "swap", version_a);
 
-    PakLoader loader;
+    the_seed::PakLoader loader;
     loader.PathAdd(location.string());
 
     Failures failures;
@@ -233,7 +233,7 @@ TEST_CASE("One ResourcePak object used from 8 threads loads correct bytes", "[Pa
     const Contents contents = VersionContents(3);
     const std::filesystem::path file = seedtest::WritePak(scratch.Path(), "single", contents);
 
-    ResourcePak pak(file.string());
+    the_seed::ResourcePak pak(file.string());
     Failures failures;
     std::barrier sync(ThreadCount);
     std::vector<std::thread> threads;
@@ -277,7 +277,7 @@ TEST_CASE("ResourcePak copies used from threads validate a replaced file", "[Pak
     const Contents version_a = VersionContents(1);
     const Contents version_b = VersionContents(2);
     const std::filesystem::path target = seedtest::WritePak(scratch.Path() / "location", "copies", version_a);
-    const ResourcePak original(target.string());
+    const the_seed::ResourcePak original(target.string());
 
     // The file changes before the threads start; every copy meets the new
     // version together.
@@ -289,7 +289,7 @@ TEST_CASE("ResourcePak copies used from threads validate a replaced file", "[Pak
     for(int t = 0; t < ThreadCount; ++t)
     {
         threads.emplace_back([&]() {
-            ResourcePak copy = original;
+            the_seed::ResourcePak copy = original;
             sync.arrive_and_wait();
             try
             {
@@ -331,7 +331,7 @@ TEST_CASE("A failed validation reaches every waiting thread and the next request
     const std::filesystem::path target = location / "flaky.pak";
     seedtest::WriteBytes(target, damaged);
 
-    PakLoader loader;
+    the_seed::PakLoader loader;
     loader.PathAdd(location.string());
 
     for(int round = 0; round < 10; ++round)
@@ -348,9 +348,9 @@ TEST_CASE("A failed validation reaches every waiting thread and the next request
                     loader.Load("flaky");
                     failures.Add("Load did not throw");
                 }
-                catch(const LoadError &error)
+                catch(const the_seed::LoadError &error)
                 {
-                    if(error.ReasonGet() != LoadError::Reason::NotLoadable ||
+                    if(error.ReasonGet() != the_seed::LoadError::Reason::NotLoadable ||
                        error.DetailGet().rfind("damaged: ", 0) != 0)
                     {
                         failures.Add(std::string("wrong error: ") + error.what());

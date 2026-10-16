@@ -22,7 +22,7 @@ std::string Canon(const std::filesystem::path &path)
 }
 
 // The libraries credited to `input` in a result.
-std::set<std::string> Slice(const DependencyResult &result, const std::string &input)
+std::set<std::string> Slice(const the_seed::DependencyResult &result, const std::string &input)
 {
     std::set<std::string> keys;
     for(const auto &entry : result.dependencies)
@@ -68,14 +68,14 @@ std::string Numbered(const std::string &prefix, int index, const std::string &su
     return prefix + text + suffix;
 }
 
-double SecondsFor(DependencyLister &lister, const std::vector<std::string> &inputs,
-                  const std::vector<std::string> &search, DependencyResult *keep = nullptr)
+double SecondsFor(the_seed::DependencyLister &lister, const std::vector<std::string> &inputs,
+                  const std::vector<std::string> &search, the_seed::DependencyResult *keep = nullptr)
 {
     double best = 1e9;
     for(int run = 0; run < 3; ++run)
     {
         const auto begin = std::chrono::steady_clock::now();
-        DependencyResult result = lister.ListDependencies(inputs, search);
+        the_seed::DependencyResult result = lister.ListDependencies(inputs, search);
         const auto end = std::chrono::steady_clock::now();
         best = std::min(best, std::chrono::duration<double>(end - begin).count());
         if(keep != nullptr && run == 0)
@@ -90,7 +90,7 @@ double SecondsFor(DependencyLister &lister, const std::vector<std::string> &inpu
 TEST_CASE("Two programs sharing a chain are both credited with all of it", "[DependencyAttribution][US1]")
 {
     ElfChain chain;
-    DependencyLister lister;
+    the_seed::DependencyLister lister;
 
     const auto result = lister.ListDependencies({chain.app_a, chain.app_b}, chain.Search());
 
@@ -110,7 +110,7 @@ TEST_CASE("Two programs sharing a chain are both credited with all of it", "[Dep
 TEST_CASE("The same programs in the opposite order give the same result", "[DependencyAttribution][US1]")
 {
     ElfChain chain;
-    DependencyLister lister;
+    the_seed::DependencyLister lister;
 
     const auto forward = lister.ListDependencies({chain.app_a, chain.app_b}, chain.Search());
     const auto backward = lister.ListDependencies({chain.app_b, chain.app_a}, chain.Search());
@@ -122,18 +122,18 @@ TEST_CASE("The same programs in the opposite order give the same result", "[Depe
 TEST_CASE("Every order of appA and appB and libfoo gives one result", "[DependencyAttribution][US1]")
 {
     ElfChain chain;
-    DependencyLister lister;
+    the_seed::DependencyLister lister;
     std::vector<std::string> inputs{chain.app_a, chain.app_b, chain.libfoo_input};
     std::sort(inputs.begin(), inputs.end());
 
-    std::vector<DependencyResult> results;
+    std::vector<the_seed::DependencyResult> results;
     do
     {
         results.push_back(lister.ListDependencies(inputs, chain.Search()));
     } while(std::next_permutation(inputs.begin(), inputs.end()));
 
     REQUIRE(results.size() == 6);
-    for(const DependencyResult &result : results)
+    for(const the_seed::DependencyResult &result : results)
     {
         REQUIRE(result.errors.empty());
         REQUIRE(result.dependencies == results.front().dependencies);
@@ -156,7 +156,7 @@ TEST_CASE("Every order of appA and appB and libfoo gives one result", "[Dependen
 TEST_CASE("Each input alone equals its slice of the joint result", "[DependencyAttribution][US1]")
 {
     ElfChain chain;
-    DependencyLister lister;
+    the_seed::DependencyLister lister;
     const std::vector<std::string> inputs{chain.app_a, chain.app_b, chain.libfoo_input};
 
     const auto joint = lister.ListDependencies(inputs, chain.Search());
@@ -206,7 +206,7 @@ TEST_CASE("Many programs sharing many libraries read each file once", "[Dependen
     }
     const std::string combined = dep::WriteFile(folder, "combined", dep::ElfNeeding(every_library)).string();
     const std::vector<std::string> search{folder.string()};
-    DependencyLister lister;
+    the_seed::DependencyLister lister;
 
     SECTION("each distinct file is read once")
     {
@@ -259,7 +259,7 @@ TEST_CASE("A chain of 10000 libraries is listed without exhausting the stack", "
         dep::WriteFile(folder, Numbered("lib", i, ".so"), dep::ElfNeeding(needed));
     }
     const std::string program = dep::WriteFile(folder, "program", dep::ElfNeeding({Numbered("lib", 0, ".so")})).string();
-    DependencyLister lister;
+    the_seed::DependencyLister lister;
 
     const auto result = lister.ListDependencies({program}, {folder.string()});
 
@@ -273,7 +273,7 @@ TEST_CASE("A chain of 10000 libraries is listed without exhausting the stack", "
 TEST_CASE("An input that is also a library is credited with its own dependencies", "[DependencyAttribution][US1]")
 {
     ElfChain chain;
-    DependencyLister lister;
+    the_seed::DependencyLister lister;
 
     for(const auto &inputs : {std::vector<std::string>{chain.app_a, chain.libfoo_input},
                               std::vector<std::string>{chain.libfoo_input, chain.app_a}})
@@ -297,7 +297,7 @@ TEST_CASE("An input that is also a library is credited with its own dependencies
 TEST_CASE("The same input named twice is one input", "[DependencyAttribution][US1]")
 {
     ElfChain chain;
-    DependencyLister lister;
+    the_seed::DependencyLister lister;
 
     const auto once = lister.ListDependencies({chain.app_a}, chain.Search());
     const auto twice = lister.ListDependencies({chain.app_a, chain.app_a}, chain.Search());
@@ -323,7 +323,7 @@ TEST_CASE("A library that cannot be opened is still credited to every program", 
     std::error_code ec;
     std::filesystem::permissions(chain.folder / "libbar.so", std::filesystem::perms::none, ec);
     REQUIRE_FALSE(ec);
-    DependencyLister lister;
+    the_seed::DependencyLister lister;
 
     const auto forward = lister.ListDependencies({chain.app_a, chain.app_b}, chain.Search());
     const auto backward = lister.ListDependencies({chain.app_b, chain.app_a}, chain.Search());
@@ -391,7 +391,7 @@ TEST_CASE("Libraries needing each other in a loop are each credited once, in any
     const std::string libx = Canon(folder / "libx.so");
     const std::string liby = Canon(folder / "liby.so");
     const std::vector<std::string> search{folder.string()};
-    DependencyLister lister;
+    the_seed::DependencyLister lister;
 
     SECTION("one program")
     {
@@ -460,7 +460,7 @@ TEST_CASE("A library needing itself is listed once", "[DependencyAttribution][US
     const std::filesystem::path folder = scratch.Path() / "self";
     dep::WriteFile(folder, "libself.so", dep::ElfNeeding({"libself.so", "libself.so"}));
     const std::string program = dep::WriteFile(folder, "prog", dep::ElfNeeding({"libself.so"})).string();
-    DependencyLister lister;
+    the_seed::DependencyLister lister;
 
     dep::ResetReadCount();
     const auto result = lister.ListDependencies({program}, {folder.string()});
@@ -480,7 +480,7 @@ TEST_CASE("A library in a loop that is also an input is credited as a library an
     const std::string libx_input = dep::WriteFile(folder, "libx.so", dep::ElfNeeding({"liby.so"})).string();
     dep::WriteFile(folder, "liby.so", dep::ElfNeeding({"libx.so"}));
     const std::string program = dep::WriteFile(folder, "prog", dep::ElfNeeding({"libx.so"})).string();
-    DependencyLister lister;
+    the_seed::DependencyLister lister;
     const std::vector<std::string> both = Sorted({libx_input, program});
 
     for(const auto &inputs : {std::vector<std::string>{program, libx_input}, std::vector<std::string>{libx_input, program}})
@@ -510,7 +510,7 @@ TEST_CASE("A link and its target are one library, credited with every input and 
     const std::string indirect = dep::WriteFile(folder, "indirect", dep::ElfNeeding({"libmid.so"})).string();
     const std::string both_names = dep::WriteFile(folder, "both", dep::ElfNeeding({"libx.so.1", "libx.so"})).string();
     const std::string target = Canon(folder / "libx.so");
-    DependencyLister lister;
+    the_seed::DependencyLister lister;
 
     dep::ResetReadCount();
     const auto result = lister.ListDependencies({direct, indirect, both_names}, {folder.string()});
@@ -538,7 +538,7 @@ TEST_CASE("A link in a search folder is listed under the real file's path", "[De
         return;
     }
     const std::string program = dep::WriteFile(scratch.Path() / "prog", "prog", dep::ElfNeeding({"libalias.so"})).string();
-    DependencyLister lister;
+    the_seed::DependencyLister lister;
 
     const auto result = lister.ListDependencies({program}, {other.string()});
 
@@ -558,7 +558,7 @@ TEST_CASE("The same file reached through two search folders is one entry", "[Dep
         return;
     }
     const std::string program = dep::WriteFile(scratch.Path() / "prog", "prog", dep::ElfNeeding({"libshared.so"})).string();
-    DependencyLister lister;
+    the_seed::DependencyLister lister;
     const std::string key = Canon(real / "libshared.so");
 
     for(const std::vector<std::string> &search :
@@ -585,7 +585,7 @@ TEST_CASE("Two names of one file by a hard link are each listed under the real p
     }
     const std::string first = dep::WriteFile(folder, "first", dep::ElfNeeding({"libone.so"})).string();
     const std::string second = dep::WriteFile(folder, "second", dep::ElfNeeding({"libtwo.so"})).string();
-    DependencyLister lister;
+    the_seed::DependencyLister lister;
 
     const auto result = lister.ListDependencies({first, second}, {folder.string()});
 
@@ -606,7 +606,7 @@ TEST_CASE("A Windows reference in another letter case finds the file and is list
     dep::WriteFile(folder, "mylib.dll", dep::PeImporting({}));
     dep::WriteFile(folder, "Other.DLL", dep::PeImporting({}));
     const std::string program = dep::WriteFile(folder, "prog.exe", dep::PeImporting({"MyLib.DLL", "OTHER.dll"})).string();
-    DependencyLister lister;
+    the_seed::DependencyLister lister;
 
     const auto result = lister.ListDependencies({program}, {folder.string()});
 
@@ -626,7 +626,7 @@ TEST_CASE("Two spellings of one Windows library are one entry", "[DependencyAttr
     dep::WriteFile(folder, "shared.dll", dep::PeImporting({}));
     const std::string one = dep::WriteFile(folder, "one.exe", dep::PeImporting({"SHARED.DLL"})).string();
     const std::string two = dep::WriteFile(folder, "two.exe", dep::PeImporting({"Shared.dll"})).string();
-    DependencyLister lister;
+    the_seed::DependencyLister lister;
 
     dep::ResetReadCount();
     const auto result = lister.ListDependencies({one, two}, {folder.string()});
@@ -641,7 +641,7 @@ TEST_CASE("Windows files differing only in case: the exact case wins, otherwise 
           "[DependencyAttribution][US6][case]")
 {
     seedtest::ScratchDir scratch;
-    DependencyLister lister;
+    the_seed::DependencyLister lister;
 
     // "LIB.dll" < "Lib.dll" < "lib.dll" in byte order. The files are written in
     // two different orders so that the answer cannot follow the creation order.
@@ -687,7 +687,7 @@ TEST_CASE("Windows files differing only in case: without the exact case the smal
         return;
     }
     const std::string program = dep::WriteFile(scratch.Path() / "prog", "p.exe", dep::PeImporting({"LiB.dll"})).string();
-    DependencyLister lister;
+    the_seed::DependencyLister lister;
 
     const auto result = lister.ListDependencies({program}, {folder.string()});
 
@@ -707,7 +707,7 @@ TEST_CASE("A Linux reference matches the file name exactly", "[DependencyAttribu
     }
     const std::string program =
         dep::WriteFile(folder, "prog", dep::ElfNeeding({"LIBQ.SO", "libQ.so", "libq.so"})).string();
-    DependencyLister lister;
+    the_seed::DependencyLister lister;
 
     const auto result = lister.ListDependencies({program}, {folder.string()});
 
@@ -739,7 +739,7 @@ TEST_CASE("Linux files differing only in case are two libraries", "[DependencyAt
     }
     const std::string lower = dep::WriteFile(scratch.Path() / "progs", "lower", dep::ElfNeeding({"libq.so"})).string();
     const std::string upper = dep::WriteFile(scratch.Path() / "progs", "upper", dep::ElfNeeding({"libQ.so"})).string();
-    DependencyLister lister;
+    the_seed::DependencyLister lister;
 
     const auto result = lister.ListDependencies({lower, upper}, {folder.string()});
 
@@ -756,7 +756,7 @@ TEST_CASE("A library that is named but absent is listed under its recorded name 
     dep::WriteFile(folder, "libmid.so", dep::ElfNeeding({"libgone.so", "libgone2.so"}));
     const std::string direct = dep::WriteFile(folder, "direct", dep::ElfNeeding({"libgone.so"})).string();
     const std::string indirect = dep::WriteFile(folder, "indirect", dep::ElfNeeding({"libmid.so"})).string();
-    DependencyLister lister;
+    the_seed::DependencyLister lister;
 
     for(const auto &inputs : {std::vector<std::string>{direct, indirect}, std::vector<std::string>{indirect, direct}})
     {
@@ -777,7 +777,7 @@ TEST_CASE("A Windows library that is absent keeps the spelling it was recorded i
     seedtest::ScratchDir scratch;
     const std::filesystem::path folder = scratch.Path() / "peabsent";
     const std::string program = dep::WriteFile(folder, "prog.exe", dep::PeImporting({"Missing.DLL"})).string();
-    DependencyLister lister;
+    the_seed::DependencyLister lister;
 
     const auto result = lister.ListDependencies({program}, {folder.string()});
 
@@ -798,7 +798,7 @@ TEST_CASE("A recorded name with a folder part is never read from outside the sea
     dep::WriteFile(search, "inner.so", dep::ElfNeeding({}));
     dep::WriteFile(search, "inner.dll", dep::PeImporting({}));
     dep::WriteFile(search / "sub", "nested.so", dep::ElfNeeding({}));
-    DependencyLister lister;
+    the_seed::DependencyLister lister;
 
     const std::string absolute = outside_file.string();
     const std::vector<std::string> elf_names{"../outside/secret.so", "./inner.so", "sub/nested.so", "..", ".", absolute};
@@ -861,7 +861,7 @@ TEST_CASE("Search folders that do not exist or are not folders are ignored", "[D
     const std::filesystem::path folder = scratch.Path() / "real";
     dep::WriteFile(folder, "libfound.so", dep::ElfNeeding({}));
     const std::string program = dep::WriteFile(folder, "prog", dep::ElfNeeding({"libfound.so", "libnot.so"})).string();
-    DependencyLister lister;
+    the_seed::DependencyLister lister;
 
     const auto result = lister.ListDependencies({program}, {(scratch.Path() / "nowhere").string(), "", program,
                                                             (scratch.Path() / "nowhere" / "deeper").string(),
@@ -878,7 +878,7 @@ TEST_CASE("An empty request and a request of only unreadable inputs give empty r
           "[DependencyAttribution][US6][edge]")
 {
     seedtest::ScratchDir scratch;
-    DependencyLister lister;
+    the_seed::DependencyLister lister;
 
     SECTION("nothing at all")
     {
@@ -929,7 +929,7 @@ TEST_CASE("A Linux program needing a Windows library, and the reverse, lists acr
     dep::WriteFile(folder, "libdeep.so", dep::ElfNeeding({}));
     const std::string linux_program = dep::WriteFile(folder, "linuxprog", dep::ElfNeeding({"win.dll"})).string();
     const std::string windows_program = dep::WriteFile(folder, "winprog.exe", dep::PeImporting({"libback.so"})).string();
-    DependencyLister lister;
+    the_seed::DependencyLister lister;
 
     SECTION("a Linux program reaching Windows libraries")
     {
@@ -965,7 +965,7 @@ TEST_CASE("An input that is also a library in a Windows chain is credited both w
     dep::WriteFile(folder, "base.dll", dep::PeImporting({}));
     const std::string middle = dep::WriteFile(folder, "middle.dll", dep::PeImporting({"BASE.dll"})).string();
     const std::string program = dep::WriteFile(folder, "prog.exe", dep::PeImporting({"Middle.DLL"})).string();
-    DependencyLister lister;
+    the_seed::DependencyLister lister;
 
     const auto result = lister.ListDependencies({middle, program}, {folder.string()});
 

@@ -16,6 +16,9 @@
 
 #include "../external/picosha2.h"
 
+namespace the_seed
+{
+
 namespace {
 
 using the_seed::internal::ByteOrder;
@@ -472,3 +475,4 @@ void PeSigner::StripSignature(const std::string &file_path)
         WriteFileBytes(file_path, bytes);
     });
 }
+} // namespace the_seed

@@ -15,13 +15,13 @@
 
 TEST_CASE("PakLoader instance isolation", "[PakLoader]") {
     SECTION("Default construction creates empty state") {
-        PakLoader loader;
+        the_seed::PakLoader loader;
         REQUIRE(loader.PathsGet().empty());
     }
 
     SECTION("PathAdd and PathsGet are per-instance") {
-        PakLoader a;
-        PakLoader b;
+        the_seed::PakLoader a;
+        the_seed::PakLoader b;
 
         a.PathAdd("/path/a");
         b.PathAdd("/path/b1");
@@ -39,34 +39,34 @@ TEST_CASE("PakLoader instance isolation", "[PakLoader]") {
     }
 
     SECTION("Instances do not share search paths") {
-        PakLoader first;
+        the_seed::PakLoader first;
         first.PathAdd("/shared/test/path");
 
-        PakLoader second;
+        the_seed::PakLoader second;
         REQUIRE(second.PathsGet().empty());
     }
 }
 
 TEST_CASE("PakLoader Load error handling", "[PakLoader]") {
     SECTION("Load throws runtime_error for nonexistent pak") {
-        PakLoader loader;
+        the_seed::PakLoader loader;
         loader.PathAdd("/nonexistent/path");
         REQUIRE_THROWS_AS(loader.Load("nonexistent/pak"), std::runtime_error);
-        REQUIRE_THROWS_AS(loader.Load("nonexistent/pak"), LoadError);
+        REQUIRE_THROWS_AS(loader.Load("nonexistent/pak"), the_seed::LoadError);
     }
 
     SECTION("Filtered Load throws runtime_error for nonexistent pak") {
-        PakLoader loader;
+        the_seed::PakLoader loader;
         loader.PathAdd("/nonexistent/path");
         std::vector<std::string> names = {"resource1"};
         REQUIRE_THROWS_AS(loader.Load("nonexistent/pak", names), std::runtime_error);
-        REQUIRE_THROWS_AS(loader.Load("nonexistent/pak", names), LoadError);
+        REQUIRE_THROWS_AS(loader.Load("nonexistent/pak", names), the_seed::LoadError);
     }
 }
 
 TEST_CASE("PakLoader destruction completes", "[PakLoader]") {
     SECTION("Destruction completes without error") {
-        auto loader = std::make_unique<PakLoader>();
+        auto loader = std::make_unique<the_seed::PakLoader>();
         loader->PathAdd("/some/path");
         REQUIRE_NOTHROW(loader.reset());
     }
@@ -113,7 +113,7 @@ TEST_CASE("PakLoader search passes over an unreadable location", "[PakLoader]") 
 
     SECTION("A later location still loads the pak") {
         Locked lock(locked);
-        PakLoader loader;
+        the_seed::PakLoader loader;
         loader.PathAdd(locked.string());
         loader.PathAdd(good.string());
 
@@ -124,7 +124,7 @@ TEST_CASE("PakLoader search passes over an unreadable location", "[PakLoader]") 
 
     SECTION("With no other copy the message names the location and the system text") {
         Locked lock(locked);
-        PakLoader loader;
+        the_seed::PakLoader loader;
         loader.PathAdd(locked.string());
 
         try
@@ -132,11 +132,11 @@ TEST_CASE("PakLoader search passes over an unreadable location", "[PakLoader]") 
             loader.Load("lockedpak");
             FAIL("Load did not throw");
         }
-        catch(const LoadError &error)
+        catch(const the_seed::LoadError &error)
         {
-            REQUIRE(error.ReasonGet() == LoadError::Reason::NotFound);
+            REQUIRE(error.ReasonGet() == the_seed::LoadError::Reason::NotFound);
             REQUIRE(error.LocationsGet().size() >= 1);
-            REQUIRE(error.LocationsGet()[0].state == LoadError::LocationState::Unreadable);
+            REQUIRE(error.LocationsGet()[0].state == the_seed::LoadError::LocationState::Unreadable);
             REQUIRE(error.LocationsGet()[0].reason == "Permission denied");
             REQUIRE(std::string(error.what()).find("could not be examined: " + locked.string() +
                                                    ": Permission denied") != std::string::npos);
@@ -168,7 +168,7 @@ TEST_CASE("PakLoader loads a writer's pak and reads the description once per loa
 
     SECTION("Load returns every resource with its exact bytes")
     {
-        PakLoader loader;
+        the_seed::PakLoader loader;
         loader.PathAdd(scratch.Path().string());
         auto resources = loader.Load("several");
         REQUIRE(resources.size() == contents.size());
@@ -182,7 +182,7 @@ TEST_CASE("PakLoader loads a writer's pak and reads the description once per loa
 
     SECTION("A filtered Load returns only the named resources")
     {
-        PakLoader loader;
+        the_seed::PakLoader loader;
         loader.PathAdd(scratch.Path().string());
         auto resources = loader.Load("several", {"mid", "empty"});
         REQUIRE(resources.size() == 2);
@@ -192,7 +192,7 @@ TEST_CASE("PakLoader loads a writer's pak and reads the description once per loa
 
     SECTION("Two requests through one loader parse the description once")
     {
-        PakLoader loader;
+        the_seed::PakLoader loader;
         loader.PathAdd(scratch.Path().string());
         ResetPakDescriptionParseCount();
         loader.Load("several", {"zeta"});
@@ -204,8 +204,8 @@ TEST_CASE("PakLoader loads a writer's pak and reads the description once per loa
 
     SECTION("Two loaders each parse the description once")
     {
-        PakLoader first;
-        PakLoader second;
+        the_seed::PakLoader first;
+        the_seed::PakLoader second;
         first.PathAdd(scratch.Path().string());
         second.PathAdd(scratch.Path().string());
         ResetPakDescriptionParseCount();
@@ -219,7 +219,7 @@ TEST_CASE("PakLoader loads a writer's pak and reads the description once per loa
 
     SECTION("A second request for one resource reads no description")
     {
-        PakLoader loader;
+        the_seed::PakLoader loader;
         loader.PathAdd(scratch.Path().string());
         loader.Load("several", {"zeta"});
         ResetPakBytesReadCount();
@@ -229,7 +229,7 @@ TEST_CASE("PakLoader loads a writer's pak and reads the description once per loa
 
     SECTION("Resources stored with Container::Resources are shared, not copied")
     {
-        PakLoader loader;
+        the_seed::PakLoader loader;
         loader.PathAdd(scratch.Path().string());
         auto resources = loader.Load("several");
         ecs::Manager manager;
@@ -247,7 +247,7 @@ TEST_CASE("PakLoader loads a pak with no resources", "[PakLoader]")
 {
     seedtest::ScratchDir scratch;
     seedtest::WritePak(scratch.Path(), "nothing", {});
-    PakLoader loader;
+    the_seed::PakLoader loader;
     loader.PathAdd(scratch.Path().string());
     REQUIRE(loader.Load("nothing").empty());
     REQUIRE(loader.Load("nothing", {}).empty());
@@ -260,7 +260,7 @@ TEST_CASE("PakLoader reports requested resources that the pak does not contain",
     const std::filesystem::path file = seedtest::WritePak(
         scratch.Path(), "missing", {{"a", Pattern(40, 1)}, {"b", Pattern(300000, 2)}});
 
-    PakLoader loader;
+    the_seed::PakLoader loader;
     loader.PathAdd(scratch.Path().string());
 
     // Runs the request and returns the error, failing when it does not throw.
@@ -269,7 +269,7 @@ TEST_CASE("PakLoader reports requested resources that the pak does not contain",
         {
             loader.Load("missing", names);
         }
-        catch(const LoadError &error)
+        catch(const the_seed::LoadError &error)
         {
             return error;
         }
@@ -283,15 +283,15 @@ TEST_CASE("PakLoader reports requested resources that the pak does not contain",
 
     SECTION("A missing name fails the request with ResourceMissing")
     {
-        const LoadError error = errorGet({"a", "c"});
-        REQUIRE(error.ReasonGet() == LoadError::Reason::ResourceMissing);
+        const the_seed::LoadError error = errorGet({"a", "c"});
+        REQUIRE(error.ReasonGet() == the_seed::LoadError::Reason::ResourceMissing);
         REQUIRE(error.NameGet() == "missing");
         REQUIRE(error.MissingGet() == std::vector<std::string>{"c"});
     }
 
     SECTION("The error names the absolute pak file and no locations")
     {
-        const LoadError error = errorGet({"a", "c"});
+        const the_seed::LoadError error = errorGet({"a", "c"});
         REQUIRE(std::filesystem::path(error.FileGet()).is_absolute());
         REQUIRE(std::filesystem::equivalent(error.FileGet(), file));
         REQUIRE(error.LocationsGet().empty());
@@ -299,7 +299,7 @@ TEST_CASE("PakLoader reports requested resources that the pak does not contain",
 
     SECTION("The message lists the pak, the file and the missing names")
     {
-        const LoadError error = errorGet({"a", "c"});
+        const the_seed::LoadError error = errorGet({"a", "c"});
         REQUIRE(error.DetailGet() == "does not contain \"c\"");
         REQUIRE(std::string(error.what()) ==
                 "resource pak \"missing\": " + error.FileGet() + " does not contain \"c\"");
@@ -307,14 +307,14 @@ TEST_CASE("PakLoader reports requested resources that the pak does not contain",
 
     SECTION("Several missing names are listed in request order, each once")
     {
-        const LoadError error = errorGet({"c", "d", "c"});
+        const the_seed::LoadError error = errorGet({"c", "d", "c"});
         REQUIRE(error.MissingGet() == std::vector<std::string>{"c", "d"});
         REQUIRE(error.DetailGet() == "does not contain \"c\", \"d\"");
     }
 
     SECTION("Missing names are reported with the present ones left out")
     {
-        const LoadError error = errorGet({"d", "a", "c", "b"});
+        const the_seed::LoadError error = errorGet({"d", "a", "c", "b"});
         REQUIRE(error.MissingGet() == std::vector<std::string>{"d", "c"});
     }
 
@@ -369,7 +369,7 @@ TEST_CASE("PakLoader reports a name missing from a pak with no resources", "[Pak
 {
     seedtest::ScratchDir scratch;
     seedtest::WritePak(scratch.Path(), "hollow", {});
-    PakLoader loader;
+    the_seed::PakLoader loader;
     loader.PathAdd(scratch.Path().string());
 
     try
@@ -377,9 +377,9 @@ TEST_CASE("PakLoader reports a name missing from a pak with no resources", "[Pak
         loader.Load("hollow", {"x"});
         FAIL("Load did not throw");
     }
-    catch(const LoadError &error)
+    catch(const the_seed::LoadError &error)
     {
-        REQUIRE(error.ReasonGet() == LoadError::Reason::ResourceMissing);
+        REQUIRE(error.ReasonGet() == the_seed::LoadError::Reason::ResourceMissing);
         REQUIRE(error.MissingGet() == std::vector<std::string>{"x"});
     }
 }
@@ -394,32 +394,32 @@ TEST_CASE("PakLoader validates the pak before an empty list returns", "[PakLoade
         auto bytes = seedtest::PakBytes({"broken", {{"a", {1, 2, 3}, ""}}});
         seedtest::WriteBytes(file, seedtest::PakTruncate(bytes, 2));
 
-        PakLoader loader;
+        the_seed::PakLoader loader;
         loader.PathAdd(scratch.Path().string());
         try
         {
             loader.Load("broken", {});
             FAIL("Load did not throw");
         }
-        catch(const LoadError &error)
+        catch(const the_seed::LoadError &error)
         {
-            REQUIRE(error.ReasonGet() == LoadError::Reason::NotLoadable);
+            REQUIRE(error.ReasonGet() == the_seed::LoadError::Reason::NotLoadable);
             REQUIRE(error.DetailGet().rfind("damaged: ", 0) == 0);
         }
     }
 
     SECTION("An absent pak is still not found")
     {
-        PakLoader loader;
+        the_seed::PakLoader loader;
         loader.PathAdd(scratch.Path().string());
         try
         {
             loader.Load("nowhere", {});
             FAIL("Load did not throw");
         }
-        catch(const LoadError &error)
+        catch(const the_seed::LoadError &error)
         {
-            REQUIRE(error.ReasonGet() == LoadError::Reason::NotFound);
+            REQUIRE(error.ReasonGet() == the_seed::LoadError::Reason::NotFound);
         }
     }
 }
@@ -436,7 +436,7 @@ TEST_CASE("PakLoader picks up a pak that is replaced, rewritten or removed", "[P
         {"a", Pattern(55, 77)}, {"b", Pattern(12000, 78)}};
     const std::filesystem::path file = seedtest::WritePak(location, "changing", first);
 
-    PakLoader loader;
+    the_seed::PakLoader loader;
     loader.PathAdd(location.string());
 
     SECTION("A pak replaced by rename is returned new by the next request")
@@ -473,9 +473,9 @@ TEST_CASE("PakLoader picks up a pak that is replaced, rewritten or removed", "[P
                 loader.Load("changing");
                 FAIL("Load did not throw");
             }
-            catch(const LoadError &error)
+            catch(const the_seed::LoadError &error)
             {
-                REQUIRE(error.ReasonGet() == LoadError::Reason::NotLoadable);
+                REQUIRE(error.ReasonGet() == the_seed::LoadError::Reason::NotLoadable);
                 REQUIRE(error.DetailGet().rfind("damaged: ", 0) == 0);
             }
         }
@@ -495,9 +495,9 @@ TEST_CASE("PakLoader picks up a pak that is replaced, rewritten or removed", "[P
             loader.Load("changing");
             FAIL("Load did not throw");
         }
-        catch(const LoadError &error)
+        catch(const the_seed::LoadError &error)
         {
-            REQUIRE(error.ReasonGet() == LoadError::Reason::NotFound);
+            REQUIRE(error.ReasonGet() == the_seed::LoadError::Reason::NotFound);
         }
     }
 

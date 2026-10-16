@@ -4,28 +4,9 @@
 
 #include <string>
 #include <vector>
-#include <memory>
-#ifdef _WIN32
-    #include <windows.h>
-#else
-    #include <dlfcn.h>
-#endif
 
-struct LibraryDeleter
+namespace the_seed
 {
-    void operator()(void *ptr) const
-    {
-        if(ptr)
-        {
-#ifdef _WIN32
-            FreeLibrary(static_cast<HMODULE>(ptr));
-#else
-            dlclose(ptr);
-#endif
-        }
-    }
-};
-
 /**
  * @brief Loads functions from dynamic libraries.
  *        (.so, .dll, .dylib)
@@ -51,6 +32,15 @@ class THE_SEED_API LibraryLoader
      */
     LibraryLoader(const std::string &library): name(library) {};
     /**
+     * @brief Releases the handle the loader holds. The code stays loaded
+     *        (see above).
+     */
+    ~LibraryLoader();
+    LibraryLoader(const LibraryLoader &) = delete;
+    LibraryLoader &operator=(const LibraryLoader &) = delete;
+    LibraryLoader(LibraryLoader &&) = delete;
+    LibraryLoader &operator=(LibraryLoader &&) = delete;
+    /**
      * @brief Get pointer to function in library.
      * 
      * @param FuncName The name of the function to load.
@@ -75,8 +65,13 @@ class THE_SEED_API LibraryLoader
     const std::string name;
     static const std::string GetLastErrorAsString();
   private:
-    std::unique_ptr<void, LibraryDeleter> library_handle;
+    void *library_handle = nullptr;
     void Load();
     std::vector<std::string> paths;
     std::string loaded_file;
 };
+} // namespace the_seed
+
+#ifdef THE_SEED_LEGACY_NAMES
+using LibraryLoader [[deprecated("use the_seed::LibraryLoader")]] = the_seed::LibraryLoader;
+#endif

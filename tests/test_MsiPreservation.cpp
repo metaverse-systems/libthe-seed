@@ -40,7 +40,7 @@ using seedtest::msi::Bytes;
 namespace sm = seedtest::malformed;
 namespace cfb = seedtest::cfb;
 namespace msi = seedtest::msi;
-using State = MsiSigner::SignatureState;
+using State = the_seed::MsiSigner::SignatureState;
 
 // The sizes of the blobs used: both sides of the cut-off.
 const std::size_t kBlobSizes[] = {100, 4095, 4096, 5000};
@@ -53,7 +53,7 @@ std::string Hex(const Bytes &bytes)
 // The fingerprint the library computes and the independent reader computes are the recorded one.
 void RequireFingerprintIs(const std::string &path, const std::string &fingerprint)
 {
-    CHECK(Hex(MsiSigner::ComputeAuthenticodeDigest(path).digest) == fingerprint);
+    CHECK(Hex(the_seed::MsiSigner::ComputeAuthenticodeDigest(path).digest) == fingerprint);
     CHECK(cfb::Fingerprint(sm::ReadAll(path)) == fingerprint);
 }
 
@@ -97,14 +97,14 @@ void RequireOperationsKeepContent(const seedtest::ScratchDir &scratch, const std
         const Bytes blob = cfb::PatternBytes(size, 41);
 
         // Replace (or add when there was no signature).
-        REQUIRE_NOTHROW(MsiSigner::EmbedSignature(path, blob));
+        REQUIRE_NOTHROW(the_seed::MsiSigner::EmbedSignature(path, blob));
         Bytes now = sm::ReadAll(path);
         msi::RequireSameContent(original, now);
         RequireWellFormed(now, blob, &original);
         RequireFingerprintIs(path, fingerprint);
 
         // Strip: only the signature streams are gone.
-        CHECK(MsiSigner::StripSignature(path));
+        CHECK(the_seed::MsiSigner::StripSignature(path));
         const Bytes stripped = sm::ReadAll(path);
         msi::RequireSameContent(original, stripped);
         RequireWellFormed(stripped, std::nullopt, &original);
@@ -112,7 +112,7 @@ void RequireOperationsKeepContent(const seedtest::ScratchDir &scratch, const std
         CHECK(cfb::Listing(cfb::Package(stripped), false) == cfb::Listing(cfb::Package(stripped), true));
 
         // Add again to the stripped package.
-        REQUIRE_NOTHROW(MsiSigner::EmbedSignature(path, blob));
+        REQUIRE_NOTHROW(the_seed::MsiSigner::EmbedSignature(path, blob));
         now = sm::ReadAll(path);
         msi::RequireSameContent(original, now);
         RequireWellFormed(now, blob, &original);
@@ -157,17 +157,17 @@ TEST_CASE("the signature streams are the only difference between before and afte
         REQUIRE(before_streams >= 1);
         const std::string path = msi::CopySample(scratch, sample);
 
-        REQUIRE_NOTHROW(MsiSigner::EmbedSignature(path, cfb::PatternBytes(300, 2)));
+        REQUIRE_NOTHROW(the_seed::MsiSigner::EmbedSignature(path, cfb::PatternBytes(300, 2)));
         const Bytes replaced = sm::ReadAll(path);
         CHECK(cfb::CountBelowRoot(cfb::Package(replaced)) ==
               cfb::CountBelowRoot(cfb::Package(original)) - before_streams + 1);
 
-        REQUIRE(MsiSigner::StripSignature(path));
+        REQUIRE(the_seed::MsiSigner::StripSignature(path));
         const Bytes stripped = sm::ReadAll(path);
         CHECK(cfb::CountBelowRoot(cfb::Package(stripped)) ==
               cfb::CountBelowRoot(cfb::Package(original)) - before_streams);
 
-        REQUIRE_NOTHROW(MsiSigner::EmbedSignature(path, cfb::PatternBytes(300, 2)));
+        REQUIRE_NOTHROW(the_seed::MsiSigner::EmbedSignature(path, cfb::PatternBytes(300, 2)));
         CHECK(sm::ReadAll(path) == replaced);
     }
 }
@@ -316,23 +316,23 @@ TEST_CASE("every shape of the directory around the signature entry is kept and s
                     for(const std::size_t size : {5000u, 100u})
                     {
                         const Bytes blob = cfb::PatternBytes(size, 62);
-                        REQUIRE_NOTHROW(MsiSigner::EmbedSignature(path, blob));
+                        REQUIRE_NOTHROW(the_seed::MsiSigner::EmbedSignature(path, blob));
                         const Bytes now = sm::ReadAll(path);
                         msi::RequireSameContent(original, now);
                         RequireWellFormed(now, blob);
-                        CHECK(Hex(MsiSigner::ComputeAuthenticodeDigest(path).digest) == fingerprint);
-                        CHECK(MsiSigner::ExtractSignature(path) == std::optional<Bytes>(blob));
+                        CHECK(Hex(the_seed::MsiSigner::ComputeAuthenticodeDigest(path).digest) == fingerprint);
+                        CHECK(the_seed::MsiSigner::ExtractSignature(path) == std::optional<Bytes>(blob));
                     }
-                    REQUIRE(MsiSigner::StripSignature(path));
+                    REQUIRE(the_seed::MsiSigner::StripSignature(path));
                     const Bytes stripped = sm::ReadAll(path);
                     msi::RequireSameContent(original, stripped);
                     RequireWellFormed(stripped, std::nullopt);
                     const Bytes blob = cfb::PatternBytes(4096, 63);
-                    REQUIRE_NOTHROW(MsiSigner::EmbedSignature(path, blob));
+                    REQUIRE_NOTHROW(the_seed::MsiSigner::EmbedSignature(path, blob));
                     const Bytes added = sm::ReadAll(path);
                     msi::RequireSameContent(original, added);
                     RequireWellFormed(added, blob);
-                    CHECK(Hex(MsiSigner::ComputeAuthenticodeDigest(path).digest) == fingerprint);
+                    CHECK(Hex(the_seed::MsiSigner::ComputeAuthenticodeDigest(path).digest) == fingerprint);
                 }
             }
         }
@@ -364,7 +364,7 @@ TEST_CASE("replacing a signature in the mini stream touches no other stream", "[
             INFO("sample " << sample << " blob of " << size << " bytes");
             const std::string path = msi::CopySample(scratch, sample);
             const Bytes blob = cfb::PatternBytes(size, 71);
-            REQUIRE_NOTHROW(MsiSigner::EmbedSignature(path, blob));
+            REQUIRE_NOTHROW(the_seed::MsiSigner::EmbedSignature(path, blob));
             const Bytes after_bytes = sm::ReadAll(path);
             const cfb::Package after(after_bytes);
 
@@ -378,7 +378,7 @@ TEST_CASE("replacing a signature in the mini stream touches no other stream", "[
                     REQUIRE_NOTHROW(after.ReadStream(index));
                 }
             }
-            CHECK(MsiSigner::ExtractSignature(path) == std::optional<Bytes>(blob));
+            CHECK(the_seed::MsiSigner::ExtractSignature(path) == std::optional<Bytes>(blob));
         }
     }
 }
@@ -392,7 +392,7 @@ TEST_CASE("the extended stream is dropped on replace and strip and never created
     SECTION("replace")
     {
         const std::string path = msi::CopySample(scratch, "tiny-osslsig-dse.msi");
-        REQUIRE_NOTHROW(MsiSigner::EmbedSignature(path, cfb::PatternBytes(1444, 8)));
+        REQUIRE_NOTHROW(the_seed::MsiSigner::EmbedSignature(path, cfb::PatternBytes(1444, 8)));
         const Bytes now = sm::ReadAll(path);
         CHECK_FALSE(msi::HasExtendedStream(now));
         CHECK(cfb::CountBelowRoot(cfb::Package(now)) == cfb::CountBelowRoot(cfb::Package(dse)) - 1);
@@ -404,14 +404,14 @@ TEST_CASE("the extended stream is dropped on replace and strip and never created
         // the fingerprint; the one of the plain sample is.
         const std::string path = msi::CopySample(scratch, "tiny-osslsig-dse.msi");
         const Bytes blob = msi::SampleSignature("tiny-osslsig-small.msi");
-        REQUIRE_NOTHROW(MsiSigner::EmbedSignature(path, blob, true));
+        REQUIRE_NOTHROW(the_seed::MsiSigner::EmbedSignature(path, blob, true));
         CHECK_FALSE(msi::HasExtendedStream(sm::ReadAll(path)));
-        CHECK(MsiSigner::CheckSignature(path).state == State::Matches);
+        CHECK(the_seed::MsiSigner::CheckSignature(path).state == State::Matches);
     }
     SECTION("strip")
     {
         const std::string path = msi::CopySample(scratch, "tiny-osslsig-dse.msi");
-        REQUIRE(MsiSigner::StripSignature(path));
+        REQUIRE(the_seed::MsiSigner::StripSignature(path));
         const Bytes now = sm::ReadAll(path);
         CHECK_FALSE(msi::HasExtendedStream(now));
         CHECK(cfb::CountBelowRoot(cfb::Package(now)) == cfb::CountBelowRoot(cfb::Package(dse)) - 2);
@@ -424,11 +424,11 @@ TEST_CASE("the extended stream is dropped on replace and strip and never created
         root.Add(cfb::BuildNode::Stream(cfb::ExtendedSignatureName(), cfb::PatternBytes(32, 2)));
         const Bytes original = cfb::Build(root);
         const std::string path = sm::WriteScratch(scratch, "ex-only.msi", original);
-        REQUIRE(MsiSigner::StripSignature(path));
+        REQUIRE(the_seed::MsiSigner::StripSignature(path));
         const Bytes now = sm::ReadAll(path);
         CHECK_FALSE(msi::HasExtendedStream(now));
         msi::RequireSameContent(original, now);
-        CHECK_FALSE(MsiSigner::StripSignature(path));
+        CHECK_FALSE(the_seed::MsiSigner::StripSignature(path));
     }
     SECTION("signing never creates one")
     {
@@ -437,7 +437,7 @@ TEST_CASE("the extended stream is dropped on replace and strip and never created
             const std::string path = msi::CopySample(scratch, sample);
             for(const std::size_t size : {100u, 4096u, 9000u})
             {
-                REQUIRE_NOTHROW(MsiSigner::EmbedSignature(path, cfb::PatternBytes(size, 9)));
+                REQUIRE_NOTHROW(the_seed::MsiSigner::EmbedSignature(path, cfb::PatternBytes(size, 9)));
                 CHECK_FALSE(msi::HasExtendedStream(sm::ReadAll(path)));
                 CHECK(msi::SignaturePaths(sm::ReadAll(path)).size() == 1);
             }
@@ -453,9 +453,9 @@ TEST_CASE("stripping a package without a signature leaves the file as it was and
         INFO("sample " << sample);
         const Bytes original = sm::LoadSample(sample);
         const std::string path = msi::CopySample(scratch, sample);
-        CHECK(MsiSigner::StripSignature(path) == false);
+        CHECK(the_seed::MsiSigner::StripSignature(path) == false);
         sm::RequireUnchanged(path, original);
-        CHECK(MsiSigner::StripSignature(path) == false);
+        CHECK(the_seed::MsiSigner::StripSignature(path) == false);
         sm::RequireUnchanged(path, original);
     }
     // A package that was signed and stripped has none either.
@@ -463,9 +463,9 @@ TEST_CASE("stripping a package without a signature leaves the file as it was and
     {
         INFO("sample " << sample);
         const std::string path = msi::CopySample(scratch, sample);
-        REQUIRE(MsiSigner::StripSignature(path) == true);
+        REQUIRE(the_seed::MsiSigner::StripSignature(path) == true);
         const Bytes stripped = sm::ReadAll(path);
-        CHECK(MsiSigner::StripSignature(path) == false);
+        CHECK(the_seed::MsiSigner::StripSignature(path) == false);
         sm::RequireUnchanged(path, stripped);
     }
 }
@@ -480,20 +480,20 @@ TEST_CASE("strip then sign gives the original fingerprint and the signature back
         const std::string fingerprint = msi::RecordedFingerprint(sample);
         const Bytes blob = msi::SampleSignature(sample);
         const std::string path = msi::CopySample(scratch, sample);
-        const std::string before = Hex(MsiSigner::ComputeAuthenticodeDigest(path).digest);
+        const std::string before = Hex(the_seed::MsiSigner::ComputeAuthenticodeDigest(path).digest);
         CHECK(before == fingerprint);
 
-        REQUIRE(MsiSigner::StripSignature(path));
-        CHECK(Hex(MsiSigner::ComputeAuthenticodeDigest(path).digest) == fingerprint);
-        CHECK(MsiSigner::CheckSignature(path).state == State::None);
+        REQUIRE(the_seed::MsiSigner::StripSignature(path));
+        CHECK(Hex(the_seed::MsiSigner::ComputeAuthenticodeDigest(path).digest) == fingerprint);
+        CHECK(the_seed::MsiSigner::CheckSignature(path).state == State::None);
 
-        REQUIRE_NOTHROW(MsiSigner::EmbedSignature(path, blob));
-        CHECK(Hex(MsiSigner::ComputeAuthenticodeDigest(path).digest) == fingerprint);
-        CHECK(MsiSigner::ExtractSignature(path) == std::optional<Bytes>(blob));
+        REQUIRE_NOTHROW(the_seed::MsiSigner::EmbedSignature(path, blob));
+        CHECK(Hex(the_seed::MsiSigner::ComputeAuthenticodeDigest(path).digest) == fingerprint);
+        CHECK(the_seed::MsiSigner::ExtractSignature(path) == std::optional<Bytes>(blob));
         msi::RequireSameContent(original, sm::ReadAll(path));
         RequireWellFormed(sm::ReadAll(path), blob, &original);
         // The signature osslsigncode wrote holds this fingerprint, except where it covers an extended stream.
-        const auto state = MsiSigner::CheckSignature(path).state;
+        const auto state = the_seed::MsiSigner::CheckSignature(path).state;
         CHECK(state == (sample == "tiny-osslsig-dse.msi" ? State::Mismatch : State::Matches));
     }
 }
@@ -518,8 +518,8 @@ TEST_CASE("many rounds of signing and stripping leave the content as it was and 
 
         // The package without a signature in the library's own layout, and what one signing with each blob gives.
         const std::string bare_path = msi::CopySample(scratch, sample, "bare.msi");
-        REQUIRE_NOTHROW(MsiSigner::EmbedSignature(bare_path, cfb::PatternBytes(10, 1)));
-        REQUIRE(MsiSigner::StripSignature(bare_path));
+        REQUIRE_NOTHROW(the_seed::MsiSigner::EmbedSignature(bare_path, cfb::PatternBytes(10, 1)));
+        REQUIRE(the_seed::MsiSigner::StripSignature(bare_path));
         const Bytes bare = sm::ReadAll(bare_path);
         msi::RequireSameContent(original, bare);
 
@@ -529,7 +529,7 @@ TEST_CASE("many rounds of signing and stripping leave the content as it was and 
             largest = std::max(largest, size);
         }
         const std::string largest_path = sm::WriteScratch(scratch, "largest.msi", bare);
-        REQUIRE_NOTHROW(MsiSigner::EmbedSignature(largest_path, cfb::PatternBytes(largest, 2)));
+        REQUIRE_NOTHROW(the_seed::MsiSigner::EmbedSignature(largest_path, cfb::PatternBytes(largest, 2)));
         const std::size_t one_signing = sm::ReadAll(largest_path).size();
 
         SECTION("sign and strip every round")
@@ -540,19 +540,19 @@ TEST_CASE("many rounds of signing and stripping leave the content as it was and 
             {
                 INFO("round " << round++ << " blob of " << size << " bytes");
                 const Bytes blob = cfb::PatternBytes(size, static_cast<std::uint8_t>(size));
-                REQUIRE_NOTHROW(MsiSigner::EmbedSignature(path, blob));
+                REQUIRE_NOTHROW(the_seed::MsiSigner::EmbedSignature(path, blob));
                 const Bytes now = sm::ReadAll(path);
                 CHECK(now.size() <= one_signing);
                 msi::RequireSameContent(original, now);
                 RequireWellFormed(now, blob, &original);
-                CHECK(MsiSigner::ExtractSignature(path) == std::optional<Bytes>(blob));
+                CHECK(the_seed::MsiSigner::ExtractSignature(path) == std::optional<Bytes>(blob));
 
                 // Nothing is left from the earlier rounds: the same as signing the bare package once.
                 const std::string direct = sm::WriteScratch(scratch, "direct.msi", bare);
-                REQUIRE_NOTHROW(MsiSigner::EmbedSignature(direct, blob));
+                REQUIRE_NOTHROW(the_seed::MsiSigner::EmbedSignature(direct, blob));
                 CHECK(now == sm::ReadAll(direct));
 
-                REQUIRE(MsiSigner::StripSignature(path));
+                REQUIRE(the_seed::MsiSigner::StripSignature(path));
                 CHECK(sm::ReadAll(path) == bare);
             }
             msi::RequireSameContent(original, sm::ReadAll(path));
@@ -568,15 +568,15 @@ TEST_CASE("many rounds of signing and stripping leave the content as it was and 
             {
                 INFO("round " << round++ << " blob of " << size << " bytes");
                 blob = cfb::PatternBytes(size, static_cast<std::uint8_t>(size + 7));
-                REQUIRE_NOTHROW(MsiSigner::EmbedSignature(path, blob));
+                REQUIRE_NOTHROW(the_seed::MsiSigner::EmbedSignature(path, blob));
                 CHECK(sm::ReadAll(path).size() <= one_signing);
             }
             const Bytes last = sm::ReadAll(path);
             const std::string direct = sm::WriteScratch(scratch, "direct.msi", bare);
-            REQUIRE_NOTHROW(MsiSigner::EmbedSignature(direct, blob));
+            REQUIRE_NOTHROW(the_seed::MsiSigner::EmbedSignature(direct, blob));
             CHECK(last == sm::ReadAll(direct));
             msi::RequireSameContent(original, last);
-            REQUIRE(MsiSigner::StripSignature(path));
+            REQUIRE(the_seed::MsiSigner::StripSignature(path));
             CHECK(sm::ReadAll(path) == bare);
         }
     }
@@ -593,8 +593,8 @@ TEST_CASE("the package an earlier version signed is repaired by replace and by s
     SECTION("reading it never says it matches")
     {
         const std::string path = msi::CopySample(scratch, sample);
-        MsiSigner::SignatureCheck check;
-        REQUIRE_NOTHROW(check = MsiSigner::CheckSignature(path));
+        the_seed::MsiSigner::SignatureCheck check;
+        REQUIRE_NOTHROW(check = the_seed::MsiSigner::CheckSignature(path));
         CHECK(check.state != State::Matches);
         CHECK((check.state == State::Unreadable || check.state == State::Mismatch));
         CHECK(Hex(check.computed_digest) == fingerprint);
@@ -607,41 +607,41 @@ TEST_CASE("the package an earlier version signed is repaired by replace and by s
             INFO("blob of " << size << " bytes");
             const std::string path = msi::CopySample(scratch, sample);
             const Bytes blob = cfb::PatternBytes(size, 81);
-            REQUIRE_NOTHROW(MsiSigner::EmbedSignature(path, blob));
+            REQUIRE_NOTHROW(the_seed::MsiSigner::EmbedSignature(path, blob));
             const Bytes repaired = sm::ReadAll(path);
             // The independent reader parses it, finds the entry by searching and sees the same bytes.
             RequireWellFormed(repaired, blob, &original);
             msi::RequireSameContent(unsigned_original, repaired);
             RequireFingerprintIs(path, fingerprint);
-            CHECK(MsiSigner::ExtractSignature(path) == std::optional<Bytes>(blob));
+            CHECK(the_seed::MsiSigner::ExtractSignature(path) == std::optional<Bytes>(blob));
             // Placement follows the size alone.
             const cfb::Package package(repaired);
             CHECK(package.InMiniStream(*package.FindSignature()) == (size < 4096));
             // It is the package that signing the unsigned original gives.
             const std::string direct = msi::CopySample(scratch, "tiny.msi", "direct.msi");
-            REQUIRE_NOTHROW(MsiSigner::EmbedSignature(direct, blob));
+            REQUIRE_NOTHROW(the_seed::MsiSigner::EmbedSignature(direct, blob));
             CHECK(repaired == sm::ReadAll(direct));
         }
     }
     SECTION("replacing it with a signature that fits the package is read as a match")
     {
         const std::string path = msi::CopySample(scratch, sample);
-        REQUIRE_NOTHROW(MsiSigner::EmbedSignature(path, msi::SampleSignature("tiny-osslsig-small.msi"), true));
-        CHECK(MsiSigner::CheckSignature(path).state == State::Matches);
+        REQUIRE_NOTHROW(the_seed::MsiSigner::EmbedSignature(path, msi::SampleSignature("tiny-osslsig-small.msi"), true));
+        CHECK(the_seed::MsiSigner::CheckSignature(path).state == State::Matches);
     }
     SECTION("stripping it removes what the reader cannot reach")
     {
         const std::string path = msi::CopySample(scratch, sample);
-        REQUIRE(MsiSigner::StripSignature(path));
+        REQUIRE(the_seed::MsiSigner::StripSignature(path));
         const Bytes stripped = sm::ReadAll(path);
         RequireWellFormed(stripped, std::nullopt, &original);
         msi::RequireSameContent(unsigned_original, stripped);
         RequireFingerprintIs(path, fingerprint);
-        CHECK_FALSE(MsiSigner::HasEmbeddedSignature(path));
-        CHECK(MsiSigner::CheckSignature(path).state == State::None);
-        CHECK_FALSE(MsiSigner::StripSignature(path));
+        CHECK_FALSE(the_seed::MsiSigner::HasEmbeddedSignature(path));
+        CHECK(the_seed::MsiSigner::CheckSignature(path).state == State::None);
+        CHECK_FALSE(the_seed::MsiSigner::StripSignature(path));
         // Signing the repaired package once more works.
-        REQUIRE_NOTHROW(MsiSigner::EmbedSignature(path, cfb::PatternBytes(200, 3)));
+        REQUIRE_NOTHROW(the_seed::MsiSigner::EmbedSignature(path, cfb::PatternBytes(200, 3)));
         RequireWellFormed(sm::ReadAll(path), cfb::PatternBytes(200, 3), &original);
     }
 }

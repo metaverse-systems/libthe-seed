@@ -6,6 +6,8 @@
 #include <string>
 #include <vector>
 
+namespace the_seed
+{
 /**
  * @brief Report for one library that was found but could not be read.
  *
@@ -141,3 +143,10 @@ class THE_SEED_API DependencyLister
         const std::vector<std::string> &search_paths
     );
 };
+} // namespace the_seed
+
+#ifdef THE_SEED_LEGACY_NAMES
+using LibraryError [[deprecated("use the_seed::LibraryError")]] = the_seed::LibraryError;
+using DependencyResult [[deprecated("use the_seed::DependencyResult")]] = the_seed::DependencyResult;
+using DependencyLister [[deprecated("use the_seed::DependencyLister")]] = the_seed::DependencyLister;
+#endif

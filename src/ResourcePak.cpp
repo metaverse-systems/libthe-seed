@@ -4,6 +4,9 @@
 #include <filesystem>
 #include <mutex>
 
+namespace the_seed
+{
+
 using namespace the_seed::internal;
 
 // Shared by every copy of a ResourcePak. The description is replaced when the
@@ -119,3 +122,4 @@ std::vector<std::string> ResourcePak::ResourceNames() const
     }
     return names;
 }
+} // namespace the_seed

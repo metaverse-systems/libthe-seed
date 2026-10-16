@@ -3,6 +3,9 @@
 #include <cstdio>
 #include <utility>
 
+namespace the_seed
+{
+
 namespace
 {
     std::string Trim(std::string text)
@@ -225,3 +228,4 @@ const std::vector<std::string> &LoadError::MissingGet() const
 {
     return this->missing;
 }
+} // namespace the_seed

@@ -28,7 +28,7 @@ namespace
     using seedtest::WorkingDirectoryGuard;
 
     // The variant of the test module a component came from: 1 for libtestmodule, 2 for libtestmodulealt.
-    int VariantOf(ComponentLoader &loader, const std::string &name = "testmodule")
+    int VariantOf(the_seed::ComponentLoader &loader, const std::string &name = "testmodule")
     {
         std::unique_ptr<ecs::Component> component = loader.Create(name);
         REQUIRE(component);
@@ -36,13 +36,13 @@ namespace
     }
 
     template <typename Function>
-    LoadError LoadErrorOf(Function function)
+    the_seed::LoadError LoadErrorOf(Function function)
     {
         try
         {
             function();
         }
-        catch(const LoadError &error)
+        catch(const the_seed::LoadError &error)
         {
             return error;
         }
@@ -50,12 +50,12 @@ namespace
         throw 0;
     }
 
-    bool Mentions(const LoadError &error, const std::string &text)
+    bool Mentions(const the_seed::LoadError &error, const std::string &text)
     {
         return std::string(error.what()).find(text) != std::string::npos;
     }
 
-    const LoadError::Location *LocationFor(const LoadError &error, const std::string &path)
+    const the_seed::LoadError::Location *LocationFor(const the_seed::LoadError &error, const std::string &path)
     {
         for(const auto &location : error.LocationsGet())
         {
@@ -91,7 +91,7 @@ TEST_CASE("A configured location beats the working directory for components", "[
     CopyModule(scratch, "testmodulealt", "cwd", "testmodule");
     WorkingDirectoryGuard guard(scratch.Path() / "cwd");
 
-    ComponentLoader loader;
+    the_seed::ComponentLoader loader;
     loader.PathAdd((scratch.Path() / "conf").string());
 
     for(int attempt = 0; attempt < 3; ++attempt)
@@ -99,7 +99,7 @@ TEST_CASE("A configured location beats the working directory for components", "[
         REQUIRE(VariantOf(loader) == 1);
     }
 
-    ComponentLoader again;
+    the_seed::ComponentLoader again;
     again.PathAdd((scratch.Path() / "conf").string());
     REQUIRE(VariantOf(again) == 1);
 }
@@ -112,10 +112,10 @@ TEST_CASE("A configured location beats the working directory for systems", "[Plu
     CopyModule(scratch, "testsystem", "cwd", "testsystem");
     WorkingDirectoryGuard guard(scratch.Path() / "cwd");
 
-    SystemLoader loader;
+    the_seed::SystemLoader loader;
     loader.PathAdd((scratch.Path() / "conf").string());
 
-    SystemLoader::SystemCreator creator = loader.Get("testsystem");
+    the_seed::SystemLoader::SystemCreator creator = loader.Get("testsystem");
     REQUIRE(creator != nullptr);
     REQUIRE(fs::equivalent(FileOf(reinterpret_cast<void *>(creator)), configured));
 }
@@ -132,10 +132,10 @@ TEST_CASE("A plugin only in the working directory is not found", "[PluginSearchO
 
     SECTION("component")
     {
-        ComponentLoader loader;
+        the_seed::ComponentLoader loader;
         loader.PathAdd(conf);
-        LoadError error = LoadErrorOf([&] { loader.Create("testmodule"); });
-        REQUIRE(error.ReasonGet() == LoadError::Reason::NotFound);
+        the_seed::LoadError error = LoadErrorOf([&] { loader.Create("testmodule"); });
+        REQUIRE(error.ReasonGet() == the_seed::LoadError::Reason::NotFound);
         REQUIRE(Mentions(error, conf));
         REQUIRE(LocationFor(error, conf) != nullptr);
         // The configured location, then the one development location of a plain name.
@@ -146,19 +146,19 @@ TEST_CASE("A plugin only in the working directory is not found", "[PluginSearchO
 
     SECTION("system")
     {
-        SystemLoader loader;
+        the_seed::SystemLoader loader;
         loader.PathAdd(conf);
-        LoadError error = LoadErrorOf([&] { loader.Get("testsystem"); });
-        REQUIRE(error.ReasonGet() == LoadError::Reason::NotFound);
+        the_seed::LoadError error = LoadErrorOf([&] { loader.Get("testsystem"); });
+        REQUIRE(error.ReasonGet() == the_seed::LoadError::Reason::NotFound);
         REQUIRE(Mentions(error, conf));
         REQUIRE(error.LocationsGet().size() == 2);
     }
 
     SECTION("no configured locations at all")
     {
-        ComponentLoader loader;
-        LoadError error = LoadErrorOf([&] { loader.Create("testmodule"); });
-        REQUIRE(error.ReasonGet() == LoadError::Reason::NotFound);
+        the_seed::ComponentLoader loader;
+        the_seed::LoadError error = LoadErrorOf([&] { loader.Create("testmodule"); });
+        REQUIRE(error.ReasonGet() == the_seed::LoadError::Reason::NotFound);
         REQUIRE(error.LocationsGet().size() == 1);
         REQUIRE(error.LocationsGet()[0].development);
     }
@@ -171,13 +171,13 @@ TEST_CASE("The first of several configured locations holding the file wins", "[P
     CopyModule(scratch, "testmodulealt", "second", "testmodule");
     CopyModule(scratch, "testmodule", "third", "testmodule");
 
-    ComponentLoader loader;
+    the_seed::ComponentLoader loader;
     loader.PathAdd((scratch.Path() / "empty").string());
     loader.PathAdd((scratch.Path() / "second").string());
     loader.PathAdd((scratch.Path() / "third").string());
     REQUIRE(VariantOf(loader) == 2);
 
-    ComponentLoader reversed;
+    the_seed::ComponentLoader reversed;
     reversed.PathAdd((scratch.Path() / "third").string());
     reversed.PathAdd((scratch.Path() / "second").string());
     REQUIRE(VariantOf(reversed) == 1);
@@ -189,18 +189,18 @@ TEST_CASE("A damaged file in the first location is reported and the second copy 
     seedtest::WriteDamagedModule(scratch.Path() / "first", "testmodule");
     CopyModule(scratch, "testmodule", "second", "testmodule");
 
-    ComponentLoader loader;
+    the_seed::ComponentLoader loader;
     loader.PathAdd((scratch.Path() / "first").string());
     loader.PathAdd((scratch.Path() / "second").string());
 
     std::unique_ptr<ecs::Component> component;
-    LoadError error = LoadErrorOf([&] { component = loader.Create("testmodule"); });
-    REQUIRE(error.ReasonGet() == LoadError::Reason::NotLoadable);
+    the_seed::LoadError error = LoadErrorOf([&] { component = loader.Create("testmodule"); });
+    REQUIRE(error.ReasonGet() == the_seed::LoadError::Reason::NotLoadable);
     REQUIRE(!component);
 
     // Asking again gives the same answer: the good copy is never reached.
-    LoadError second = LoadErrorOf([&] { component = loader.Create("testmodule"); });
-    REQUIRE(second.ReasonGet() == LoadError::Reason::NotLoadable);
+    the_seed::LoadError second = LoadErrorOf([&] { component = loader.Create("testmodule"); });
+    REQUIRE(second.ReasonGet() == the_seed::LoadError::Reason::NotLoadable);
     REQUIRE(!component);
 }
 
@@ -210,7 +210,7 @@ TEST_CASE("A relative configured location is resolved against the working direct
     CopyModule(scratch, "testmodule", "tree/conf", "testmodule");
     CopyModule(scratch, "testmodulealt", "other/conf", "testmodule");
 
-    ComponentLoader loader;
+    the_seed::ComponentLoader loader;
     loader.PathAdd("conf");
     REQUIRE(loader.PathsGet() == std::vector<std::string>{"conf"});
 
@@ -219,7 +219,7 @@ TEST_CASE("A relative configured location is resolved against the working direct
         REQUIRE(VariantOf(loader) == 1);
     }
 
-    ComponentLoader elsewhere;
+    the_seed::ComponentLoader elsewhere;
     elsewhere.PathAdd("conf");
     {
         WorkingDirectoryGuard guard(scratch.Path() / "other");
@@ -234,17 +234,17 @@ TEST_CASE("A location added after a load affects the next request", "[PluginSear
     CopyModule(scratch, "testmodule", "late", "testmodule");
     CopyModule(scratch, "testsystem", "late", "testsystem");
 
-    ComponentLoader loader;
+    the_seed::ComponentLoader loader;
     loader.PathAdd((scratch.Path() / "empty").string());
-    LoadError error = LoadErrorOf([&] { loader.Create("testmodule"); });
-    REQUIRE(error.ReasonGet() == LoadError::Reason::NotFound);
+    the_seed::LoadError error = LoadErrorOf([&] { loader.Create("testmodule"); });
+    REQUIRE(error.ReasonGet() == the_seed::LoadError::Reason::NotFound);
 
     loader.PathAdd((scratch.Path() / "late").string());
     REQUIRE(VariantOf(loader) == 1);
 
-    SystemLoader systems;
+    the_seed::SystemLoader systems;
     systems.PathAdd((scratch.Path() / "empty").string());
-    REQUIRE_THROWS_AS(systems.Get("testsystem"), LoadError);
+    REQUIRE_THROWS_AS(systems.Get("testsystem"), the_seed::LoadError);
     systems.PathAdd((scratch.Path() / "late").string());
     REQUIRE(systems.Get("testsystem") != nullptr);
 }
@@ -258,19 +258,19 @@ TEST_CASE("A configured location that does not exist is skipped and listed as no
 
     SECTION("when the file is nowhere")
     {
-        ComponentLoader loader;
+        the_seed::ComponentLoader loader;
         loader.PathAdd(missing);
         loader.PathAdd(present);
-        LoadError error = LoadErrorOf([&] { loader.Create("testmodule"); });
-        REQUIRE(error.ReasonGet() == LoadError::Reason::NotFound);
+        the_seed::LoadError error = LoadErrorOf([&] { loader.Create("testmodule"); });
+        REQUIRE(error.ReasonGet() == the_seed::LoadError::Reason::NotFound);
         REQUIRE(error.LocationsGet().size() == 3);
 
-        const LoadError::Location *missingLocation = LocationFor(error, missing);
-        const LoadError::Location *presentLocation = LocationFor(error, present);
+        const the_seed::LoadError::Location *missingLocation = LocationFor(error, missing);
+        const the_seed::LoadError::Location *presentLocation = LocationFor(error, present);
         REQUIRE(missingLocation != nullptr);
         REQUIRE(presentLocation != nullptr);
-        REQUIRE(missingLocation->state == LoadError::LocationState::Missing);
-        REQUIRE(presentLocation->state == LoadError::LocationState::Searched);
+        REQUIRE(missingLocation->state == the_seed::LoadError::LocationState::Missing);
+        REQUIRE(presentLocation->state == the_seed::LoadError::LocationState::Searched);
         REQUIRE(!missingLocation->development);
         REQUIRE(Mentions(error, "does not exist: " + missing));
         REQUIRE(Mentions(error, "searched: " + present));
@@ -279,7 +279,7 @@ TEST_CASE("A configured location that does not exist is skipped and listed as no
     SECTION("when a later location holds the file")
     {
         CopyModule(scratch, "testmodule", "present", "testmodule");
-        ComponentLoader loader;
+        the_seed::ComponentLoader loader;
         loader.PathAdd(missing);
         loader.PathAdd(present);
         REQUIRE(VariantOf(loader) == 1);
@@ -292,8 +292,8 @@ TEST_CASE("Two loaders with different locations each load their own file", "[Plu
     CopyModule(scratch, "testmodule", "one", "testmodule");
     CopyModule(scratch, "testmodulealt", "two", "testmodule");
 
-    ComponentLoader first;
-    ComponentLoader second;
+    the_seed::ComponentLoader first;
+    the_seed::ComponentLoader second;
     first.PathAdd((scratch.Path() / "one").string());
     second.PathAdd((scratch.Path() / "two").string());
 
@@ -311,7 +311,7 @@ TEST_CASE("A pak in a configured location beats one in the working directory", "
     seedtest::WritePak(scratch.Path() / "cwd", "searchpak", {{"item", Bytes(2)}});
     WorkingDirectoryGuard guard(scratch.Path() / "cwd");
 
-    PakLoader loader;
+    the_seed::PakLoader loader;
     loader.PathAdd((scratch.Path() / "conf").string());
 
     for(int attempt = 0; attempt < 2; ++attempt)
@@ -330,16 +330,16 @@ TEST_CASE("A pak only in the working directory is not found", "[PluginSearchOrde
     WorkingDirectoryGuard guard(scratch.Path() / "cwd");
     const std::string conf = (scratch.Path() / "conf").string();
 
-    PakLoader loader;
+    the_seed::PakLoader loader;
     loader.PathAdd(conf);
 
-    LoadError error = LoadErrorOf([&] { loader.Load("searchpak"); });
-    REQUIRE(error.ReasonGet() == LoadError::Reason::NotFound);
+    the_seed::LoadError error = LoadErrorOf([&] { loader.Load("searchpak"); });
+    REQUIRE(error.ReasonGet() == the_seed::LoadError::Reason::NotFound);
     REQUIRE(Mentions(error, conf));
     REQUIRE(Mentions(error, "searchpak.pak"));
 
-    LoadError filtered = LoadErrorOf([&] { loader.Load("searchpak", {"item"}); });
-    REQUIRE(filtered.ReasonGet() == LoadError::Reason::NotFound);
+    the_seed::LoadError filtered = LoadErrorOf([&] { loader.Load("searchpak", {"item"}); });
+    REQUIRE(filtered.ReasonGet() == the_seed::LoadError::Reason::NotFound);
 }
 
 TEST_CASE("The first of several pak locations holding the file wins", "[PluginSearchOrder]")
@@ -349,7 +349,7 @@ TEST_CASE("The first of several pak locations holding the file wins", "[PluginSe
     seedtest::WritePak(scratch.Path() / "second", "searchpak", {{"item", Bytes(3)}});
     seedtest::WritePak(scratch.Path() / "third", "searchpak", {{"item", Bytes(4)}});
 
-    PakLoader loader;
+    the_seed::PakLoader loader;
     loader.PathAdd((scratch.Path() / "empty").string());
     loader.PathAdd((scratch.Path() / "second").string());
     loader.PathAdd((scratch.Path() / "third").string());
@@ -399,14 +399,14 @@ TEST_CASE("A plugin only in a development location loads", "[PluginSearchOrder]"
 
     SECTION("component with a configured location that does not hold it")
     {
-        ComponentLoader loader;
+        the_seed::ComponentLoader loader;
         loader.PathAdd(conf);
         REQUIRE(VariantOf(loader) == 2);
     }
 
     SECTION("component with no configured location at all")
     {
-        ComponentLoader loader;
+        the_seed::ComponentLoader loader;
         REQUIRE(VariantOf(loader) == 2);
     }
 
@@ -416,9 +416,9 @@ TEST_CASE("A plugin only in a development location loads", "[PluginSearchOrder]"
         CopyModule(scratch, "testmodule", organisation, "testmodule");
         fs::remove_all(directory);
 
-        ComponentLoader loader;
+        the_seed::ComponentLoader loader;
         REQUIRE(VariantOf(loader, "org/testmodule") == 1);
-        REQUIRE_THROWS_AS(loader.Create("testmodule"), LoadError);
+        REQUIRE_THROWS_AS(loader.Create("testmodule"), the_seed::LoadError);
     }
 }
 
@@ -430,8 +430,8 @@ TEST_CASE("A system only in a development location loads", "[PluginSearchOrder]"
     fs::path file = CopyModule(scratch, "testsystem", DevelopmentDirOf(scratch, developmentSystem), "testsystem");
     WorkingDirectoryGuard guard(project);
 
-    SystemLoader loader;
-    SystemLoader::SystemCreator creator = loader.Get("testsystem");
+    the_seed::SystemLoader loader;
+    the_seed::SystemLoader::SystemCreator creator = loader.Get("testsystem");
     REQUIRE(creator != nullptr);
     REQUIRE(fs::equivalent(FileOf(reinterpret_cast<void *>(creator)), file));
 }
@@ -445,7 +445,7 @@ TEST_CASE("A configured location beats a development location", "[PluginSearchOr
     CopyModule(scratch, "testmodule", "conf", "testmodule");
     WorkingDirectoryGuard guard(project);
 
-    ComponentLoader loader;
+    the_seed::ComponentLoader loader;
     loader.PathAdd((scratch.Path() / "conf").string());
     for(int attempt = 0; attempt < 3; ++attempt)
     {
@@ -455,9 +455,9 @@ TEST_CASE("A configured location beats a development location", "[PluginSearchOr
 #ifndef _WIN32
     fs::path system = CopyModule(scratch, "testsystem", DevelopmentDirOf(scratch, developmentSystem), "testsystem");
     CopyModule(scratch, "testsystem", "conf", "testsystem");
-    SystemLoader systems;
+    the_seed::SystemLoader systems;
     systems.PathAdd((scratch.Path() / "conf").string());
-    SystemLoader::SystemCreator creator = systems.Get("testsystem");
+    the_seed::SystemLoader::SystemCreator creator = systems.Get("testsystem");
     REQUIRE(creator != nullptr);
     REQUIRE(!fs::equivalent(FileOf(reinterpret_cast<void *>(creator)), system));
 #endif
@@ -473,23 +473,23 @@ TEST_CASE("The error lists configured then development locations in search order
 
     SECTION("plain name")
     {
-        ComponentLoader loader;
+        the_seed::ComponentLoader loader;
         loader.PathAdd(one);
         loader.PathAdd(two);
-        LoadError error = LoadErrorOf([&] { loader.Create("testmodule"); });
-        REQUIRE(error.ReasonGet() == LoadError::Reason::NotFound);
+        the_seed::LoadError error = LoadErrorOf([&] { loader.Create("testmodule"); });
+        REQUIRE(error.ReasonGet() == the_seed::LoadError::Reason::NotFound);
 
         const auto &locations = error.LocationsGet();
         REQUIRE(locations.size() == 3);
         REQUIRE(locations[0].path == one);
         REQUIRE(!locations[0].development);
-        REQUIRE(locations[0].state == LoadError::LocationState::Searched);
+        REQUIRE(locations[0].state == the_seed::LoadError::LocationState::Searched);
         REQUIRE(locations[1].path == two);
         REQUIRE(!locations[1].development);
-        REQUIRE(locations[1].state == LoadError::LocationState::Missing);
+        REQUIRE(locations[1].state == the_seed::LoadError::LocationState::Missing);
         REQUIRE(locations[2].path == developmentComponent);
         REQUIRE(locations[2].development);
-        REQUIRE(locations[2].state == LoadError::LocationState::Missing);
+        REQUIRE(locations[2].state == the_seed::LoadError::LocationState::Missing);
 
         const std::string text = error.what();
         REQUIRE(text.find(one) < text.find(two));
@@ -499,9 +499,9 @@ TEST_CASE("The error lists configured then development locations in search order
 
     SECTION("organisation name")
     {
-        ComponentLoader loader;
+        the_seed::ComponentLoader loader;
         loader.PathAdd(one);
-        LoadError error = LoadErrorOf([&] { loader.Create("org/testmodule"); });
+        the_seed::LoadError error = LoadErrorOf([&] { loader.Create("org/testmodule"); });
         const auto &locations = error.LocationsGet();
         REQUIRE(locations.size() == 3);
         REQUIRE(locations[0].path == one);
@@ -513,8 +513,8 @@ TEST_CASE("The error lists configured then development locations in search order
 
     SECTION("no configured location")
     {
-        ComponentLoader bare;
-        LoadError none = LoadErrorOf([&] { bare.Create("testmodule"); });
+        the_seed::ComponentLoader bare;
+        the_seed::LoadError none = LoadErrorOf([&] { bare.Create("testmodule"); });
         REQUIRE(none.LocationsGet().size() == 1);
         REQUIRE(none.LocationsGet()[0].path == developmentComponent);
         REQUIRE(none.LocationsGet()[0].development);
@@ -525,7 +525,7 @@ TEST_CASE("The error lists configured then development locations in search order
 TEST_CASE("SearchPathsGet returns the lookup order, validates the name and does not touch the file system", "[PluginSearchOrder]")
 {
     // None of these locations exists, and the working directory is not a development tree.
-    ComponentLoader loader;
+    the_seed::ComponentLoader loader;
     loader.PathAdd("/does/not/exist/one");
     loader.PathAdd("relative/two");
 
@@ -543,14 +543,14 @@ TEST_CASE("SearchPathsGet returns the lookup order, validates the name and does 
     {
         for(const char *bad : {"", "..", "a/../b", "a\\b", "c:x", "a/b/c", "/a"})
         {
-            LoadError error = LoadErrorOf([&] { loader.SearchPathsGet(bad); });
-            REQUIRE(error.ReasonGet() == LoadError::Reason::InvalidName);
+            the_seed::LoadError error = LoadErrorOf([&] { loader.SearchPathsGet(bad); });
+            REQUIRE(error.ReasonGet() == the_seed::LoadError::Reason::InvalidName);
         }
     }
 
     SECTION("with no configured locations at all")
     {
-        ComponentLoader bare;
+        the_seed::ComponentLoader bare;
         REQUIRE(bare.SearchPathsGet("testmodule") == std::vector<std::string>{developmentComponent});
         REQUIRE(bare.SearchPathsGet("org/testmodule") ==
                 std::vector<std::string>{developmentComponent, developmentOrganisation});
@@ -558,13 +558,13 @@ TEST_CASE("SearchPathsGet returns the lookup order, validates the name and does 
 
     SECTION("the same for systems")
     {
-        SystemLoader systems;
+        the_seed::SystemLoader systems;
         systems.PathAdd("/does/not/exist/one");
         REQUIRE(systems.SearchPathsGet("testsystem") ==
                 std::vector<std::string>{"/does/not/exist/one", developmentSystem});
         REQUIRE(systems.SearchPathsGet("org/testsystem").back() ==
                 "../node_modules/org/testsystem/src/.libs");
-        REQUIRE_THROWS_AS(systems.SearchPathsGet("a\\b"), LoadError);
+        REQUIRE_THROWS_AS(systems.SearchPathsGet("a\\b"), the_seed::LoadError);
     }
 }
 
@@ -579,7 +579,7 @@ TEST_CASE("A pak only in a development location loads", "[PluginSearchOrder]")
 
     SECTION("with a configured location that does not hold it")
     {
-        PakLoader loader;
+        the_seed::PakLoader loader;
         loader.PathAdd(conf);
         auto resources = loader.Load("searchpak");
         REQUIRE(resources.at("item")->Data == Bytes(5));
@@ -587,7 +587,7 @@ TEST_CASE("A pak only in a development location loads", "[PluginSearchOrder]")
 
     SECTION("with no configured location at all")
     {
-        PakLoader loader;
+        the_seed::PakLoader loader;
         REQUIRE(loader.Load("searchpak").at("item")->Data == Bytes(5));
     }
 
@@ -596,9 +596,9 @@ TEST_CASE("A pak only in a development location loads", "[PluginSearchOrder]")
         seedtest::WritePak(DevelopmentDirOf(scratch, developmentPakOrganisation), "searchpak", {{"item", Bytes(7)}});
         fs::remove_all(DevelopmentDirOf(scratch, developmentPak));
 
-        PakLoader loader;
+        the_seed::PakLoader loader;
         REQUIRE(loader.Load("org/searchpak").at("item")->Data == Bytes(7));
-        REQUIRE_THROWS_AS(loader.Load("searchpak"), LoadError);
+        REQUIRE_THROWS_AS(loader.Load("searchpak"), the_seed::LoadError);
     }
 }
 
@@ -610,7 +610,7 @@ TEST_CASE("A configured pak beats a development pak", "[PluginSearchOrder]")
     seedtest::WritePak(scratch.Path() / "conf", "searchpak", {{"item", Bytes(8)}});
     WorkingDirectoryGuard guard(project);
 
-    PakLoader loader;
+    the_seed::PakLoader loader;
     loader.PathAdd((scratch.Path() / "conf").string());
     REQUIRE(loader.Load("searchpak").at("item")->Data == Bytes(8));
 }
@@ -622,15 +622,15 @@ TEST_CASE("Pak search paths and error list development locations after configure
     WorkingDirectoryGuard guard(ProjectOf(scratch));
     const std::string conf = (scratch.Path() / "conf").string();
 
-    PakLoader loader;
+    the_seed::PakLoader loader;
     loader.PathAdd(conf);
     REQUIRE(loader.SearchPathsGet("searchpak") == std::vector<std::string>{conf, developmentPak});
     REQUIRE(loader.SearchPathsGet("org/searchpak") ==
             std::vector<std::string>{conf, developmentPak, developmentPakOrganisation});
-    REQUIRE_THROWS_AS(loader.SearchPathsGet("../searchpak"), LoadError);
+    REQUIRE_THROWS_AS(loader.SearchPathsGet("../searchpak"), the_seed::LoadError);
 
-    LoadError error = LoadErrorOf([&] { loader.Load("org/searchpak"); });
-    REQUIRE(error.ReasonGet() == LoadError::Reason::NotFound);
+    the_seed::LoadError error = LoadErrorOf([&] { loader.Load("org/searchpak"); });
+    REQUIRE(error.ReasonGet() == the_seed::LoadError::Reason::NotFound);
     const auto &locations = error.LocationsGet();
     REQUIRE(locations.size() == 3);
     REQUIRE(locations[0].path == conf);

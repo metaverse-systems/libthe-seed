@@ -79,7 +79,7 @@ std::string ToHex(const std::vector<std::uint8_t> &bytes)
 // list. This wraps that report as an exception so RequireRejected can judge it.
 void ListOrThrow(const std::string &path)
 {
-    DependencyLister lister;
+    the_seed::DependencyLister lister;
     const auto result = lister.ListDependencies({path}, {});
     const auto error = result.errors.find(path);
     if(error != result.errors.end())
@@ -104,13 +104,13 @@ std::vector<Operation> SignerOps()
 {
     return {
         {"ComputeAuthenticodeDigest",
-         [](const std::string &path) { (void)PeSigner::ComputeAuthenticodeDigest(path); }},
-        {"ExtractSignature", [](const std::string &path) { (void)PeSigner::ExtractSignature(path); }},
+         [](const std::string &path) { (void)the_seed::PeSigner::ComputeAuthenticodeDigest(path); }},
+        {"ExtractSignature", [](const std::string &path) { (void)the_seed::PeSigner::ExtractSignature(path); }},
         {"HasEmbeddedSignature",
-         [](const std::string &path) { (void)PeSigner::HasEmbeddedSignature(path); }},
-        {"StripSignature", [](const std::string &path) { PeSigner::StripSignature(path); }},
+         [](const std::string &path) { (void)the_seed::PeSigner::HasEmbeddedSignature(path); }},
+        {"StripSignature", [](const std::string &path) { the_seed::PeSigner::StripSignature(path); }},
         {"EmbedSignature",
-         [](const std::string &path) { PeSigner::EmbedSignature(path, kFakeSignature); }},
+         [](const std::string &path) { the_seed::PeSigner::EmbedSignature(path, kFakeSignature); }},
     };
 }
 
@@ -158,7 +158,7 @@ Bytes SignedTiny()
 {
     seedtest::ScratchDir scratch("malformed-pe-signed");
     const std::string path = seedtest::malformed::WriteScratch(scratch, "signed.exe", Sample("tiny.exe"));
-    PeSigner::EmbedSignature(path, kFakeSignature);
+    the_seed::PeSigner::EmbedSignature(path, kFakeSignature);
     return seedtest::malformed::ReadAll(path);
 }
 
@@ -190,7 +190,7 @@ TEST_CASE("ok: DependencyLister lists the imports of the PE samples", "[Malforme
         DYNAMIC_SECTION(name)
         {
             const std::string path = seedtest::FixturePath(name);
-            DependencyLister lister;
+            the_seed::DependencyLister lister;
             const auto result = lister.ListDependencies({path}, {});
             CHECK(result.errors.empty());
             REQUIRE(result.dependencies.size() == 2);
@@ -204,11 +204,11 @@ TEST_CASE("ok: DependencyLister lists the imports of the PE samples", "[Malforme
 
 TEST_CASE("ok: PeSigner digest of the PE samples", "[MalformedPe][ok]")
 {
-    const auto tiny = PeSigner::ComputeAuthenticodeDigest(seedtest::FixturePath("tiny.exe"));
+    const auto tiny = the_seed::PeSigner::ComputeAuthenticodeDigest(seedtest::FixturePath("tiny.exe"));
     CHECK(tiny.is_pe32_plus);
     CHECK(ToHex(tiny.digest) == kTinyDigest);
 
-    const auto dll = PeSigner::ComputeAuthenticodeDigest(seedtest::FixturePath("test.dll"));
+    const auto dll = the_seed::PeSigner::ComputeAuthenticodeDigest(seedtest::FixturePath("test.dll"));
     CHECK(dll.is_pe32_plus);
     CHECK(ToHex(dll.digest) == kTestDllDigest);
 }
@@ -222,9 +222,9 @@ TEST_CASE("ok: PeSigner presence, extraction and stripping on unsigned samples",
         {
             const Bytes original = Sample(name);
             const std::string path = seedtest::malformed::WriteScratch(scratch, name, original);
-            CHECK_FALSE(PeSigner::HasEmbeddedSignature(path));
-            CHECK_FALSE(PeSigner::ExtractSignature(path).has_value());
-            PeSigner::StripSignature(path);
+            CHECK_FALSE(the_seed::PeSigner::HasEmbeddedSignature(path));
+            CHECK_FALSE(the_seed::PeSigner::ExtractSignature(path).has_value());
+            the_seed::PeSigner::StripSignature(path);
             seedtest::malformed::RequireUnchanged(path, original);
         }
     }
@@ -239,11 +239,11 @@ TEST_CASE("ok: PeSigner embed, extract and strip round trip", "[MalformedPe][ok]
         {
             const Bytes original = Sample(name);
             const std::string path = seedtest::malformed::WriteScratch(scratch, name, original);
-            const auto unsigned_digest = PeSigner::ComputeAuthenticodeDigest(path).digest;
+            const auto unsigned_digest = the_seed::PeSigner::ComputeAuthenticodeDigest(path).digest;
 
-            PeSigner::EmbedSignature(path, kFakeSignature);
-            CHECK(PeSigner::HasEmbeddedSignature(path));
-            const auto extracted = PeSigner::ExtractSignature(path);
+            the_seed::PeSigner::EmbedSignature(path, kFakeSignature);
+            CHECK(the_seed::PeSigner::HasEmbeddedSignature(path));
+            const auto extracted = the_seed::PeSigner::ExtractSignature(path);
             REQUIRE(extracted.has_value());
             CHECK(*extracted == kFakeSignature);
 
@@ -254,13 +254,13 @@ TEST_CASE("ok: PeSigner embed, extract and strip round trip", "[MalformedPe][ok]
             CHECK(CertificateOffset(signed_bytes) == table);
             CHECK(CertificateSize(signed_bytes) == 136);
             CHECK(signed_bytes.size() == table + 136);
-            CHECK(PeSigner::ComputeAuthenticodeDigest(path).digest == unsigned_digest);
+            CHECK(the_seed::PeSigner::ComputeAuthenticodeDigest(path).digest == unsigned_digest);
 
-            PeSigner::StripSignature(path);
-            CHECK_FALSE(PeSigner::HasEmbeddedSignature(path));
-            CHECK_FALSE(PeSigner::ExtractSignature(path).has_value());
+            the_seed::PeSigner::StripSignature(path);
+            CHECK_FALSE(the_seed::PeSigner::HasEmbeddedSignature(path));
+            CHECK_FALSE(the_seed::PeSigner::ExtractSignature(path).has_value());
             CHECK(seedtest::malformed::ReadAll(path).size() == table);
-            CHECK(PeSigner::ComputeAuthenticodeDigest(path).digest == unsigned_digest);
+            CHECK(the_seed::PeSigner::ComputeAuthenticodeDigest(path).digest == unsigned_digest);
         }
     }
 }
@@ -272,20 +272,20 @@ TEST_CASE("ok: PE with 3 bytes appended", "[MalformedPe][ok]")
     bytes.insert(bytes.end(), {0xa5, 0xa6, 0xa7}); // the bytes of the recorded reference
     const std::string path = seedtest::malformed::WriteScratch(scratch, "plus3.exe", bytes);
 
-    DependencyLister lister;
+    the_seed::DependencyLister lister;
     const auto result = lister.ListDependencies({path}, {});
     CHECK(result.errors.empty());
     CHECK(result.dependencies.size() == 2);
 
-    CHECK(ToHex(PeSigner::ComputeAuthenticodeDigest(path).digest) == kTinyPlus3Digest);
-    CHECK_FALSE(PeSigner::HasEmbeddedSignature(path));
-    CHECK_FALSE(PeSigner::ExtractSignature(path).has_value());
+    CHECK(ToHex(the_seed::PeSigner::ComputeAuthenticodeDigest(path).digest) == kTinyPlus3Digest);
+    CHECK_FALSE(the_seed::PeSigner::HasEmbeddedSignature(path));
+    CHECK_FALSE(the_seed::PeSigner::ExtractSignature(path).has_value());
 
-    PeSigner::EmbedSignature(path, kFakeSignature);
-    const auto extracted = PeSigner::ExtractSignature(path);
+    the_seed::PeSigner::EmbedSignature(path, kFakeSignature);
+    const auto extracted = the_seed::PeSigner::ExtractSignature(path);
     REQUIRE(extracted.has_value());
     CHECK(*extracted == kFakeSignature);
-    CHECK(PeSigner::HasEmbeddedSignature(path));
+    CHECK(the_seed::PeSigner::HasEmbeddedSignature(path));
 }
 
 // ---------------------------------------------------------------------------
@@ -535,7 +535,7 @@ TEST_CASE("edge: PE zero-length file", "[MalformedPe][edge]")
 
     seedtest::ScratchDir scratch("malformed-pe-empty");
     const std::string path = seedtest::malformed::WriteScratch(scratch, "empty.exe", empty);
-    DependencyLister lister;
+    the_seed::DependencyLister lister;
     const auto result = lister.ListDependencies({path}, {});
     REQUIRE(result.errors.count(path) == 1);
     CHECK_FALSE(result.errors.at(path).empty());

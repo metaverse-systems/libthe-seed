@@ -89,7 +89,7 @@ std::string ToHex(const std::vector<std::uint8_t> &bytes)
 
 std::string DigestOf(const std::string &path)
 {
-    return ToHex(PeSigner::ComputeAuthenticodeDigest(path).digest);
+    return ToHex(the_seed::PeSigner::ComputeAuthenticodeDigest(path).digest);
 }
 
 // The recorded fingerprints, by "<fixture>:<appended count>".
@@ -167,12 +167,12 @@ void CheckStrippedShape(const std::string &path)
     const Bytes stripped = seedtest::malformed::ReadAll(path);
     CHECK(Get<std::uint32_t>(stripped, kCertificateDirectoryField) == 0);
     CHECK(Get<std::uint32_t>(stripped, kCertificateDirectoryField + 4) == 0);
-    CHECK_FALSE(PeSigner::HasEmbeddedSignature(path));
-    CHECK_FALSE(PeSigner::ExtractSignature(path).has_value());
+    CHECK_FALSE(the_seed::PeSigner::HasEmbeddedSignature(path));
+    CHECK_FALSE(the_seed::PeSigner::ExtractSignature(path).has_value());
     CHECK(Get<std::uint32_t>(stripped, kChecksumField) == ExpectedChecksum(stripped));
     CHECK(stripped.size() >= Floor(stripped));
     // Well formed: the fingerprint can be calculated again.
-    CHECK_NOTHROW((void)PeSigner::ComputeAuthenticodeDigest(path));
+    CHECK_NOTHROW((void)the_seed::PeSigner::ComputeAuthenticodeDigest(path));
 }
 
 // A program signed the way osslsigncode signs one: the program is padded with
@@ -225,9 +225,9 @@ TEST_CASE("round trip: embed then strip restores a program ending in a non-zero 
                     const std::string path = seedtest::malformed::WriteScratch(scratch, fixture, original);
                     const std::string before = DigestOf(path);
 
-                    PeSigner::EmbedSignature(path, TestBlob(blob_size));
-                    REQUIRE(PeSigner::HasEmbeddedSignature(path));
-                    PeSigner::StripSignature(path);
+                    the_seed::PeSigner::EmbedSignature(path, TestBlob(blob_size));
+                    REQUIRE(the_seed::PeSigner::HasEmbeddedSignature(path));
+                    the_seed::PeSigner::StripSignature(path);
 
                     const Bytes stripped = seedtest::malformed::ReadAll(path);
                     INFO("original " << original.size() << " bytes, stripped " << stripped.size());
@@ -259,8 +259,8 @@ TEST_CASE("round trip: the samples as they are come back byte for byte",
             REQUIRE(original.size() % 8 == 0);
             const std::string path = seedtest::malformed::WriteScratch(scratch, fixture, original);
 
-            PeSigner::EmbedSignature(path, TestBlob(128));
-            PeSigner::StripSignature(path);
+            the_seed::PeSigner::EmbedSignature(path, TestBlob(128));
+            the_seed::PeSigner::StripSignature(path);
 
             // These samples end inside the last section with zero bytes: nothing
             // below the section data may be taken, whatever the rule.
@@ -284,10 +284,10 @@ TEST_CASE("round trip: embed, strip, embed gives two identical signed files",
                 const std::string path =
                     seedtest::malformed::WriteScratch(scratch, fixture, Derived(fixture, count));
 
-                PeSigner::EmbedSignature(path, TestBlob(128));
+                the_seed::PeSigner::EmbedSignature(path, TestBlob(128));
                 const Bytes first = seedtest::malformed::ReadAll(path);
-                PeSigner::StripSignature(path);
-                PeSigner::EmbedSignature(path, TestBlob(128));
+                the_seed::PeSigner::StripSignature(path);
+                the_seed::PeSigner::EmbedSignature(path, TestBlob(128));
                 const Bytes second = seedtest::malformed::ReadAll(path);
 
                 CHECK(first == second);
@@ -313,11 +313,11 @@ TEST_CASE("signed: a second embed keeps one signature and strip still restores t
                 const Bytes original = Derived(fixture, count);
                 const std::string path = seedtest::malformed::WriteScratch(scratch, fixture, original);
 
-                PeSigner::EmbedSignature(path, TestBlob(128));
-                PeSigner::EmbedSignature(path, TestBlob(200));
-                CHECK(PeSigner::ExtractSignature(path) == std::optional<Bytes>(TestBlob(200)));
+                the_seed::PeSigner::EmbedSignature(path, TestBlob(128));
+                the_seed::PeSigner::EmbedSignature(path, TestBlob(200));
+                CHECK(the_seed::PeSigner::ExtractSignature(path) == std::optional<Bytes>(TestBlob(200)));
 
-                PeSigner::StripSignature(path);
+                the_seed::PeSigner::StripSignature(path);
                 const Bytes stripped = seedtest::malformed::ReadAll(path);
                 CHECK(stripped.size() == original.size());
                 CheckStrippedShape(path);
@@ -345,11 +345,11 @@ TEST_CASE("signed by another tool: the signature entry goes and the file stays w
 
                     // The hand-built file is a program the verifier would accept: its
                     // fingerprint is the recorded one.
-                    REQUIRE(PeSigner::HasEmbeddedSignature(path));
-                    CHECK(PeSigner::ExtractSignature(path).has_value());
+                    REQUIRE(the_seed::PeSigner::HasEmbeddedSignature(path));
+                    CHECK(the_seed::PeSigner::ExtractSignature(path).has_value());
                     CHECK(DigestOf(path) == Recorded(fixture, count));
 
-                    PeSigner::StripSignature(path);
+                    the_seed::PeSigner::StripSignature(path);
 
                     const Bytes stripped = seedtest::malformed::ReadAll(path);
                     // The documented rule applied to the padding in front of the signature:
@@ -385,8 +385,8 @@ TEST_CASE("limit: an aligned program ending in zeros loses at most 7 of them",
                 REQUIRE(floor < original.size());
                 const std::string path = seedtest::malformed::WriteScratch(scratch, fixture, original);
 
-                PeSigner::EmbedSignature(path, TestBlob(128));
-                PeSigner::StripSignature(path);
+                the_seed::PeSigner::EmbedSignature(path, TestBlob(128));
+                the_seed::PeSigner::StripSignature(path);
 
                 const Bytes stripped = seedtest::malformed::ReadAll(path);
                 INFO("original " << original.size() << " bytes, stripped " << stripped.size());
@@ -425,8 +425,8 @@ TEST_CASE("limit: nothing below the end of the last section's data is removed",
             original.resize(original.size() + 8, 0);
             const std::string path = seedtest::malformed::WriteScratch(scratch, fixture, original);
 
-            PeSigner::EmbedSignature(path, TestBlob(128));
-            PeSigner::StripSignature(path);
+            the_seed::PeSigner::EmbedSignature(path, TestBlob(128));
+            the_seed::PeSigner::StripSignature(path);
 
             const Bytes stripped = seedtest::malformed::ReadAll(path);
             CHECK(stripped.size() >= floor);
@@ -446,13 +446,13 @@ TEST_CASE("limit: a program that is only its headers is not cut below them",
     seedtest::ScratchDir scratch("pe-roundtrip-headers");
     const std::string path = seedtest::malformed::WriteScratch(scratch, "headers.exe", original);
 
-    PeSigner::EmbedSignature(path, TestBlob(128));
-    PeSigner::StripSignature(path);
+    the_seed::PeSigner::EmbedSignature(path, TestBlob(128));
+    the_seed::PeSigner::StripSignature(path);
 
     const Bytes stripped = seedtest::malformed::ReadAll(path);
     CHECK(stripped.size() >= 1024);
     CHECK(stripped.size() == original.size());
-    CHECK_FALSE(PeSigner::HasEmbeddedSignature(path));
+    CHECK_FALSE(the_seed::PeSigner::HasEmbeddedSignature(path));
 }
 
 // ---------------------------------------------------------------------------
@@ -476,14 +476,14 @@ TEST_CASE("unsigned: strip leaves the file alone and writes nothing",
                     input.resize(input.size() + 8, 0);
                 }
                 const std::string path = seedtest::malformed::WriteScratch(scratch, fixture, input);
-                REQUIRE_FALSE(PeSigner::HasEmbeddedSignature(path));
+                REQUIRE_FALSE(the_seed::PeSigner::HasEmbeddedSignature(path));
 
                 the_seed::internal::FileReplaceHooksScope scope;
-                CHECK_NOTHROW(PeSigner::StripSignature(path));
+                CHECK_NOTHROW(the_seed::PeSigner::StripSignature(path));
 
                 CHECK(scope.Calls().empty());
                 seedtest::malformed::RequireUnchanged(path, input);
-                CHECK_FALSE(PeSigner::HasEmbeddedSignature(path));
+                CHECK_FALSE(the_seed::PeSigner::HasEmbeddedSignature(path));
             }
         }
     }
@@ -499,7 +499,7 @@ void RequireStripRejected(const Bytes &input, const std::string &keyword)
 {
     seedtest::ScratchDir scratch("pe-roundtrip-malformed");
     const std::string path = seedtest::malformed::WriteScratch(scratch, "input.bin", input);
-    seedtest::malformed::RequireRejected([&] { PeSigner::StripSignature(path); }, "PE", keyword,
+    seedtest::malformed::RequireRejected([&] { the_seed::PeSigner::StripSignature(path); }, "PE", keyword,
                                          input.size());
     seedtest::malformed::RequireUnchanged(path, input);
 }

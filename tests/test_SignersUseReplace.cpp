@@ -53,9 +53,9 @@ Bytes FakePkcs7(std::size_t size = 128)
 // bytes per slice. The replacement is the single write of CompleteSignature.
 void SignMachO(const std::string &path)
 {
-    const MachOSigner::PreparedSignature prepared = MachOSigner::PrepareSignature(path, "test-identity", 64);
+    const the_seed::MachOSigner::PreparedSignature prepared = the_seed::MachOSigner::PrepareSignature(path, "test-identity", 64);
     const std::vector<Bytes> cms(prepared.slices.size(), Bytes(64, 0xDD));
-    MachOSigner::CompleteSignature(path, prepared, cms);
+    the_seed::MachOSigner::CompleteSignature(path, prepared, cms);
 }
 
 std::vector<std::string> Names(const std::vector<FolderEntry> &entries)
@@ -125,13 +125,13 @@ TEST_CASE("signers: PE embed and strip keep the mode and add no entries", "[Sign
     const unsigned expected = ModeOf(path);
     const auto names = Names(ListFolder(scratch.Path()));
 
-    PeSigner::EmbedSignature(path, FakePkcs7());
-    CHECK(PeSigner::HasEmbeddedSignature(path));
+    the_seed::PeSigner::EmbedSignature(path, FakePkcs7());
+    CHECK(the_seed::PeSigner::HasEmbeddedSignature(path));
     CHECK(ModeOf(path) == expected);
     CHECK(Names(ListFolder(scratch.Path())) == names);
 
-    PeSigner::StripSignature(path);
-    CHECK_FALSE(PeSigner::HasEmbeddedSignature(path));
+    the_seed::PeSigner::StripSignature(path);
+    CHECK_FALSE(the_seed::PeSigner::HasEmbeddedSignature(path));
     CHECK(ModeOf(path) == expected);
     CHECK(Names(ListFolder(scratch.Path())) == names);
 }
@@ -149,7 +149,7 @@ TEST_CASE("signers: Mach-O completion keeps the mode and adds no entries", "[Sig
     const auto names = Names(ListFolder(scratch.Path()));
 
     SignMachO(path);
-    CHECK(MachOSigner::HasEmbeddedSignature(path));
+    CHECK(the_seed::MachOSigner::HasEmbeddedSignature(path));
     CHECK(ModeOf(path) == expected);
     CHECK(Names(ListFolder(scratch.Path())) == names);
 }
@@ -165,13 +165,13 @@ TEST_CASE("signers: MSI embed and strip keep the mode and add no entries", "[Sig
     const unsigned expected = ModeOf(path);
     const auto names = Names(ListFolder(scratch.Path()));
 
-    MsiSigner::EmbedSignature(path, FakePkcs7());
-    CHECK(MsiSigner::HasEmbeddedSignature(path));
+    the_seed::MsiSigner::EmbedSignature(path, FakePkcs7());
+    CHECK(the_seed::MsiSigner::HasEmbeddedSignature(path));
     CHECK(ModeOf(path) == expected);
     CHECK(Names(ListFolder(scratch.Path())) == names);
 
-    MsiSigner::StripSignature(path);
-    CHECK_FALSE(MsiSigner::HasEmbeddedSignature(path));
+    the_seed::MsiSigner::StripSignature(path);
+    CHECK_FALSE(the_seed::MsiSigner::HasEmbeddedSignature(path));
     CHECK(ModeOf(path) == expected);
     CHECK(Names(ListFolder(scratch.Path())) == names);
 }
@@ -188,14 +188,14 @@ TEST_CASE("signers: a failure in the replacement leaves the PE file unchanged",
     SECTION("embed")
     {
         RequireFailureLeavesFile(scratch, path,
-                                 [&] { PeSigner::EmbedSignature(path, FakePkcs7()); });
-        CHECK_FALSE(PeSigner::HasEmbeddedSignature(path));
+                                 [&] { the_seed::PeSigner::EmbedSignature(path, FakePkcs7()); });
+        CHECK_FALSE(the_seed::PeSigner::HasEmbeddedSignature(path));
     }
     SECTION("strip")
     {
-        PeSigner::EmbedSignature(path, FakePkcs7());
-        RequireFailureLeavesFile(scratch, path, [&] { PeSigner::StripSignature(path); });
-        CHECK(PeSigner::HasEmbeddedSignature(path));
+        the_seed::PeSigner::EmbedSignature(path, FakePkcs7());
+        RequireFailureLeavesFile(scratch, path, [&] { the_seed::PeSigner::StripSignature(path); });
+        CHECK(the_seed::PeSigner::HasEmbeddedSignature(path));
     }
 }
 
@@ -205,11 +205,11 @@ TEST_CASE("signers: a failure in the replacement leaves the Mach-O file unchange
     seedtest::ScratchDir scratch("seed-signers-macho-fail");
     const std::string path = CopyFixture(scratch, "tiny-macho-x86_64");
     SetModeOf(path, 0755);
-    const MachOSigner::PreparedSignature prepared = MachOSigner::PrepareSignature(path, "test-identity", 64);
+    const the_seed::MachOSigner::PreparedSignature prepared = the_seed::MachOSigner::PrepareSignature(path, "test-identity", 64);
     const std::vector<Bytes> cms(prepared.slices.size(), Bytes(64, 0xDD));
 
-    RequireFailureLeavesFile(scratch, path, [&] { MachOSigner::CompleteSignature(path, prepared, cms); });
-    CHECK_FALSE(MachOSigner::HasEmbeddedSignature(path));
+    RequireFailureLeavesFile(scratch, path, [&] { the_seed::MachOSigner::CompleteSignature(path, prepared, cms); });
+    CHECK_FALSE(the_seed::MachOSigner::HasEmbeddedSignature(path));
 }
 
 TEST_CASE("signers: a failure in the replacement leaves the MSI file unchanged",
@@ -222,14 +222,14 @@ TEST_CASE("signers: a failure in the replacement leaves the MSI file unchanged",
     SECTION("embed")
     {
         RequireFailureLeavesFile(scratch, path,
-                                 [&] { MsiSigner::EmbedSignature(path, FakePkcs7()); });
-        CHECK_FALSE(MsiSigner::HasEmbeddedSignature(path));
+                                 [&] { the_seed::MsiSigner::EmbedSignature(path, FakePkcs7()); });
+        CHECK_FALSE(the_seed::MsiSigner::HasEmbeddedSignature(path));
     }
     SECTION("strip")
     {
-        MsiSigner::EmbedSignature(path, FakePkcs7());
-        RequireFailureLeavesFile(scratch, path, [&] { MsiSigner::StripSignature(path); });
-        CHECK(MsiSigner::HasEmbeddedSignature(path));
+        the_seed::MsiSigner::EmbedSignature(path, FakePkcs7());
+        RequireFailureLeavesFile(scratch, path, [&] { the_seed::MsiSigner::StripSignature(path); });
+        CHECK(the_seed::MsiSigner::HasEmbeddedSignature(path));
     }
 }
 

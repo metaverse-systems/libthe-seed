@@ -12,45 +12,45 @@ namespace
         return text.find(part) != std::string::npos;
     }
 
-    std::vector<LoadError::Location> LocationsMake()
+    std::vector<the_seed::LoadError::Location> LocationsMake()
     {
         return {
-            {"/etc/app/plugins", false, LoadError::LocationState::Searched},
-            {"/opt/missing", false, LoadError::LocationState::Missing},
-            {"/home/dev/build", true, LoadError::LocationState::Searched},
+            {"/etc/app/plugins", false, the_seed::LoadError::LocationState::Searched},
+            {"/opt/missing", false, the_seed::LoadError::LocationState::Missing},
+            {"/home/dev/build", true, the_seed::LoadError::LocationState::Searched},
         };
     }
 }
 
 TEST_CASE("LoadError returns what it was given", "[LoadError]")
 {
-    const LoadError::Reason reasons[] = {
-        LoadError::Reason::InvalidName,
-        LoadError::Reason::NotFound,
-        LoadError::Reason::NotLoadable,
-        LoadError::Reason::EntryPointMissing,
-        LoadError::Reason::NoObject,
-        LoadError::Reason::SceneUnopenable,
-        LoadError::Reason::SceneNotUnderstood,
-        LoadError::Reason::SceneComponentFailed,
+    const the_seed::LoadError::Reason reasons[] = {
+        the_seed::LoadError::Reason::InvalidName,
+        the_seed::LoadError::Reason::NotFound,
+        the_seed::LoadError::Reason::NotLoadable,
+        the_seed::LoadError::Reason::EntryPointMissing,
+        the_seed::LoadError::Reason::NoObject,
+        the_seed::LoadError::Reason::SceneUnopenable,
+        the_seed::LoadError::Reason::SceneNotUnderstood,
+        the_seed::LoadError::Reason::SceneComponentFailed,
     };
 
-    for(LoadError::Reason reason : reasons)
+    for(the_seed::LoadError::Reason reason : reasons)
     {
-        LoadError error(reason, "org/thing", "/some/dir/libthing.so", LocationsMake(), "some detail");
+        the_seed::LoadError error(reason, "org/thing", "/some/dir/libthing.so", LocationsMake(), "some detail");
 
         REQUIRE(error.ReasonGet() == reason);
         REQUIRE(error.NameGet() == "org/thing");
         REQUIRE(error.FileGet() == "/some/dir/libthing.so");
         REQUIRE(error.DetailGet() == "some detail");
 
-        const std::vector<LoadError::Location> &locations = error.LocationsGet();
+        const std::vector<the_seed::LoadError::Location> &locations = error.LocationsGet();
         REQUIRE(locations.size() == 3);
         REQUIRE(locations[0].path == "/etc/app/plugins");
         REQUIRE_FALSE(locations[0].development);
-        REQUIRE(locations[0].state == LoadError::LocationState::Searched);
+        REQUIRE(locations[0].state == the_seed::LoadError::LocationState::Searched);
         REQUIRE(locations[1].path == "/opt/missing");
-        REQUIRE(locations[1].state == LoadError::LocationState::Missing);
+        REQUIRE(locations[1].state == the_seed::LoadError::LocationState::Missing);
         REQUIRE(locations[2].path == "/home/dev/build");
         REQUIRE(locations[2].development);
     }
@@ -58,9 +58,9 @@ TEST_CASE("LoadError returns what it was given", "[LoadError]")
 
 TEST_CASE("LoadError accessors keep empty values", "[LoadError]")
 {
-    LoadError error(LoadError::Reason::NoObject, "", "", {}, "");
+    the_seed::LoadError error(the_seed::LoadError::Reason::NoObject, "", "", {}, "");
 
-    REQUIRE(error.ReasonGet() == LoadError::Reason::NoObject);
+    REQUIRE(error.ReasonGet() == the_seed::LoadError::Reason::NoObject);
     REQUIRE(error.NameGet().empty());
     REQUIRE(error.FileGet().empty());
     REQUIRE(error.LocationsGet().empty());
@@ -72,14 +72,14 @@ TEST_CASE("LoadError is a std::runtime_error", "[LoadError]")
     SECTION("Caught as std::runtime_error")
     {
         REQUIRE_THROWS_AS(
-            throw LoadError(LoadError::Reason::NotFound, "thing", "", {}, ""),
+            throw the_seed::LoadError(the_seed::LoadError::Reason::NotFound, "thing", "", {}, ""),
             std::runtime_error);
     }
 
     SECTION("Caught as std::exception")
     {
         REQUIRE_THROWS_AS(
-            throw LoadError(LoadError::Reason::NotFound, "thing", "", {}, ""),
+            throw the_seed::LoadError(the_seed::LoadError::Reason::NotFound, "thing", "", {}, ""),
             std::exception);
     }
 
@@ -87,26 +87,26 @@ TEST_CASE("LoadError is a std::runtime_error", "[LoadError]")
     {
         try
         {
-            throw LoadError(LoadError::Reason::EntryPointMissing, "thing", "/d/libthing.so", {}, "undefined symbol");
+            throw the_seed::LoadError(the_seed::LoadError::Reason::EntryPointMissing, "thing", "/d/libthing.so", {}, "undefined symbol");
             FAIL("not reached");
         }
         catch(const std::runtime_error &error)
         {
-            const LoadError *load_error = dynamic_cast<const LoadError *>(&error);
+            const the_seed::LoadError *load_error = dynamic_cast<const the_seed::LoadError *>(&error);
             REQUIRE(load_error != nullptr);
-            REQUIRE(load_error->ReasonGet() == LoadError::Reason::EntryPointMissing);
+            REQUIRE(load_error->ReasonGet() == the_seed::LoadError::Reason::EntryPointMissing);
         }
     }
 }
 
 TEST_CASE("LoadError is copyable", "[LoadError]")
 {
-    LoadError original(LoadError::Reason::NotFound, "org/thing", "libthing.so", LocationsMake(), "");
+    the_seed::LoadError original(the_seed::LoadError::Reason::NotFound, "org/thing", "libthing.so", LocationsMake(), "");
     const std::string message = original.what();
 
     SECTION("Copy construction")
     {
-        LoadError copy(original);
+        the_seed::LoadError copy(original);
 
         REQUIRE(copy.ReasonGet() == original.ReasonGet());
         REQUIRE(copy.NameGet() == "org/thing");
@@ -117,18 +117,18 @@ TEST_CASE("LoadError is copyable", "[LoadError]")
 
     SECTION("Copy assignment")
     {
-        LoadError other(LoadError::Reason::NoObject, "other", "", {}, "x");
+        the_seed::LoadError other(the_seed::LoadError::Reason::NoObject, "other", "", {}, "x");
         other = original;
 
-        REQUIRE(other.ReasonGet() == LoadError::Reason::NotFound);
+        REQUIRE(other.ReasonGet() == the_seed::LoadError::Reason::NotFound);
         REQUIRE(other.NameGet() == "org/thing");
         REQUIRE(message == other.what());
     }
 
     SECTION("Copy survives the original")
     {
-        LoadError *heap = new LoadError(original);
-        LoadError copy(*heap);
+        the_seed::LoadError *heap = new the_seed::LoadError(original);
+        the_seed::LoadError copy(*heap);
         delete heap;
 
         REQUIRE(copy.NameGet() == "org/thing");
@@ -138,7 +138,7 @@ TEST_CASE("LoadError is copyable", "[LoadError]")
 
 TEST_CASE("LoadError message for InvalidName", "[LoadError]")
 {
-    LoadError error(LoadError::Reason::InvalidName, "a\\b", "", {}, "backslash");
+    the_seed::LoadError error(the_seed::LoadError::Reason::InvalidName, "a\\b", "", {}, "backslash");
     const std::string message = error.what();
 
     REQUIRE(Contains(message, "a\\b"));
@@ -148,7 +148,7 @@ TEST_CASE("LoadError message for InvalidName", "[LoadError]")
 
 TEST_CASE("LoadError message for NotFound lists every location with its state", "[LoadError]")
 {
-    LoadError error(LoadError::Reason::NotFound, "org/thing", "libthing.so", LocationsMake(), "");
+    the_seed::LoadError error(the_seed::LoadError::Reason::NotFound, "org/thing", "libthing.so", LocationsMake(), "");
     const std::string message = error.what();
 
     REQUIRE(Contains(message, "org/thing"));
@@ -168,7 +168,7 @@ TEST_CASE("LoadError message for NotFound lists every location with its state", 
 
 TEST_CASE("LoadError message for NotFound with no locations", "[LoadError]")
 {
-    LoadError error(LoadError::Reason::NotFound, "thing", "libthing.so", {}, "");
+    the_seed::LoadError error(the_seed::LoadError::Reason::NotFound, "thing", "libthing.so", {}, "");
     const std::string message = error.what();
 
     REQUIRE(Contains(message, "thing"));
@@ -177,11 +177,11 @@ TEST_CASE("LoadError message for NotFound with no locations", "[LoadError]")
 
 TEST_CASE("LoadError message for NotLoadable", "[LoadError]")
 {
-    std::vector<LoadError::Location> locations = {
-        {"/first", false, LoadError::LocationState::Missing},
-        {"/second", false, LoadError::LocationState::Found},
+    std::vector<the_seed::LoadError::Location> locations = {
+        {"/first", false, the_seed::LoadError::LocationState::Missing},
+        {"/second", false, the_seed::LoadError::LocationState::Found},
     };
-    LoadError error(LoadError::Reason::NotLoadable, "thing", "/second/libthing.so", locations,
+    the_seed::LoadError error(the_seed::LoadError::Reason::NotLoadable, "thing", "/second/libthing.so", locations,
                     "invalid ELF header\r\n");
     const std::string message = error.what();
 
@@ -199,7 +199,7 @@ TEST_CASE("LoadError message for NotLoadable", "[LoadError]")
 
 TEST_CASE("LoadError message for EntryPointMissing", "[LoadError]")
 {
-    LoadError error(LoadError::Reason::EntryPointMissing, "thing", "/d/libthing.so", {},
+    the_seed::LoadError error(the_seed::LoadError::Reason::EntryPointMissing, "thing", "/d/libthing.so", {},
                     "create_component: undefined symbol");
     const std::string message = error.what();
 
@@ -212,7 +212,7 @@ TEST_CASE("LoadError message for EntryPointMissing", "[LoadError]")
 
 TEST_CASE("LoadError message for NoObject", "[LoadError]")
 {
-    LoadError error(LoadError::Reason::NoObject, "thing", "/d/libthing.so", {}, "create_component");
+    the_seed::LoadError error(the_seed::LoadError::Reason::NoObject, "thing", "/d/libthing.so", {}, "create_component");
     const std::string message = error.what();
 
     REQUIRE(Contains(message, "thing"));
@@ -223,7 +223,7 @@ TEST_CASE("LoadError message for NoObject", "[LoadError]")
 
 TEST_CASE("LoadError message for SceneUnopenable", "[LoadError]")
 {
-    LoadError error(LoadError::Reason::SceneUnopenable, "", "scenes/level.json", {},
+    the_seed::LoadError error(the_seed::LoadError::Reason::SceneUnopenable, "", "scenes/level.json", {},
                     "No such file or directory");
     const std::string message = error.what();
 
@@ -235,7 +235,7 @@ TEST_CASE("LoadError message for SceneUnopenable", "[LoadError]")
 
 TEST_CASE("LoadError message for SceneNotUnderstood", "[LoadError]")
 {
-    LoadError error(LoadError::Reason::SceneNotUnderstood, "", "scenes/level.json", {},
+    the_seed::LoadError error(the_seed::LoadError::Reason::SceneNotUnderstood, "", "scenes/level.json", {},
                     "syntax error at line 3, column 7");
     const std::string message = error.what();
 
@@ -246,7 +246,7 @@ TEST_CASE("LoadError message for SceneNotUnderstood", "[LoadError]")
 
 TEST_CASE("LoadError message for SceneComponentFailed", "[LoadError]")
 {
-    LoadError error(LoadError::Reason::SceneComponentFailed, "", "scenes/level.json", {},
+    the_seed::LoadError error(the_seed::LoadError::Reason::SceneComponentFailed, "", "scenes/level.json", {},
                     "entity \"player\", component \"org/missing\": component plugin \"org/missing\" not found");
     const std::string message = error.what();
 
@@ -259,11 +259,11 @@ TEST_CASE("LoadError message for SceneComponentFailed", "[LoadError]")
 TEST_CASE("LoadError message for ResourceMissing", "[LoadError]")
 {
     const std::vector<std::string> missing = {"tex_hero", "snd_jump"};
-    LoadError error(LoadError::Reason::ResourceMissing, "org/art", "/game/paks/art.pak", {}, "", "resource pak",
+    the_seed::LoadError error(the_seed::LoadError::Reason::ResourceMissing, "org/art", "/game/paks/art.pak", {}, "", "resource pak",
                     missing);
     const std::string message = error.what();
 
-    REQUIRE(error.ReasonGet() == LoadError::Reason::ResourceMissing);
+    REQUIRE(error.ReasonGet() == the_seed::LoadError::Reason::ResourceMissing);
     REQUIRE(error.NameGet() == "org/art");
     REQUIRE(error.FileGet() == "/game/paks/art.pak");
     REQUIRE(error.KindGet() == "resource pak");
@@ -280,14 +280,14 @@ TEST_CASE("LoadError message for ResourceMissing", "[LoadError]")
 
     SECTION("The list survives a copy")
     {
-        LoadError copy(error);
+        the_seed::LoadError copy(error);
         REQUIRE(copy.MissingGet() == missing);
         REQUIRE(std::string(copy.what()) == message);
     }
 
     SECTION("Control characters in a missing name are escaped")
     {
-        LoadError odd(LoadError::Reason::ResourceMissing, "org/art", "/game/paks/art.pak", {}, "", "resource pak",
+        the_seed::LoadError odd(the_seed::LoadError::Reason::ResourceMissing, "org/art", "/game/paks/art.pak", {}, "", "resource pak",
                       {"two\nlines", "tab\there", "bell\x07"});
         const std::string text = odd.what();
 
@@ -303,36 +303,36 @@ TEST_CASE("LoadError message for ResourceMissing", "[LoadError]")
 
 TEST_CASE("LoadError MissingGet is empty for every other reason", "[LoadError]")
 {
-    const LoadError::Reason reasons[] = {
-        LoadError::Reason::InvalidName,
-        LoadError::Reason::NotFound,
-        LoadError::Reason::NotLoadable,
-        LoadError::Reason::EntryPointMissing,
-        LoadError::Reason::NoObject,
-        LoadError::Reason::SceneUnopenable,
-        LoadError::Reason::SceneNotUnderstood,
-        LoadError::Reason::SceneComponentFailed,
+    const the_seed::LoadError::Reason reasons[] = {
+        the_seed::LoadError::Reason::InvalidName,
+        the_seed::LoadError::Reason::NotFound,
+        the_seed::LoadError::Reason::NotLoadable,
+        the_seed::LoadError::Reason::EntryPointMissing,
+        the_seed::LoadError::Reason::NoObject,
+        the_seed::LoadError::Reason::SceneUnopenable,
+        the_seed::LoadError::Reason::SceneNotUnderstood,
+        the_seed::LoadError::Reason::SceneComponentFailed,
     };
 
-    for(LoadError::Reason reason : reasons)
+    for(the_seed::LoadError::Reason reason : reasons)
     {
-        LoadError error(reason, "org/thing", "/some/dir/libthing.so", LocationsMake(), "some detail");
+        the_seed::LoadError error(reason, "org/thing", "/some/dir/libthing.so", LocationsMake(), "some detail");
         REQUIRE(error.MissingGet().empty());
     }
 }
 
 TEST_CASE("LoadError message for an unreadable location", "[LoadError]")
 {
-    std::vector<LoadError::Location> locations = {
-        {"/game/paks", false, LoadError::LocationState::Searched},
-        {"/locked/paks", false, LoadError::LocationState::Unreadable, "Permission denied"},
-        {"../../art", true, LoadError::LocationState::Missing},
+    std::vector<the_seed::LoadError::Location> locations = {
+        {"/game/paks", false, the_seed::LoadError::LocationState::Searched},
+        {"/locked/paks", false, the_seed::LoadError::LocationState::Unreadable, "Permission denied"},
+        {"../../art", true, the_seed::LoadError::LocationState::Missing},
     };
-    LoadError error(LoadError::Reason::NotFound, "org/art", "art.pak", locations, "", "resource pak");
+    the_seed::LoadError error(the_seed::LoadError::Reason::NotFound, "org/art", "art.pak", locations, "", "resource pak");
     const std::string message = error.what();
 
     REQUIRE(error.LocationsGet().size() == 3);
-    REQUIRE(error.LocationsGet()[1].state == LoadError::LocationState::Unreadable);
+    REQUIRE(error.LocationsGet()[1].state == the_seed::LoadError::LocationState::Unreadable);
     REQUIRE(error.LocationsGet()[1].reason == "Permission denied");
     REQUIRE(error.LocationsGet()[0].reason.empty());
 
@@ -345,7 +345,7 @@ TEST_CASE("LoadError message for an unreadable location", "[LoadError]")
 
 TEST_CASE("LoadError message for NotFound with no locations and a detail", "[LoadError]")
 {
-    LoadError error(LoadError::Reason::NotFound, "/game/paks/art.pak", "/game/paks/art.pak", {},
+    the_seed::LoadError error(the_seed::LoadError::Reason::NotFound, "/game/paks/art.pak", "/game/paks/art.pak", {},
                     "No such file or directory", "resource pak");
     const std::string message = error.what();
 
@@ -356,10 +356,10 @@ TEST_CASE("LoadError message for NotFound with no locations and a detail", "[Loa
 
 TEST_CASE("LoadError Location still takes three members", "[LoadError]")
 {
-    const LoadError::Location location{"/some/dir", true, LoadError::LocationState::NotReached};
+    const the_seed::LoadError::Location location{"/some/dir", true, the_seed::LoadError::LocationState::NotReached};
 
     REQUIRE(location.path == "/some/dir");
     REQUIRE(location.development);
-    REQUIRE(location.state == LoadError::LocationState::NotReached);
+    REQUIRE(location.state == the_seed::LoadError::LocationState::NotReached);
     REQUIRE(location.reason.empty());
 }

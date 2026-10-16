@@ -46,7 +46,7 @@ TEST_CASE("ResourcePak round-trip loads Resource::Data correctly", "[ResourcePak
     seedtest::ScratchDir scratch;
     std::string pakPath = createTestPak(scratch.Path().string(), "test_res", expected);
 
-    ResourcePak pak(pakPath);
+    the_seed::ResourcePak pak(pakPath);
 
     SECTION("Load returns Resource with matching Data vector")
     {
@@ -97,12 +97,12 @@ TEST_CASE("ResourcePak refuses a pak whose resource size exceeds the file", "[Re
     // opened, so the pak is refused before any resource is asked for.
     try
     {
-        ResourcePak pak(pakPath);
+        the_seed::ResourcePak pak(pakPath);
         FAIL("the pak was accepted");
     }
-    catch(const LoadError &error)
+    catch(const the_seed::LoadError &error)
     {
-        REQUIRE(error.ReasonGet() == LoadError::Reason::NotLoadable);
+        REQUIRE(error.ReasonGet() == the_seed::LoadError::Reason::NotLoadable);
         REQUIRE(error.DetailGet().rfind("damaged:", 0) == 0);
     }
 }
@@ -113,7 +113,7 @@ TEST_CASE("A resource loaded from a pak is shared read-only by the world", "[Res
     seedtest::ScratchDir scratch;
     std::string pakPath = createTestPak(scratch.Path().string(), "shared_res", expected);
 
-    ResourcePak pak(pakPath);
+    the_seed::ResourcePak pak(pakPath);
     ecs::Manager manager;
     auto *world = manager.Container("world");
     pak.Load(world, "shared_res");
@@ -161,7 +161,7 @@ TEST_CASE("LoadAll puts every pak resource in the world", "[ResourcePak]")
     seedtest::ScratchDir scratch;
     std::string pakPath = createTestPak(scratch.Path().string(), "only_res", expected);
 
-    ResourcePak pak(pakPath);
+    the_seed::ResourcePak pak(pakPath);
     ecs::Manager manager;
     auto *world = manager.Container("world");
     pak.LoadAll(world);
@@ -204,7 +204,7 @@ TEST_CASE("ResourcePak reads a writer's pak exactly", "[ResourcePak]")
 
     SECTION("Every resource comes back with its exact bytes")
     {
-        ResourcePak pak(path);
+        the_seed::ResourcePak pak(path);
         for(const auto &resource : spec.resources)
         {
             INFO(resource.name);
@@ -214,22 +214,22 @@ TEST_CASE("ResourcePak reads a writer's pak exactly", "[ResourcePak]")
 
     SECTION("A zero-size resource is an empty resource")
     {
-        ResourcePak pak(path);
+        the_seed::ResourcePak pak(path);
         ecs::Resource resource = pak.Load("empty");
         REQUIRE(resource.Data.empty());
     }
 
     SECTION("ResourceNames are in description order and callable on a const pak")
     {
-        const ResourcePak pak(path);
+        const the_seed::ResourcePak pak(path);
         const std::vector<std::string> names = pak.ResourceNames();
         REQUIRE(names == std::vector<std::string>{"zeta", "alpha", "empty", "mid"});
     }
 
     SECTION("A copy loads the same bytes")
     {
-        ResourcePak pak(path);
-        ResourcePak copy(pak);
+        the_seed::ResourcePak pak(path);
+        the_seed::ResourcePak copy(pak);
         REQUIRE(copy.Load("mid").Data == spec.resources[3].bytes);
         REQUIRE(pak.Load("mid").Data == spec.resources[3].bytes);
         REQUIRE(copy.ResourceNames() == pak.ResourceNames());
@@ -237,7 +237,7 @@ TEST_CASE("ResourcePak reads a writer's pak exactly", "[ResourcePak]")
 
     SECTION("LoadAll adds every resource to the container")
     {
-        ResourcePak pak(path);
+        the_seed::ResourcePak pak(path);
         ecs::Manager manager;
         auto *world = manager.Container("world");
         pak.LoadAll(world);
@@ -252,7 +252,7 @@ TEST_CASE("ResourcePak reads a writer's pak exactly", "[ResourcePak]")
 
     SECTION("Load into a container adds that resource")
     {
-        ResourcePak pak(path);
+        the_seed::ResourcePak pak(path);
         ecs::Manager manager;
         auto *world = manager.Container("world");
         pak.Load(world, "alpha");
@@ -270,7 +270,7 @@ TEST_CASE("ResourcePak reads a pak with no resources", "[ResourcePak]")
     spec.name = "seed/none";
     const std::string path = seedtest::WritePakFile(scratch.Path(), "none.pak", spec).string();
 
-    ResourcePak pak(path);
+    the_seed::ResourcePak pak(path);
     REQUIRE(pak.ResourceNames().empty());
     ecs::Manager manager;
     auto *world = manager.Container("world");
@@ -285,12 +285,12 @@ TEST_CASE("ResourcePak on a missing path is not found", "[ResourcePak]")
 
     try
     {
-        ResourcePak pak(path);
+        the_seed::ResourcePak pak(path);
         FAIL("a missing pak was accepted");
     }
-    catch(const LoadError &error)
+    catch(const the_seed::LoadError &error)
     {
-        REQUIRE(error.ReasonGet() == LoadError::Reason::NotFound);
+        REQUIRE(error.ReasonGet() == the_seed::LoadError::Reason::NotFound);
         REQUIRE(error.NameGet() == path);
         REQUIRE(error.FileGet() == path);
         REQUIRE(error.LocationsGet().empty());
@@ -314,7 +314,7 @@ TEST_CASE("ResourcePak reports a pak damaged after it was opened", "[ResourcePak
     const std::vector<std::uint8_t> sound = seedtest::PakBytes(spec);
     const std::filesystem::path path = seedtest::WritePakFile(scratch.Path(), "several.pak", spec);
 
-    ResourcePak pak(path.string());
+    the_seed::ResourcePak pak(path.string());
     REQUIRE(pak.Load("alpha").Data == spec.resources[1].bytes);
 
     SECTION("A pak truncated after the constructor is checked again by the next Load")
@@ -326,9 +326,9 @@ TEST_CASE("ResourcePak reports a pak damaged after it was opened", "[ResourcePak
             pak.Load("zeta");
             FAIL("a truncated pak was read");
         }
-        catch(const LoadError &error)
+        catch(const the_seed::LoadError &error)
         {
-            REQUIRE(error.ReasonGet() == LoadError::Reason::NotLoadable);
+            REQUIRE(error.ReasonGet() == the_seed::LoadError::Reason::NotLoadable);
             REQUIRE(error.FileGet() == path.string());
             REQUIRE(error.DetailGet() == "damaged: the description claims " + std::to_string(sound.size()) +
                                              " bytes but the file holds " + std::to_string(sound.size() - 10));
@@ -350,9 +350,9 @@ TEST_CASE("ResourcePak reports a pak damaged after it was opened", "[ResourcePak
             pak.LoadAll(world);
             FAIL("a pak with trailing data was read");
         }
-        catch(const LoadError &error)
+        catch(const the_seed::LoadError &error)
         {
-            REQUIRE(error.ReasonGet() == LoadError::Reason::NotLoadable);
+            REQUIRE(error.ReasonGet() == the_seed::LoadError::Reason::NotLoadable);
             REQUIRE(error.DetailGet() == "damaged: 7 bytes of unexplained data after the last resource");
         }
         catch(...)
@@ -367,10 +367,10 @@ TEST_CASE("ResourcePak reports an unknown resource name", "[ResourcePak]")
 {
     seedtest::ScratchDir scratch;
     const std::string pakPath = createTestPak(scratch.Path().string(), "known", {1, 2, 3});
-    ResourcePak pak(pakPath);
+    the_seed::ResourcePak pak(pakPath);
 
-    auto check = [&](const LoadError &error) {
-        REQUIRE(error.ReasonGet() == LoadError::Reason::ResourceMissing);
+    auto check = [&](const the_seed::LoadError &error) {
+        REQUIRE(error.ReasonGet() == the_seed::LoadError::Reason::ResourceMissing);
         REQUIRE(error.FileGet() == pakPath);
         REQUIRE(error.MissingGet() == std::vector<std::string>{"unknown"});
         REQUIRE(error.LocationsGet().empty());
@@ -384,7 +384,7 @@ TEST_CASE("ResourcePak reports an unknown resource name", "[ResourcePak]")
             pak.Load("unknown");
             FAIL("Load did not throw");
         }
-        catch(const LoadError &error)
+        catch(const the_seed::LoadError &error)
         {
             check(error);
         }
@@ -399,7 +399,7 @@ TEST_CASE("ResourcePak reports an unknown resource name", "[ResourcePak]")
             pak.Load(world, "unknown");
             FAIL("Load did not throw");
         }
-        catch(const LoadError &error)
+        catch(const the_seed::LoadError &error)
         {
             check(error);
         }
@@ -409,7 +409,7 @@ TEST_CASE("ResourcePak reports an unknown resource name", "[ResourcePak]")
 
     SECTION("A known name still loads afterwards")
     {
-        REQUIRE_THROWS_AS(pak.Load("unknown"), LoadError);
+        REQUIRE_THROWS_AS(pak.Load("unknown"), the_seed::LoadError);
         REQUIRE(pak.Load("known").Data == std::vector<uint8_t>{1, 2, 3});
     }
 }

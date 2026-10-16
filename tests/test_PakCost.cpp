@@ -80,7 +80,7 @@ TEST_CASE("a request reads and holds only what it asks for", "[PakCost]")
 {
     REQUIRE(seedtest::heap::HeapGrowthScope::Active());
     Pak pak;
-    PakLoader loader;
+    the_seed::PakLoader loader;
     loader.PathAdd(pak.scratch.Path().string());
 
     // One 1 KiB resource of 256 MiB.
@@ -166,7 +166,7 @@ TEST_CASE("a request reads and holds only what it asks for", "[PakCost]")
 TEST_CASE("ResourcePak::Load(name) reads only that resource", "[PakCost]")
 {
     Pak pak;
-    ResourcePak resource_pak(pak.path.string());
+    the_seed::ResourcePak resource_pak(pak.path.string());
 
     ResetPakBytesReadCount();
     ecs::Resource resource = resource_pak.Load(seedtest::LargePakResourceName(7));

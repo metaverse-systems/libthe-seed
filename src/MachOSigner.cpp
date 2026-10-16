@@ -13,6 +13,9 @@
 
 #include "../external/picosha2.h"
 
+namespace the_seed
+{
+
 namespace {
 
 using the_seed::internal::ByteOrder;
@@ -912,3 +915,4 @@ std::optional<std::vector<std::uint8_t>> MachOSigner::ExtractCodeDirectoryFromSu
             return std::vector<std::uint8_t>(first, last);
         });
 }
+} // namespace the_seed

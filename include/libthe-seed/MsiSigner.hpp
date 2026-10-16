@@ -7,6 +7,8 @@
 #include <vector>
 #include <optional>
 
+namespace the_seed
+{
 /**
  * MSI (OLE Compound Document) Authenticode signature operations.
  * All methods are static — no instance state required.
@@ -174,3 +176,8 @@ public:
      */
     [[nodiscard]] static SignatureCheck CheckSignature(const std::string &file_path);
 };
+} // namespace the_seed
+
+#ifdef THE_SEED_LEGACY_NAMES
+using MsiSigner [[deprecated("use the_seed::MsiSigner")]] = the_seed::MsiSigner;
+#endif

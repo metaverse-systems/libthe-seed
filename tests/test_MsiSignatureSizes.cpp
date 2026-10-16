@@ -115,8 +115,8 @@ TEST_CASE("signature found by search and read by size equals the library", "[Msi
 
         // The library returns the same bytes, and reports the signature present.
         const std::string path = seedtest::FixturePath(item.sample);
-        CHECK(MsiSigner::HasEmbeddedSignature(path));
-        const auto extracted = MsiSigner::ExtractSignature(path);
+        CHECK(the_seed::MsiSigner::HasEmbeddedSignature(path));
+        const auto extracted = the_seed::MsiSigner::ExtractSignature(path);
         REQUIRE(extracted.has_value());
         CHECK(extracted->size() == *recorded);
         CHECK(*extracted == expected);
@@ -137,7 +137,7 @@ TEST_CASE("signature of two sizes read from a copy of the sample", "[MsiSignatur
         const auto found = package.FindSignature();
         REQUIRE(found.has_value());
 
-        const auto extracted = MsiSigner::ExtractSignature(path);
+        const auto extracted = the_seed::MsiSigner::ExtractSignature(path);
         REQUIRE(extracted.has_value());
         CHECK(*extracted == package.ReadStream(*found));
         sm::RequireUnchanged(path, bytes);
@@ -152,8 +152,8 @@ TEST_CASE("samples without a signature have none to read", "[MsiSignatureSizes][
         const Bytes bytes = sm::LoadSample(sample);
         CHECK_FALSE(cfb::Package(bytes).FindSignature().has_value());
         const std::string path = seedtest::FixturePath(sample);
-        CHECK_FALSE(MsiSigner::HasEmbeddedSignature(path));
-        CHECK_FALSE(MsiSigner::ExtractSignature(path).has_value());
+        CHECK_FALSE(the_seed::MsiSigner::HasEmbeddedSignature(path));
+        CHECK_FALSE(the_seed::MsiSigner::ExtractSignature(path).has_value());
     }
 }
 
@@ -178,8 +178,8 @@ TEST_CASE("large signature is read from ordinary sectors and small from the mini
 
         seedtest::ScratchDir scratch;
         const std::string path = sm::WriteScratch(scratch, "built.msi", bytes);
-        CHECK(MsiSigner::HasEmbeddedSignature(path));
-        const auto extracted = MsiSigner::ExtractSignature(path);
+        CHECK(the_seed::MsiSigner::HasEmbeddedSignature(path));
+        const auto extracted = the_seed::MsiSigner::ExtractSignature(path);
         REQUIRE(extracted.has_value());
         CHECK(*extracted == blob);
     }
@@ -199,8 +199,8 @@ void RequireEmbedded(const std::string &path, const Bytes &original, const Bytes
     INFO("blob of " << blob.size() << " bytes");
 
     // The library reads it back.
-    CHECK(MsiSigner::HasEmbeddedSignature(path));
-    const auto extracted = MsiSigner::ExtractSignature(path);
+    CHECK(the_seed::MsiSigner::HasEmbeddedSignature(path));
+    const auto extracted = the_seed::MsiSigner::ExtractSignature(path);
     REQUIRE(extracted.has_value());
     CHECK(*extracted == blob);
 
@@ -230,7 +230,7 @@ void RequireEmbedded(const std::string &path, const Bytes &original, const Bytes
     CHECK(package.Version() == cfb::Package(original).Version());
     CHECK(package.SectorSize() == cfb::Package(original).SectorSize());
     CHECK(cfb::Fingerprint(package) == fingerprint);
-    CHECK(msi::ToHexString(MsiSigner::ComputeAuthenticodeDigest(path).digest) == fingerprint);
+    CHECK(msi::ToHexString(the_seed::MsiSigner::ComputeAuthenticodeDigest(path).digest) == fingerprint);
     CHECK_FALSE(msi::HasExtendedStream(bytes));
 }
 
@@ -247,7 +247,7 @@ TEST_CASE("blobs of every size are embedded and read back", "[MsiSignatureSizes]
             const Bytes original = sm::LoadSample(sample);
             const std::string path = msi::CopySample(scratch, sample);
             const Bytes blob = cfb::PatternBytes(size, static_cast<std::uint8_t>(size));
-            REQUIRE_NOTHROW(MsiSigner::EmbedSignature(path, blob));
+            REQUIRE_NOTHROW(the_seed::MsiSigner::EmbedSignature(path, blob));
             RequireEmbedded(path, original, blob, msi::RecordedFingerprint(sample));
         }
     }
@@ -261,7 +261,7 @@ TEST_CASE("a blob of size zero is refused and the file is unchanged", "[MsiSigna
         INFO("sample " << sample);
         const Bytes original = sm::LoadSample(sample);
         const std::string path = msi::CopySample(scratch, sample);
-        CHECK_THROWS_AS(MsiSigner::EmbedSignature(path, Bytes()), std::runtime_error);
+        CHECK_THROWS_AS(the_seed::MsiSigner::EmbedSignature(path, Bytes()), std::runtime_error);
         sm::RequireUnchanged(path, original);
     }
 }
@@ -277,10 +277,10 @@ TEST_CASE("blobs are embedded into samples another tool signed", "[MsiSignatureS
             const Bytes original = sm::LoadSample(sample);
             const std::string path = msi::CopySample(scratch, sample);
             const Bytes blob = cfb::PatternBytes(size, 31);
-            REQUIRE_NOTHROW(MsiSigner::EmbedSignature(path, blob));
+            REQUIRE_NOTHROW(the_seed::MsiSigner::EmbedSignature(path, blob));
             RequireEmbedded(path, original, blob, msi::RecordedFingerprint(sample));
             // The other tool's signature is gone, and so is its extended stream.
-            CHECK(MsiSigner::ExtractSignature(path) == std::optional<Bytes>(blob));
+            CHECK(the_seed::MsiSigner::ExtractSignature(path) == std::optional<Bytes>(blob));
         }
     }
 }
@@ -303,12 +303,12 @@ TEST_CASE("a signature replaced across the cut-off is read back in both directio
             {
                 INFO("sample " << sample << " then " << size << " bytes");
                 blob = cfb::PatternBytes(size, static_cast<std::uint8_t>(size + 1));
-                REQUIRE_NOTHROW(MsiSigner::EmbedSignature(path, blob));
+                REQUIRE_NOTHROW(the_seed::MsiSigner::EmbedSignature(path, blob));
                 RequireEmbedded(path, original, blob, msi::RecordedFingerprint(sample));
             }
             // The package is what signing the unsigned original with the last blob gives: nothing is left over.
             const std::string direct = msi::CopySample(scratch, sample, "direct.msi");
-            REQUIRE_NOTHROW(MsiSigner::EmbedSignature(direct, blob));
+            REQUIRE_NOTHROW(the_seed::MsiSigner::EmbedSignature(direct, blob));
             CHECK(sm::ReadAll(path) == sm::ReadAll(direct));
         }
     }
@@ -324,15 +324,15 @@ TEST_CASE("signing again with the same then a larger and a smaller signature", "
             const Bytes original = sm::LoadSample(sample);
             const std::string path = msi::CopySample(scratch, sample);
             const Bytes first = cfb::PatternBytes(first_size, 5);
-            REQUIRE_NOTHROW(MsiSigner::EmbedSignature(path, first));
+            REQUIRE_NOTHROW(the_seed::MsiSigner::EmbedSignature(path, first));
             const Bytes once = sm::ReadAll(path);
 
             // The same signature gives the same bytes.
             {
                 INFO("sample " << sample << " first " << first_size);
-                REQUIRE_NOTHROW(MsiSigner::EmbedSignature(path, first));
+                REQUIRE_NOTHROW(the_seed::MsiSigner::EmbedSignature(path, first));
                 CHECK(sm::ReadAll(path) == once);
-                REQUIRE_NOTHROW(MsiSigner::EmbedSignature(path, first));
+                REQUIRE_NOTHROW(the_seed::MsiSigner::EmbedSignature(path, first));
                 CHECK(sm::ReadAll(path) == once);
             }
             // A larger and a smaller signature leave no trace of the first.
@@ -341,10 +341,10 @@ TEST_CASE("signing again with the same then a larger and a smaller signature", "
                 {
                     INFO("sample " << sample << " first " << first_size << " then " << size);
                     const Bytes next = cfb::PatternBytes(size, 6);
-                    REQUIRE_NOTHROW(MsiSigner::EmbedSignature(path, next));
+                    REQUIRE_NOTHROW(the_seed::MsiSigner::EmbedSignature(path, next));
                     RequireEmbedded(path, original, next, msi::RecordedFingerprint(sample));
                     const std::string direct = msi::CopySample(scratch, sample, "direct.msi");
-                    REQUIRE_NOTHROW(MsiSigner::EmbedSignature(direct, next));
+                    REQUIRE_NOTHROW(the_seed::MsiSigner::EmbedSignature(direct, next));
                     CHECK(sm::ReadAll(path) == sm::ReadAll(direct));
                 }
             }
@@ -380,7 +380,7 @@ TEST_CASE("signature entry among neighbours is found by search after embedding",
                 const Bytes original = cfb::Build(cfb::ToBuildTree(base, true), options);
                 const std::string path = sm::WriteScratch(scratch, "tree.msi", original);
                 const Bytes blob = cfb::PatternBytes(size, 12);
-                REQUIRE_NOTHROW(MsiSigner::EmbedSignature(path, blob));
+                REQUIRE_NOTHROW(the_seed::MsiSigner::EmbedSignature(path, blob));
                 RequireEmbedded(path, original, blob, msi::RecordedFingerprint("tiny.msi"));
             }
         }

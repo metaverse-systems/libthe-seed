@@ -5,6 +5,9 @@
 #include "internal/NameParser.hpp"
 #include <memory>
 
+namespace the_seed
+{
+
 namespace
 {
 the_seed::internal::PluginCache<SystemLoader::SystemCreator>::Entry Resolve(the_seed::internal::PluginCache<SystemLoader::SystemCreator> &cache,
@@ -56,3 +59,4 @@ std::vector<std::string> SystemLoader::SearchPathsGet(const std::string &name) c
     the_seed::internal::NameParser parsed(name, "system plugin");
     return this->cache->SearchPathsGet(parsed.org, parsed.library);
 }
+} // namespace the_seed
