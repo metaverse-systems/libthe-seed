@@ -74,7 +74,3 @@ class THE_SEED_API ComponentLoader
     std::unique_ptr<the_seed::internal::PluginCache<ComponentCreator>> cache;
 };
 } // namespace the_seed
-
-#ifdef THE_SEED_LEGACY_NAMES
-using ComponentLoader [[deprecated("use the_seed::ComponentLoader")]] = the_seed::ComponentLoader;
-#endif

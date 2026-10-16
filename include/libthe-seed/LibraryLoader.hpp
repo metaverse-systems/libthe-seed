@@ -71,7 +71,3 @@ class THE_SEED_API LibraryLoader
     std::string loaded_file;
 };
 } // namespace the_seed
-
-#ifdef THE_SEED_LEGACY_NAMES
-using LibraryLoader [[deprecated("use the_seed::LibraryLoader")]] = the_seed::LibraryLoader;
-#endif

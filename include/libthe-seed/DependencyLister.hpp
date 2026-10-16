@@ -144,9 +144,3 @@ class THE_SEED_API DependencyLister
     );
 };
 } // namespace the_seed
-
-#ifdef THE_SEED_LEGACY_NAMES
-using LibraryError [[deprecated("use the_seed::LibraryError")]] = the_seed::LibraryError;
-using DependencyResult [[deprecated("use the_seed::DependencyResult")]] = the_seed::DependencyResult;
-using DependencyLister [[deprecated("use the_seed::DependencyLister")]] = the_seed::DependencyLister;
-#endif

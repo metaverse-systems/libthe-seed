@@ -53,7 +53,3 @@ class THE_SEED_API JSONLoader
     ComponentLoader &loader;
 };
 } // namespace the_seed
-
-#ifdef THE_SEED_LEGACY_NAMES
-using JSONLoader [[deprecated("use the_seed::JSONLoader")]] = the_seed::JSONLoader;
-#endif

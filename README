@@ -133,7 +133,7 @@ The signature container that the-seed builds has no signed attributes and its cr
 
 ## Public surface
 
-The library exports exactly the classes below, each in the `the_seed` namespace and each installed as `<libthe-seed/Name.hpp>`. Everything else in the shared library is internal (`the_seed::internal`) and is neither installed nor exported. Including a public header introduces no name outside `the_seed`, except the macros `THE_SEED_API` and, when you set it, `THE_SEED_LEGACY_NAMES`.
+The library exports exactly the classes below, each in the `the_seed` namespace and each installed as `<libthe-seed/Name.hpp>`. Everything else in the shared library is internal (`the_seed::internal`) and is neither installed nor exported. Including a public header introduces no name outside `the_seed`, except the macro `THE_SEED_API`.
 
 | Public name | Header | Nested public names |
 |---|---|---|
@@ -428,16 +428,7 @@ On Windows, a plugin is opened by absolute path with its own folder first in the
 
 ### Migrating from earlier versions
 
-* Every public class is now in the `the_seed` namespace: `the_seed::ComponentLoader`, `the_seed::SystemLoader`, `the_seed::JSONLoader`, `the_seed::PakLoader`, `the_seed::ResourcePak`, `the_seed::LoadError`, `the_seed::LibraryLoader`, `the_seed::DependencyLister` (with `DependencyResult` and `LibraryError`), `the_seed::MachOParser`, `the_seed::PeSigner`, `the_seed::MachOSigner` and `the_seed::MsiSigner`. The old global names clashed with names in applications and platform headers. There are two ways to move:
-  * Rename. Write `the_seed::` before each name, or add a using-declaration at your own scope (`using the_seed::ComponentLoader;`).
-  * Compile with the switch. Define `THE_SEED_LEGACY_NAMES` before the first `#include <libthe-seed/...>` (or with `-DTHE_SEED_LEGACY_NAMES`) and the former global names exist again as deprecated aliases (`using ComponentLoader [[deprecated("use the_seed::ComponentLoader")]] = the_seed::ComponentLoader;`). The program compiles with a deprecation warning for each use, naming the new name. The aliases are kept until the next incompatible release after the one that introduces the prefix, and they bring back the risk of clashing with other global names, so use the switch only while moving.
-
-  ```cpp
-  #define THE_SEED_LEGACY_NAMES
-  #include <libthe-seed/ComponentLoader.hpp>
-
-  ComponentLoader loader;   // warning: 'ComponentLoader' is deprecated: use the_seed::ComponentLoader
-  ```
+* Every public class is now in the `the_seed` namespace: `the_seed::ComponentLoader`, `the_seed::SystemLoader`, `the_seed::JSONLoader`, `the_seed::PakLoader`, `the_seed::ResourcePak`, `the_seed::LoadError`, `the_seed::LibraryLoader`, `the_seed::DependencyLister` (with `DependencyResult` and `LibraryError`), `the_seed::MachOParser`, `the_seed::PeSigner`, `the_seed::MachOSigner` and `the_seed::MsiSigner`. The old global names clashed with names in applications and platform headers. Update your code: write `the_seed::` before each name, or add a using-declaration at your own scope (`using the_seed::ComponentLoader;`).
 
   Every symbol of the library has a new name, so applications must be rebuilt; a program built against the old library fails to start with an unresolved-symbol error, never silently. Plugins built before the change keep loading unchanged, because a plugin exports only `create_component` or `create_system` and does not link this library; a plugin that links this library's classes must be rebuilt.
 * Only the classes listed above are exported from the shared library. Helpers that were exported by accident are no longer visible.

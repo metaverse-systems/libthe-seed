@@ -102,7 +102,3 @@ private:
     );
 };
 } // namespace the_seed
-
-#ifdef THE_SEED_LEGACY_NAMES
-using PeSigner [[deprecated("use the_seed::PeSigner")]] = the_seed::PeSigner;
-#endif

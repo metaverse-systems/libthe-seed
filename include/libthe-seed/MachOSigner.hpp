@@ -225,7 +225,3 @@ public:
     );
 };
 } // namespace the_seed
-
-#ifdef THE_SEED_LEGACY_NAMES
-using MachOSigner [[deprecated("use the_seed::MachOSigner")]] = the_seed::MachOSigner;
-#endif

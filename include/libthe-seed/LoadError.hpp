@@ -82,7 +82,3 @@ class THE_SEED_API LoadError : public std::runtime_error
     std::vector<std::string> missing;
 };
 } // namespace the_seed
-
-#ifdef THE_SEED_LEGACY_NAMES
-using LoadError [[deprecated("use the_seed::LoadError")]] = the_seed::LoadError;
-#endif

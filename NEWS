@@ -4,10 +4,8 @@ libthe-seed (unreleased)
   (the_seed::ComponentLoader, SystemLoader, JSONLoader, PakLoader,
   ResourcePak, LoadError, LibraryLoader, DependencyLister, DependencyResult,
   LibraryError, MachOParser, PeSigner, MachOSigner, MsiSigner). Applications
-  must be rebuilt and either use the new names or define
-  THE_SEED_LEGACY_NAMES, which brings back the old global names as deprecated
-  aliases until the next incompatible release. Plugins that do not link the
-  library load unchanged.
+  must update their code to the new names and be rebuilt. Plugins that do not
+  link the library load unchanged.
 
 * The shared library exports only the public classes (new installed header
   libthe-seed/Export.hpp defines THE_SEED_API). Internal helpers are hidden.

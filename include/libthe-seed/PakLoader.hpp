@@ -123,7 +123,3 @@ class THE_SEED_API PakLoader
     mutable std::shared_mutex mutex;
 };
 } // namespace the_seed
-
-#ifdef THE_SEED_LEGACY_NAMES
-using PakLoader [[deprecated("use the_seed::PakLoader")]] = the_seed::PakLoader;
-#endif

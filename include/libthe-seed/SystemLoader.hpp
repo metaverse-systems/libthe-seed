@@ -67,7 +67,3 @@ class THE_SEED_API SystemLoader
     std::unique_ptr<the_seed::internal::PluginCache<SystemCreator>> cache;
 };
 } // namespace the_seed
-
-#ifdef THE_SEED_LEGACY_NAMES
-using SystemLoader [[deprecated("use the_seed::SystemLoader")]] = the_seed::SystemLoader;
-#endif

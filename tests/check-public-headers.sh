@@ -7,12 +7,10 @@
 #      (_WINDOWS_, _WINDOWS_H, WINAPI, RTLD_NOW, _DLFCN_H).
 #   4. Including all of them does not collide with global classes that
 #      have the names the library's classes used to have.
-#   5. The compatibility switch THE_SEED_LEGACY_NAMES compiles, and the
-#      aliases it declares are deprecated and point at the_seed::.
-#   6. The internal ELF, PE and Mach-O headers sit next to the platform's own
+#   5. The internal ELF, PE and Mach-O headers sit next to the platform's own
 #      (<elf.h> on Linux, <windows.h> in the Windows cross build), in both
 #      include orders.
-#   7. A source file outside the library cannot reach an internal header
+#   6. A source file outside the library cannot reach an internal header
 #      with the include path the library's public tests use.
 #
 # Every failing item is printed. Exit status: 0 pass, 1 fail, 77 skipped.
@@ -140,58 +138,7 @@ if ! compile -I"$include_root" ${LIBECS_CFLAGS:-} "$work/collision.cpp"; then
     grep -E 'error' "$work/cc.log" | sed 's/^/    /' | head -n 8
 fi
 
-# ---- 5. The compatibility switch ----
-
-cat >"$work/legacy.cpp" <<'SOURCE'
-#include <libthe-seed/ComponentLoader.hpp>
-#include <libthe-seed/DependencyLister.hpp>
-#include <libthe-seed/JSONLoader.hpp>
-#include <libthe-seed/LibraryLoader.hpp>
-#include <libthe-seed/LoadError.hpp>
-#include <libthe-seed/MachOParser.hpp>
-#include <libthe-seed/MachOSigner.hpp>
-#include <libthe-seed/MsiSigner.hpp>
-#include <libthe-seed/PakLoader.hpp>
-#include <libthe-seed/PeSigner.hpp>
-#include <libthe-seed/ResourcePak.hpp>
-#include <libthe-seed/SystemLoader.hpp>
-
-int Use()
-{
-    ComponentLoader components;
-    SystemLoader systems;
-    PakLoader paks;
-    LibraryLoader library("none");
-    DependencyLister lister;
-    DependencyResult result;
-    LibraryError library_error;
-    LoadError::Reason reason = LoadError::Reason::NotFound;
-    LoadError::LocationState state = LoadError::LocationState::Missing;
-    MachOParser::Format format = MachOParser::Format::NotMachO;
-    ResourcePak *pak = nullptr;
-    JSONLoader *json = nullptr;
-    bool signed_pe = PeSigner::HasEmbeddedSignature("none");
-    bool signed_macho = MachOSigner::HasEmbeddedSignature("none");
-    bool signed_msi = MsiSigner::HasEmbeddedSignature("none");
-    (void)components; (void)systems; (void)paks; (void)library; (void)lister;
-    (void)result; (void)library_error; (void)reason; (void)state; (void)format;
-    (void)pak; (void)json; (void)signed_pe; (void)signed_macho; (void)signed_msi;
-    return 0;
-}
-SOURCE
-
-if ! compile -I"$include_root" ${LIBECS_CFLAGS:-} -DTHE_SEED_LEGACY_NAMES -Wno-error "$work/legacy.cpp"; then
-    problem "the legacy names do not compile with THE_SEED_LEGACY_NAMES:"
-    grep -E 'error' "$work/cc.log" | sed 's/^/    /' | head -n 8
-fi
-if compile -I"$include_root" ${LIBECS_CFLAGS:-} -DTHE_SEED_LEGACY_NAMES -Werror=deprecated-declarations "$work/legacy.cpp"; then
-    problem "the legacy names are not deprecated: the compile with -Werror=deprecated-declarations passed"
-elif ! grep -q 'the_seed::' "$work/cc.log"; then
-    problem "the deprecation messages of the legacy names do not mention the_seed::"
-    show_log
-fi
-
-# ---- 6. Internal definitions next to the platform's ----
+# ---- 5. Internal definitions next to the platform's ----
 
 if [ "$cross" = yes ]; then
     system_header='<windows.h>'
@@ -217,7 +164,7 @@ for internal in ElfParser PeParser MachODefs; do
     done
 done
 
-# ---- 7. The public route does not reach internal headers ----
+# ---- 6. The public route does not reach internal headers ----
 
 # The include path of the library's public tests: the public headers, the
 # libecs-cpp headers and the Catch2 extras, but not src/.

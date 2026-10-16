@@ -177,7 +177,3 @@ public:
     [[nodiscard]] static SignatureCheck CheckSignature(const std::string &file_path);
 };
 } // namespace the_seed
-
-#ifdef THE_SEED_LEGACY_NAMES
-using MsiSigner [[deprecated("use the_seed::MsiSigner")]] = the_seed::MsiSigner;
-#endif
