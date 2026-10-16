@@ -54,6 +54,29 @@ AS_IF([test "x$enable_tests" = xno],
 AM_CONDITIONAL([ENABLE_TESTS], [test "x$tests_enabled" = xyes])
 AM_CONDITIONAL([TESTS_DISABLED_BY_OPTION], [test "x$enable_tests" = xno])
 
+# Warnings are always shown. --enable-werror=yes makes them fatal in the
+# library, the tests and the test plugins; the default leaves them as warnings
+# so that a newer compiler never stops an installation.
+AC_ARG_ENABLE([werror],
+    [AS_HELP_STRING([--enable-werror@<:@=no|yes@:>@],
+        [treat compiler warnings as errors in the library and the tests (default: no)])],
+    [],
+    [enable_werror=no])
+case "$enable_werror" in
+    no)
+        WERROR_CXXFLAGS=
+        ;;
+    yes)
+        WERROR_CXXFLAGS="-Werror"
+        ;;
+    *)
+        AC_MSG_ERROR([invalid value '$enable_werror' for --enable-werror; accepted values are: no, yes])
+        ;;
+esac
+WARN_CXXFLAGS="-Wall -Wextra"
+AC_SUBST([WARN_CXXFLAGS])
+AC_SUBST([WERROR_CXXFLAGS])
+
 # Optional runtime checking: --enable-sanitizer=address builds the library and
 # the tests with AddressSanitizer and UndefinedBehaviorSanitizer;
 # --enable-sanitizer=thread builds them with ThreadSanitizer.
@@ -109,4 +132,5 @@ AC_CONFIG_FILES([Makefile
 AC_OUTPUT
 
 AC_MSG_NOTICE([tests: $tests_status])
+AC_MSG_NOTICE([warnings as errors: $enable_werror])
 AC_MSG_NOTICE([sanitizer: $SANITIZER])

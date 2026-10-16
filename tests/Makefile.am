@@ -1,4 +1,4 @@
-AM_CPPFLAGS = -I$(top_srcdir)/include ${LIBECS_CFLAGS} -I$(top_srcdir)/external/Catch2/extras -I$(srcdir) \
+AM_CPPFLAGS = -I$(top_srcdir)/include ${LIBECS_CFLAGS} -isystem $(top_srcdir)/external/Catch2/extras -I$(srcdir) \
               -DFIXTURES_DIR=\"$(abs_srcdir)/fixtures\" \
               -DLIBRARY_PATH_UNDER_TEST=\"$(abs_top_builddir)/src/.libs/libthe-seed.so\" \
               -DMODULE_DIR=\"$(abs_builddir)/.libs\"
@@ -6,7 +6,7 @@ AM_CPPFLAGS = -I$(top_srcdir)/include ${LIBECS_CFLAGS} -I$(top_srcdir)/external/
 # _CPPFLAGS that adds -I$(top_srcdir)/src. Public tests link the shared library
 # only and cannot include internal headers. Internal tests link
 # ../src/libthe-seed-core.la statically (one copy of every internal counter).
-AM_CXXFLAGS = -std=c++20 $(SANITIZER_CXXFLAGS)
+AM_CXXFLAGS = -std=c++20 $(SANITIZER_CXXFLAGS) $(WARN_CXXFLAGS) $(WERROR_CXXFLAGS)
 AM_LDFLAGS = $(SANITIZER_LDFLAGS)
 
 LOG_COMPILER = $(SHELL) $(srcdir)/run-test.sh
@@ -73,7 +73,11 @@ endif
 
 check_LTLIBRARIES = libtestmodule.la libtestmodulealt.la libtestsystem.la libcatch.la
 
-libcatch_la_SOURCES = ../external/Catch2/extras/catch_amalgamated.cpp
+# The vendored framework source is reached through plain -I, so its warnings are
+# shown; it never gets -Werror.
+libcatch_la_SOURCES = catch_main.cpp
+libcatch_la_CPPFLAGS = -I$(top_srcdir)/external/Catch2/extras
+libcatch_la_CXXFLAGS = -std=c++20 $(SANITIZER_CXXFLAGS) $(WARN_CXXFLAGS)
 
 test_NameParser_SOURCES = test_NameParser.cpp
 test_NameParser_CPPFLAGS = $(AM_CPPFLAGS) -I$(top_srcdir)/src
@@ -233,17 +237,17 @@ test_SignersUseReplace_CPPFLAGS = $(AM_CPPFLAGS) -I$(top_srcdir)/src
 test_SignersUseReplace_LDADD = libcatch.la ../src/libthe-seed-core.la ${LIBECS_LIBS}
 
 libtestmodule_la_SOURCES = TestModule.cpp
-libtestmodule_la_CXXFLAGS = -std=c++20 ${LIBECS_CFLAGS} $(SANITIZER_CXXFLAGS)
+libtestmodule_la_CXXFLAGS = -std=c++20 ${LIBECS_CFLAGS} $(SANITIZER_CXXFLAGS) $(WARN_CXXFLAGS) $(WERROR_CXXFLAGS)
 libtestmodule_la_LDFLAGS = -no-undefined -rpath /nowhere -version-info 0:0:0 $(SANITIZER_LDFLAGS)
 libtestmodule_la_LIBADD = ${LIBECS_LIBS}
 
 libtestmodulealt_la_SOURCES = TestModule.cpp
-libtestmodulealt_la_CXXFLAGS = -std=c++20 ${LIBECS_CFLAGS} $(SANITIZER_CXXFLAGS) -DTEST_MODULE_VARIANT=2
+libtestmodulealt_la_CXXFLAGS = -std=c++20 ${LIBECS_CFLAGS} $(SANITIZER_CXXFLAGS) $(WARN_CXXFLAGS) $(WERROR_CXXFLAGS) -DTEST_MODULE_VARIANT=2
 libtestmodulealt_la_LDFLAGS = -no-undefined -rpath /nowhere -version-info 0:0:0 $(SANITIZER_LDFLAGS)
 libtestmodulealt_la_LIBADD = ${LIBECS_LIBS}
 
 libtestsystem_la_SOURCES = TestSystemModule.cpp
-libtestsystem_la_CXXFLAGS = -std=c++20 ${LIBECS_CFLAGS} $(SANITIZER_CXXFLAGS)
+libtestsystem_la_CXXFLAGS = -std=c++20 ${LIBECS_CFLAGS} $(SANITIZER_CXXFLAGS) $(WARN_CXXFLAGS) $(WERROR_CXXFLAGS)
 libtestsystem_la_LDFLAGS = -no-undefined -rpath /nowhere -version-info 0:0:0 $(SANITIZER_LDFLAGS)
 libtestsystem_la_LIBADD = ${LIBECS_LIBS}
 

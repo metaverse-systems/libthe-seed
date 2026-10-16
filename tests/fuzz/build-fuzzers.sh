@@ -41,7 +41,7 @@ fi
 rm -f "$probe" "$out/probe" "$out/probe.log"
 
 flags="-std=c++20 -g -O1 -fsanitize=fuzzer,address,undefined -fno-sanitize-recover=undefined"
-includes="-I$top/include -I$top/src -I$top/tests -I$here"
+includes="-I$top/include -I$top/src -I$top/tests -I$here -isystem $top/external"
 
 sources="internal/ElfParser.cpp internal/PeParser.cpp PeSigner.cpp MachOParser.cpp MachOSigner.cpp MsiSigner.cpp DependencyLister.cpp internal/FileIO.cpp internal/MachOLayout.cpp internal/CfbReader.cpp internal/CfbWriter.cpp internal/MsiAuthenticode.cpp internal/AuthenticodeDigestField.cpp"
 

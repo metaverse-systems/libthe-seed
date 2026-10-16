@@ -40,6 +40,7 @@ namespace
         // Get the raw factory function pointer
         auto creator = loader.Get("org/my-component");
         // --- end README text
+        (void)creator;
     }
 
     void SystemLoaderExample()

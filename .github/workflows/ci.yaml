@@ -100,7 +100,7 @@ jobs:
           SANITIZER: ${{ matrix.sanitizer }}
         run: |
           ./autogen.sh
-          ./configure --enable-tests=yes ${SANITIZER:+--enable-sanitizer=$SANITIZER}
+          ./configure --enable-tests=yes --enable-werror=yes ${SANITIZER:+--enable-sanitizer=$SANITIZER}
 
       - name: Build
         run: make -j4

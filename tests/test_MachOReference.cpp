@@ -24,7 +24,6 @@
 #include <cstdlib>
 #include <fstream>
 #include <map>
-#include <regex>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -87,21 +86,87 @@ struct Recorded
     std::string sha256;
 };
 
+// True when text is exactly 64 lowercase hexadecimal digits.
+bool IsHex64(const std::string &text)
+{
+    if(text.size() != 64)
+    {
+        return false;
+    }
+    for(char c : text)
+    {
+        if(!((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f')))
+        {
+            return false;
+        }
+    }
+    return true;
+}
+
+// "<prefix><digest>" with nothing else on the line.
+bool MatchPrefixedDigest(const std::string &line, const std::string &prefix, std::string &digest)
+{
+    if(line.rfind(prefix, 0) != 0 || !IsHex64(line.substr(prefix.size())))
+    {
+        return false;
+    }
+    digest = line.substr(prefix.size());
+    return true;
+}
+
+// "<spaces>page <decimal number> <digest>".
+bool MatchPageLine(const std::string &line, std::string &digest)
+{
+    std::size_t at = line.find_first_not_of(" \t");
+    if(at == std::string::npos || line.compare(at, 5, "page ") != 0)
+    {
+        return false;
+    }
+    at += 5;
+    const std::size_t digits = line.find_first_not_of("0123456789", at);
+    if(digits == at || digits == std::string::npos || line[digits] != ' ')
+    {
+        return false;
+    }
+    digest = line.substr(digits + 1);
+    return IsHex64(digest);
+}
+
+// "# sample <name without white space> <digest>".
+bool MatchSampleLine(const std::string &line, std::string &name, std::string &digest)
+{
+    const std::string prefix = "# sample ";
+    if(line.rfind(prefix, 0) != 0)
+    {
+        return false;
+    }
+    const std::size_t space = line.find(' ', prefix.size());
+    if(space == std::string::npos || space == prefix.size())
+    {
+        return false;
+    }
+    name = line.substr(prefix.size(), space - prefix.size());
+    if(name.find_first_of(" \t\r\n\f\v") != std::string::npos)
+    {
+        return false;
+    }
+    digest = line.substr(space + 1);
+    return IsHex64(digest);
+}
+
 Recorded Parse(const std::vector<std::string> &lines)
 {
     Recorded r;
-    static const std::regex page_line("^\\s*page \\d+ ([0-9a-f]{64})$");
-    static const std::regex sha_line("^sha256 ([0-9a-f]{64})$");
     for(const std::string &line : lines)
     {
-        std::smatch m;
-        if(std::regex_match(line, m, page_line))
+        std::string digest;
+        if(MatchPageLine(line, digest))
         {
-            r.pages.push_back(m[1]);
+            r.pages.push_back(digest);
         }
-        else if(std::regex_match(line, m, sha_line))
+        else if(MatchPrefixedDigest(line, "sha256 ", digest))
         {
-            r.sha256 = m[1];
+            r.sha256 = digest;
         }
         else if(line.rfind("file ", 0) == 0)
         {
@@ -315,17 +380,16 @@ TEST_CASE("reference: the recorded answers of every sample agree with the checke
 TEST_CASE("reference: the recorded input hashes match the samples", "[MachOReference]")
 {
     std::ifstream in(seedtest::FixturePath("macho-reference.txt"));
-    static const std::regex sample_line("^# sample (\\S+) ([0-9a-f]{64})$");
     std::string line;
     std::size_t seen = 0;
     while(std::getline(in, line))
     {
-        std::smatch m;
-        if(std::regex_match(line, m, sample_line))
+        std::string name, digest;
+        if(MatchSampleLine(line, name, digest))
         {
-            const mr::Bytes file = ms::LoadFixture(m[1]);
-            INFO(m[1]);
-            CHECK(mr::Hex(mr::Sha256(file.data(), file.size())) == m[2].str());
+            const mr::Bytes file = ms::LoadFixture(name);
+            INFO(name);
+            CHECK(mr::Hex(mr::Sha256(file.data(), file.size())) == digest);
             ++seen;
         }
     }

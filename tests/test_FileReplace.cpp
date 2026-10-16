@@ -75,6 +75,8 @@ std::string Lower(std::string text)
 // cannot make a message pass.
 std::string subject_path;
 
+// Only the cases that run on POSIX systems look for words in a message.
+#if !defined(_WIN32)
 std::string RemoveAll(std::string text, const std::string &piece)
 {
     if(piece.empty())
@@ -103,6 +105,7 @@ bool ContainsAny(const std::string &text, const std::vector<std::string> &words)
     }
     return false;
 }
+#endif
 
 // Calls the replacement and returns the text of the error it raised, or fails
 // the running case when it did not raise one.

@@ -71,7 +71,7 @@ void Put32LE(mr::Bytes &b, std::size_t at, std::uint32_t v)
 {
     for(int i = 0; i < 4; ++i)
     {
-        b[at + i] = static_cast<std::uint8_t>(v >> (8 * i));
+        b.at(at + i) = static_cast<std::uint8_t>(v >> (8 * i));
     }
 }
 

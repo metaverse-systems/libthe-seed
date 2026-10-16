@@ -20,7 +20,6 @@
 #include <cstdio>
 #include <filesystem>
 #include <random>
-#include <regex>
 #include <string>
 #include <thread>
 #include <vector>
@@ -55,6 +54,25 @@ constexpr int kMaxDelayMicroseconds = 20000;
 
 }
 
+// True for ".<name>.seedtmp.<decimal digits>.<hexadecimal digits>", the name of a
+// temporary file a replacement was interrupted in.
+static bool IsLeftoverName(const std::string &entry, const std::string &name)
+{
+    const std::string prefix = "." + name + ".seedtmp.";
+    if(entry.rfind(prefix, 0) != 0)
+    {
+        return false;
+    }
+    const std::string rest = entry.substr(prefix.size());
+    const std::size_t dot = rest.find('.');
+    if(dot == std::string::npos || dot == 0 || dot + 1 == rest.size())
+    {
+        return false;
+    }
+    return rest.find_first_not_of("0123456789") == dot &&
+           rest.find_first_not_of("0123456789abcdef", dot + 1) == std::string::npos;
+}
+
 TEST_CASE("kill: a replacement interrupted by SIGKILL leaves the old or the new content",
           "[FileReplaceKill]")
 {
@@ -65,7 +83,6 @@ TEST_CASE("kill: a replacement interrupted by SIGKILL leaves the old or the new 
     // Content 0 is the old content, content 1 the new; the child alternates
     // so that every replacement is a change.
     const Bytes contents[2] = {DistinctContent(0, kLargeSize), DistinctContent(1, kLargeSize)};
-    const std::regex leftover_pattern("^\\." + name + "\\.seedtmp\\.[0-9]+\\.[0-9a-f]+$");
 
     std::mt19937_64 random{std::random_device{}()};
     std::uniform_int_distribution<int> delay(0, kMaxDelayMicroseconds);
@@ -118,7 +135,7 @@ TEST_CASE("kill: a replacement interrupted by SIGKILL leaves the old or the new 
                 continue;
             }
             INFO("unexpected entry " << entry.name << " after round " << round);
-            REQUIRE(std::regex_match(entry.name, leftover_pattern));
+            REQUIRE(IsLeftoverName(entry.name, name));
             ++leftovers_seen;
             fs::remove(scratch.Path() / entry.name);
         }

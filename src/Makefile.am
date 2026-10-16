@@ -45,7 +45,7 @@ noinst_HEADERS = \
 
 # Hidden by default: only classes marked THE_SEED_API are exported.
 libthe_seed_core_la_CPPFLAGS = -DTHE_SEED_BUILDING
-libthe_seed_core_la_CXXFLAGS = -fvisibility=hidden -std=c++20 -I$(top_srcdir)/include -I$(top_srcdir)/external ${LIBECS_CFLAGS} $(SANITIZER_CXXFLAGS)
+libthe_seed_core_la_CXXFLAGS = -fvisibility=hidden -std=c++20 -I$(top_srcdir)/include -isystem $(top_srcdir)/external ${LIBECS_CFLAGS} $(SANITIZER_CXXFLAGS) $(WARN_CXXFLAGS) $(WERROR_CXXFLAGS)
 libthe_seed_core_la_LIBADD = -lpthread ${LIBECS_LIBS}
 
 # The shared library has no sources of its own. The empty C++ file only makes
