@@ -31,7 +31,13 @@ AM_TESTS_ENVIRONMENT = \
     top_srcdir='$(abs_top_srcdir)'; export top_srcdir; \
     host='$(host)'; export host; \
     CROSS_COMPILING='$(cross_compiling_flag)'; export CROSS_COMPILING; \
-    MAKE='$(MAKE)'; export MAKE;
+    MAKE='$(MAKE)'; export MAKE; \
+    SEED_SRCDIR='$(abs_top_srcdir)'; export SEED_SRCDIR; \
+    SEED_BUILDDIR='$(abs_top_builddir)'; export SEED_BUILDDIR; \
+    SEED_PREFIX='$(prefix)'; export SEED_PREFIX; \
+    SEED_VERSION='$(PACKAGE_VERSION)'; export SEED_VERSION; \
+    SEED_HOST_OS='@host_os@'; export SEED_HOST_OS; \
+    SEED_SANITIZER_FLAGS='$(SANITIZER_CXXFLAGS) $(SANITIZER_LDFLAGS)'; export SEED_SANITIZER_FLAGS;
 
 # Bare program names: run-test.sh compares them with known-gaps.txt, and
 # check_PROGRAMS gets $(EXEEXT) appended when cross-compiling for Windows.
@@ -46,14 +52,17 @@ seed_test_programs = test_NameParser test_LoadError test_LibraryLoader test_Depe
 
 check_PROGRAMS = $(seed_test_programs)
 
+# Scripts listed here run in every build, including cross builds.
+host_independent_tests = check-fixtures.sh check-style.sh check-exports.sh check-public-headers.sh
+
 if CROSS_COMPILING
 cross_compiling_flag = yes
-TESTS = check-fixtures.sh check-style.sh check-exports.sh check-public-headers.sh
+TESTS = $(host_independent_tests)
 check-local:
 	@echo "Test programs were built but not run: cross-compiling."
 else
 cross_compiling_flag = no
-TESTS = $(seed_test_programs) run-test-selftest.sh check-fixtures.sh check-style.sh check-exports.sh check-public-headers.sh
+TESTS = $(seed_test_programs) run-test-selftest.sh $(host_independent_tests)
 endif
 
 check_LTLIBRARIES = libtestmodule.la libtestmodulealt.la libtestsystem.la libcatch.la
