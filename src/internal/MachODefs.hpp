@@ -14,7 +14,7 @@ inline constexpr std::uint32_t FAT_CIGAM   = 0xBEBAFECA;
 // byte order of the host: CF FA ED FE is 0xCFFAEDFE. These are the names the
 // layout module uses; the older names above are host-order integers and are
 // kept for the code that has not moved to the layout module yet.
-namespace seed::internal::macho
+namespace the_seed::internal::macho
 {
 
 inline constexpr std::uint32_t kBytesThin64Little = 0xCFFAEDFE; // CF FA ED FE
@@ -47,7 +47,7 @@ inline constexpr std::uint64_t kFatArch32Size           = 20;
 inline constexpr std::uint64_t kFatArch64Size           = 32;
 inline constexpr std::uint64_t kFatHeaderSize           = 8;
 
-} // namespace seed::internal::macho
+} // namespace the_seed::internal::macho
 
 #pragma pack(push, 1)
 struct MachHeader32

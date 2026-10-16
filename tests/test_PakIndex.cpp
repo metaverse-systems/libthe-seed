@@ -18,7 +18,7 @@
 #include <string>
 #include <vector>
 
-using namespace seed::internal;
+using namespace the_seed::internal;
 
 namespace
 {

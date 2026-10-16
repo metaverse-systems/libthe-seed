@@ -13,7 +13,7 @@
 #include <string>
 #include <vector>
 
-namespace seed::internal
+namespace the_seed::internal
 {
 
 // The kind used in the messages of every pak failure.
@@ -48,4 +48,4 @@ class PakNoMemory : public std::runtime_error
 // checked) and the other exceptions of PakFile::ReadAt.
 void PakEntryRead(const PakFile &file, const PakEntry &entry, ecs::Resource &resource);
 
-} // namespace seed::internal
+} // namespace the_seed::internal

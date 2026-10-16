@@ -17,17 +17,19 @@
 
 namespace {
 
-using seed::internal::AuthenticodeDigestField;
-using seed::internal::CfbNode;
-using seed::internal::CfbReader;
-using seed::internal::CheckMsiSignatureSize;
-using seed::internal::ComputeMsiFingerprint;
-using seed::internal::GuardEntryPoint;
-using seed::internal::MsiSignatureExName;
-using seed::internal::MsiSignatureName;
-using seed::internal::PackageModel;
-using seed::internal::ReadAuthenticodeDigestField;
-using seed::internal::WriteCfb;
+using the_seed::internal::AuthenticodeDigestField;
+using the_seed::internal::CfbNode;
+using the_seed::internal::CfbReader;
+using the_seed::internal::CheckMsiSignatureSize;
+using the_seed::internal::ComputeMsiFingerprint;
+using the_seed::internal::GuardEntryPoint;
+using the_seed::internal::MsiSignatureExName;
+using the_seed::internal::MsiSignatureName;
+using the_seed::internal::PackageModel;
+using the_seed::internal::ReadAuthenticodeDigestField;
+using the_seed::internal::ReadFileBytes;
+using the_seed::internal::WriteCfb;
+using the_seed::internal::WriteFileBytes;
 
 constexpr const char *kFormat = "MSI";
 

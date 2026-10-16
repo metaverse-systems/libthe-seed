@@ -16,7 +16,17 @@ AM_TESTS_ENVIRONMENT = \
     SEED_TESTS_SRCDIR='$(abs_srcdir)'; export SEED_TESTS_SRCDIR; \
     ASAN_OPTIONS='halt_on_error=1:detect_leaks=1:abort_on_error=0:print_summary=1'; export ASAN_OPTIONS; \
     UBSAN_OPTIONS='halt_on_error=1:print_stacktrace=1:print_summary=1'; export UBSAN_OPTIONS; \
-    TSAN_OPTIONS='halt_on_error=1:second_deadlock_stack=1:print_summary=1'; export TSAN_OPTIONS;
+    TSAN_OPTIONS='halt_on_error=1:second_deadlock_stack=1:print_summary=1'; export TSAN_OPTIONS; \
+    CXX='$(CXX)'; export CXX; \
+    NM='$(NM)'; export NM; \
+    OBJDUMP='$(OBJDUMP)'; export OBJDUMP; \
+    CXXFILT='$(CXXFILT)'; export CXXFILT; \
+    LIBECS_CFLAGS='$(LIBECS_CFLAGS)'; export LIBECS_CFLAGS; \
+    LIBECS_LIBS='$(LIBECS_LIBS)'; export LIBECS_LIBS; \
+    top_builddir='$(abs_top_builddir)'; export top_builddir; \
+    top_srcdir='$(abs_top_srcdir)'; export top_srcdir; \
+    host='$(host)'; export host; \
+    CROSS_COMPILING='$(cross_compiling_flag)'; export CROSS_COMPILING;
 
 # Bare program names: run-test.sh compares them with known-gaps.txt, and
 # check_PROGRAMS gets $(EXEEXT) appended when cross-compiling for Windows.
@@ -31,11 +41,13 @@ seed_test_programs = test_NameParser test_LoadError test_LibraryLoader test_Depe
 check_PROGRAMS = $(seed_test_programs)
 
 if CROSS_COMPILING
-TESTS = check-fixtures.sh
+cross_compiling_flag = yes
+TESTS = check-fixtures.sh check-style.sh
 check-local:
 	@echo "Test programs were built but not run: cross-compiling."
 else
-TESTS = $(seed_test_programs) run-test-selftest.sh check-fixtures.sh
+cross_compiling_flag = no
+TESTS = $(seed_test_programs) run-test-selftest.sh check-fixtures.sh check-style.sh
 endif
 
 check_LTLIBRARIES = libtestmodule.la libtestmodulealt.la libtestsystem.la libcatch.la
@@ -209,7 +221,7 @@ test_ReadmeExamples_LDFLAGS = $(AM_LDFLAGS) -pthread
 
 EXTRA_DIST = TestPaths.hpp LoaderTestSupport.hpp PakTestSupport.hpp CfbReference.hpp MsiTestSupport.hpp ToolSupport.hpp MachOReference.hpp MachOSigningSupport.hpp HeapCounter.hpp MalformedInput.hpp ReplaceTestSupport.hpp \
              reference/reference-dump.cpp reference/compare-reference.sh \
-             reference/make-generated-references.sh run-test.sh run-test-selftest.sh check-fixtures.sh \
+             reference/make-generated-references.sh run-test.sh run-test-selftest.sh check-fixtures.sh check-style.sh \
              fuzz/FuzzTargets.hpp fuzz/FuzzTargets.cpp fuzz/fuzz_entry.cpp \
              fuzz/build-fuzzers.sh fuzz/run-fuzzers.sh \
              fuzz/corpus \

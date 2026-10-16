@@ -6,7 +6,7 @@
 #include <unordered_map>
 #include <utility>
 
-namespace seed::internal
+namespace the_seed::internal
 {
 
 namespace
@@ -782,4 +782,4 @@ PackageModel CfbReader::Parse(const std::vector<std::uint8_t> &bytes)
     return model;
 }
 
-} // namespace seed::internal
+} // namespace the_seed::internal

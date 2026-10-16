@@ -1,6 +1,9 @@
 #include "NameParser.hpp"
 #include <libthe-seed/LoadError.hpp>
 
+namespace the_seed::internal
+{
+
 namespace
 {
     [[noreturn]] void Reject(const std::string &name, const std::string &kind, const std::string &rule)
@@ -70,3 +73,5 @@ NameParser::NameParser(const std::string &name, const std::string &kind)
     PartCheck(this->org, name, kind);
     PartCheck(this->library, name, kind);
 }
+
+} // namespace the_seed::internal

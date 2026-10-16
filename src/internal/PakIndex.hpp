@@ -10,7 +10,7 @@
 #include <unordered_map>
 #include <vector>
 
-namespace seed::internal
+namespace the_seed::internal
 {
 
 // A pak breaks a rule of the pak format. what() is the detail text (without a
@@ -61,4 +61,4 @@ std::shared_ptr<const PakIndex> PakIndexRead(PakFile &file);
 std::uint64_t PakDescriptionParseCount();
 void ResetPakDescriptionParseCount();
 
-} // namespace seed::internal
+} // namespace the_seed::internal

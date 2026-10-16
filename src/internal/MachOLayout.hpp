@@ -20,7 +20,7 @@
 #include <string>
 #include <vector>
 
-namespace seed::internal
+namespace the_seed::internal
 {
 
 enum class MachOKind
@@ -148,4 +148,4 @@ SliceLayout ParseMachOSlice(const ByteSpan &file, std::uint64_t base, std::uint6
 // overlapping another, and any damaged slice.
 MachOContainer ParseMachOContainer(const ByteSpan &file);
 
-} // namespace seed::internal
+} // namespace the_seed::internal

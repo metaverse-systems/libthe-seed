@@ -5,7 +5,7 @@
 #include <vector>
 #include <libecs-cpp/ecs.hpp>
 
-namespace seed::internal
+namespace the_seed::internal
 {
 template <typename Creator> class PluginCache;
 }
@@ -60,5 +60,5 @@ class SystemLoader
     std::vector<std::string> SearchPathsGet(const std::string &name) const;
 
   private:
-    std::unique_ptr<seed::internal::PluginCache<SystemCreator>> cache;
+    std::unique_ptr<the_seed::internal::PluginCache<SystemCreator>> cache;
 };

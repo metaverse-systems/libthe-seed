@@ -189,12 +189,12 @@ inline bool RunningAsRoot()
 // How many times the library has read a whole file since the last reset.
 inline std::uint64_t ReadCount()
 {
-    return ::ReadFileBytesCallCount();
+    return the_seed::internal::ReadFileBytesCallCount();
 }
 
 inline void ResetReadCount()
 {
-    ::ResetReadFileBytesCallCount();
+    the_seed::internal::ResetReadFileBytesCallCount();
 }
 
 // ---------------------------------------------------------------------------

@@ -30,7 +30,7 @@
 
 SEED_DEFINE_HEAP_COUNTER()
 
-using namespace seed::internal;
+using namespace the_seed::internal;
 
 namespace
 {

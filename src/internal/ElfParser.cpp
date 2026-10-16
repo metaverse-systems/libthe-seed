@@ -1,8 +1,8 @@
 #include "ElfParser.hpp"
 
 #include "ByteSwap.hpp"
-#include "internal/BoundedBytes.hpp"
-#include "internal/FileIO.hpp"
+#include "BoundedBytes.hpp"
+#include "FileIO.hpp"
 
 #include <cstddef>
 #include <cstdint>
@@ -11,14 +11,13 @@
 #include <string>
 #include <vector>
 
-namespace {
+namespace the_seed::internal
+{
 
-using seed::internal::ByteOrder;
-using seed::internal::ByteSpan;
-using seed::internal::CheckedAdd;
-using seed::internal::CheckedMultiply;
-using seed::internal::RangeFits;
-using seed::internal::ThrowMalformed;
+namespace
+{
+
+using namespace elf;
 
 constexpr const char *kFormat = "ELF";
 constexpr std::uint64_t kMaxNameLength = 4096;
@@ -85,7 +84,7 @@ std::vector<std::string> ParseElf(const ByteSpan &file, bool file_is_little_endi
         const std::uint64_t p_memsz = ByteSwapIfNeeded(phdr.p_memsz, file_is_little_endian);
         const std::uint64_t p_filesz = ByteSwapIfNeeded(phdr.p_filesz, file_is_little_endian);
 
-        if(p_type == PT_LOAD)
+        if(p_type == kPtLoad)
         {
             if(!RangeFits(p_offset, p_filesz, file.Size()))
             {
@@ -99,7 +98,7 @@ std::vector<std::string> ParseElf(const ByteSpan &file, bool file_is_little_endi
             load_segments.push_back({p_vaddr, p_filesz, p_offset});
         }
 
-        if(p_type == PT_DYNAMIC)
+        if(p_type == kPtDynamic)
         {
             dynamic_offset = p_offset;
             dynamic_size = p_filesz;
@@ -124,20 +123,20 @@ std::vector<std::string> ParseElf(const ByteSpan &file, bool file_is_little_endi
         const auto dyn = dynamic.Read<Dyn>(index * sizeof(Dyn), order, "dynamic entry");
         const auto tag = ByteSwapIfNeeded(dyn.d_tag, file_is_little_endian);
 
-        if(tag == DT_NULL)
+        if(tag == kDtNull)
         {
             break;
         }
 
-        if(tag == DT_NEEDED)
+        if(tag == kDtNeeded)
         {
             needed_offsets.push_back(ByteSwapIfNeeded(dyn.d_un.d_val, file_is_little_endian));
         }
-        else if(tag == DT_STRTAB)
+        else if(tag == kDtStrtab)
         {
             string_table_va = ByteSwapIfNeeded(dyn.d_un.d_ptr, file_is_little_endian);
         }
-        else if(tag == DT_STRSZ)
+        else if(tag == kDtStrsz)
         {
             string_table_size = ByteSwapIfNeeded(dyn.d_un.d_val, file_is_little_endian);
         }
@@ -189,34 +188,34 @@ std::vector<std::string> ListFromBytes(const std::vector<std::uint8_t> &bytes)
 {
     const ByteSpan file(bytes, kFormat);
 
-    if(bytes.size() < EI_NIDENT)
+    if(bytes.size() < kEiNident)
     {
         ThrowMalformed(kFormat, "ELF header is too small (" + std::to_string(bytes.size()) +
-                                    " bytes, " + std::to_string(EI_NIDENT) + " needed)");
+                                    " bytes, " + std::to_string(kEiNident) + " needed)");
     }
 
-    if(bytes[EI_MAG0] != ELFMAG0 || bytes[EI_MAG1] != ELFMAG1 || bytes[EI_MAG2] != ELFMAG2 ||
-       bytes[EI_MAG3] != ELFMAG3)
+    if(bytes[kEiMag0] != kElfMag0 || bytes[kEiMag1] != kElfMag1 || bytes[kEiMag2] != kElfMag2 ||
+       bytes[kEiMag3] != kElfMag3)
     {
         ThrowMalformed(kFormat, "ELF header magic is invalid");
     }
 
-    const std::uint8_t elf_class = bytes[EI_CLASS];
-    const std::uint8_t elf_data = bytes[EI_DATA];
+    const std::uint8_t elf_class = bytes[kEiClass];
+    const std::uint8_t elf_data = bytes[kEiData];
 
-    if(elf_data != ELFDATA2LSB && elf_data != ELFDATA2MSB)
+    if(elf_data != kElfData2Lsb && elf_data != kElfData2Msb)
     {
         ThrowMalformed(kFormat, "ELF header endianness " + std::to_string(elf_data) + " is not supported");
     }
 
-    const bool file_is_little_endian = elf_data == ELFDATA2LSB;
+    const bool file_is_little_endian = elf_data == kElfData2Lsb;
 
-    if(elf_class == ELFCLASS32)
+    if(elf_class == kElfClass32)
     {
         return ParseElf<Elf32_Ehdr, Elf32_Phdr, Elf32_Dyn>(file, file_is_little_endian);
     }
 
-    if(elf_class == ELFCLASS64)
+    if(elf_class == kElfClass64)
     {
         return ParseElf<Elf64_Ehdr, Elf64_Phdr, Elf64_Dyn>(file, file_is_little_endian);
     }
@@ -227,10 +226,12 @@ std::vector<std::string> ListFromBytes(const std::vector<std::uint8_t> &bytes)
 
 std::vector<std::string> ElfParser::ListDependencies(const std::string &file_path)
 {
-    return seed::internal::GuardEntryPoint(kFormat, [&] { return ListFromBytes(ReadFileBytes(file_path)); });
+    return GuardEntryPoint(kFormat, [&] { return ListFromBytes(ReadFileBytes(file_path)); });
 }
 
 std::vector<std::string> ElfParser::ListDependenciesFromBytes(const std::vector<std::uint8_t> &bytes)
 {
-    return seed::internal::GuardEntryPoint(kFormat, [&] { return ListFromBytes(bytes); });
+    return GuardEntryPoint(kFormat, [&] { return ListFromBytes(bytes); });
 }
+
+} // namespace the_seed::internal

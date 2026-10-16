@@ -26,7 +26,7 @@
 #include <memory>
 #endif
 
-namespace seed::internal
+namespace the_seed::internal
 {
 
 enum class ByteOrder
@@ -325,4 +325,4 @@ auto GuardEntryPoint(std::string_view format, F &&callable) -> decltype(callable
     }
 }
 
-} // namespace seed::internal
+} // namespace the_seed::internal

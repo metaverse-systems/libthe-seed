@@ -70,8 +70,8 @@ std::vector<std::string> Names(const std::vector<FolderEntry> &entries)
 
 #if !defined(_WIN32)
 
-using seed::internal::FileReplaceHooks;
-using seed::internal::FileReplaceHooksScope;
+using the_seed::internal::FileReplaceHooks;
+using the_seed::internal::FileReplaceHooksScope;
 
 int renames_attempted = 0;
 
@@ -84,7 +84,7 @@ int FailingRename(const char *, const char *)
 
 FileReplaceHooks FailingRenameHooks()
 {
-    FileReplaceHooks hooks = seed::internal::DefaultFileReplaceHooks();
+    FileReplaceHooks hooks = the_seed::internal::DefaultFileReplaceHooks();
     hooks.rename = &FailingRename;
     return hooks;
 }

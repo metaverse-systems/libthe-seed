@@ -8,7 +8,7 @@
 
 #include <libthe-seed/LoadError.hpp>
 
-namespace seed::internal
+namespace the_seed::internal
 {
 
 // The platform file name of the plugin library `library`: lib<library>.so,
@@ -111,4 +111,4 @@ void *OpenPinned(const std::filesystem::path &absolute_path, std::string &error)
 std::uint64_t PluginOpenCallCount();
 void ResetPluginOpenCallCount();
 
-} // namespace seed::internal
+} // namespace the_seed::internal

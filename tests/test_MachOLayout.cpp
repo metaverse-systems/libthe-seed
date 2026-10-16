@@ -27,7 +27,7 @@
 #include <string>
 #include <vector>
 
-namespace si = seed::internal;
+namespace si = the_seed::internal;
 namespace mr = machoref;
 
 namespace {

@@ -279,7 +279,7 @@ TEST_CASE("Concurrent Create of an existing plugin opens it once per loader", "[
 
         std::atomic<int> working{0};
         std::atomic<int> broken{0};
-        seed::internal::ResetPluginOpenCallCount();
+        the_seed::internal::ResetPluginOpenCallCount();
 
         RunTogether([&](int index) {
             try
@@ -304,7 +304,7 @@ TEST_CASE("Concurrent Create of an existing plugin opens it once per loader", "[
         REQUIRE(broken.load() == 0);
         REQUIRE(working.load() == NUM_THREADS);
         // One open for the component loader and one for the system loader.
-        REQUIRE(seed::internal::PluginOpenCallCount() == 2);
+        REQUIRE(the_seed::internal::PluginOpenCallCount() == 2);
     }
 
     // Every thread of the group asks the same loader for the same plugin.
@@ -317,7 +317,7 @@ TEST_CASE("Concurrent Create of an existing plugin opens it once per loader", "[
 
         std::atomic<int> working{0};
         std::atomic<int> broken{0};
-        seed::internal::ResetPluginOpenCallCount();
+        the_seed::internal::ResetPluginOpenCallCount();
 
         RunTogether([&](int) {
             try
@@ -334,7 +334,7 @@ TEST_CASE("Concurrent Create of an existing plugin opens it once per loader", "[
 
         REQUIRE(broken.load() == 0);
         REQUIRE(working.load() == NUM_THREADS);
-        REQUIRE(seed::internal::PluginOpenCallCount() == 2);
+        REQUIRE(the_seed::internal::PluginOpenCallCount() == 2);
     }
 
     const auto elapsed = std::chrono::steady_clock::now() - begin;
@@ -412,7 +412,7 @@ TEST_CASE("Names that resolve to one file share one open", "[concurrency]")
     {
         ComponentLoader loader;
         loader.PathAdd(moduleDir);
-        seed::internal::ResetPluginOpenCallCount();
+        the_seed::internal::ResetPluginOpenCallCount();
 
         std::unique_ptr<ecs::Component> plain = loader.Create("testmodule");
         std::unique_ptr<ecs::Component> aliased = loader.Create("org/testmodule");
@@ -420,19 +420,19 @@ TEST_CASE("Names that resolve to one file share one open", "[concurrency]")
         REQUIRE(VariantOf(plain.get()) == 1);
         REQUIRE(VariantOf(aliased.get()) == 1);
         REQUIRE(loader.Get("testmodule") == loader.Get("org/testmodule"));
-        REQUIRE(seed::internal::PluginOpenCallCount() == 1);
+        REQUIRE(the_seed::internal::PluginOpenCallCount() == 1);
     }
 
     SECTION("systems one after the other")
     {
         SystemLoader loader;
         loader.PathAdd(moduleDir);
-        seed::internal::ResetPluginOpenCallCount();
+        the_seed::internal::ResetPluginOpenCallCount();
 
         REQUIRE(loader.Create("testsystem"));
         REQUIRE(loader.Create("org/testsystem"));
         REQUIRE(loader.Get("testsystem") == loader.Get("org/testsystem"));
-        REQUIRE(seed::internal::PluginOpenCallCount() == 1);
+        REQUIRE(the_seed::internal::PluginOpenCallCount() == 1);
     }
 
     SECTION("at the same time")
@@ -443,7 +443,7 @@ TEST_CASE("Names that resolve to one file share one open", "[concurrency]")
             loader.PathAdd(moduleDir);
             std::atomic<int> working{0};
             std::atomic<int> broken{0};
-            seed::internal::ResetPluginOpenCallCount();
+            the_seed::internal::ResetPluginOpenCallCount();
 
             RunTogether([&](int index) {
                 try
@@ -460,7 +460,7 @@ TEST_CASE("Names that resolve to one file share one open", "[concurrency]")
 
             REQUIRE(broken.load() == 0);
             REQUIRE(working.load() == NUM_THREADS);
-            REQUIRE(seed::internal::PluginOpenCallCount() == 1);
+            REQUIRE(the_seed::internal::PluginOpenCallCount() == 1);
         }
     }
 }
@@ -492,7 +492,7 @@ TEST_CASE("Names that resolve to different files stay apart", "[concurrency]")
     SECTION("at the same time")
     {
         std::atomic<int> wrong{0};
-        seed::internal::ResetPluginOpenCallCount();
+        the_seed::internal::ResetPluginOpenCallCount();
         RunTogether([&](int index) {
             try
             {
@@ -510,7 +510,7 @@ TEST_CASE("Names that resolve to different files stay apart", "[concurrency]")
             }
         });
         REQUIRE(wrong.load() == 0);
-        REQUIRE(seed::internal::PluginOpenCallCount() == 2);
+        REQUIRE(the_seed::internal::PluginOpenCallCount() == 2);
     }
 }
 

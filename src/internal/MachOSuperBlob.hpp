@@ -8,7 +8,7 @@
 #include <cstdint>
 #include <string>
 
-namespace seed::internal
+namespace the_seed::internal
 {
 
 inline void CheckMachOSuperBlobSize(std::uint64_t size)
@@ -20,4 +20,4 @@ inline void CheckMachOSuperBlobSize(std::uint64_t size)
     }
 }
 
-} // namespace seed::internal
+} // namespace the_seed::internal

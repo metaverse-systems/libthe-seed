@@ -17,7 +17,7 @@
 #include <string>
 #include <vector>
 
-namespace seed::internal
+namespace the_seed::internal
 {
 
 // A name for a message: printable ASCII as it is, any other unit as \uXXXX.
@@ -37,4 +37,4 @@ bool IsMsiSignatureName(const std::u16string &name);
 // same name by the format's ordering, or when a stream cannot be read.
 std::vector<std::uint8_t> ComputeMsiFingerprint(PackageModel &model);
 
-} // namespace seed::internal
+} // namespace the_seed::internal

@@ -2,6 +2,9 @@
 
 #include <string>
 
+namespace the_seed::internal
+{
+
 // Splits a plugin or pak name into its organization and library parts and
 // rejects every name that could address anything but a plain file below a
 // search location. Throws LoadError (InvalidName) before any path is built.
@@ -14,3 +17,5 @@ class NameParser
     std::string org;
     std::string library;
 };
+
+} // namespace the_seed::internal

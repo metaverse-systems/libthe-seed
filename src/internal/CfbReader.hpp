@@ -22,7 +22,7 @@
 #include <string>
 #include <vector>
 
-namespace seed::internal
+namespace the_seed::internal
 {
 
 inline constexpr std::uint32_t kCfbEndOfChain = 0xFFFFFFFE;
@@ -193,4 +193,4 @@ private:
                                             unsigned depth, std::uint32_t &tree_root);
 };
 
-} // namespace seed::internal
+} // namespace the_seed::internal

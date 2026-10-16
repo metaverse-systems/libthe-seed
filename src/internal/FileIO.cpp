@@ -18,7 +18,7 @@
 #include <unistd.h>
 #endif
 
-namespace seed::internal
+namespace the_seed::internal
 {
 
 namespace
@@ -142,8 +142,6 @@ std::vector<FileReplaceCall> RecordedFileReplaceCalls()
     return state.calls;
 }
 
-}
-
 namespace
 {
 std::atomic<std::uint64_t> read_file_bytes_calls{0};
@@ -190,9 +188,6 @@ namespace
 {
 
 namespace fs = std::filesystem;
-using seed::internal::ActiveFileReplaceHooks;
-using seed::internal::FileReplaceHooks;
-using seed::internal::RecordFileReplaceCall;
 
 constexpr int kMaxNameAttempts = 100;
 constexpr int kMoveRetries = 200;
@@ -611,3 +606,5 @@ void WriteFileBytes(const std::string &file_path, const std::vector<std::uint8_t
 
 #endif
 }
+
+} // namespace the_seed::internal

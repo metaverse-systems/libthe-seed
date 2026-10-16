@@ -1806,12 +1806,12 @@ TEST_CASE("edge: Mach-O oversized SuperBlob size check", "[MalformedMachO][edge]
 {
     // The check takes a length, so no 4 GiB buffer is allocated.
     const std::uint64_t largest = std::numeric_limits<std::uint32_t>::max();
-    CHECK_NOTHROW(seed::internal::CheckMachOSuperBlobSize(0));
-    CHECK_NOTHROW(seed::internal::CheckMachOSuperBlobSize(largest));
-    seedtest::malformed::RequireRejected([&] { seed::internal::CheckMachOSuperBlobSize(largest + 1); },
+    CHECK_NOTHROW(the_seed::internal::CheckMachOSuperBlobSize(0));
+    CHECK_NOTHROW(the_seed::internal::CheckMachOSuperBlobSize(largest));
+    seedtest::malformed::RequireRejected([&] { the_seed::internal::CheckMachOSuperBlobSize(largest + 1); },
                                          kProgramFormat, "SuperBlob");
     seedtest::malformed::RequireRejected(
-        [&] { seed::internal::CheckMachOSuperBlobSize(std::numeric_limits<std::uint64_t>::max()); },
+        [&] { the_seed::internal::CheckMachOSuperBlobSize(std::numeric_limits<std::uint64_t>::max()); },
         kProgramFormat, "SuperBlob");
 }
 

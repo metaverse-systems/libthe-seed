@@ -581,12 +581,12 @@ TEST_CASE("edge: PE oversized signature size check", "[MalformedPe][edge]")
 {
     // The check takes a length, so no UINT32_MAX buffer is allocated.
     const std::uint64_t largest_signature = std::numeric_limits<std::uint32_t>::max() - 8;
-    CHECK_NOTHROW(seed::internal::CheckPeSignatureSize(0));
-    CHECK_NOTHROW(seed::internal::CheckPeSignatureSize(largest_signature));
+    CHECK_NOTHROW(the_seed::internal::CheckPeSignatureSize(0));
+    CHECK_NOTHROW(the_seed::internal::CheckPeSignatureSize(largest_signature));
     seedtest::malformed::RequireRejected(
-        [&] { seed::internal::CheckPeSignatureSize(largest_signature + 1); }, "PE", "signature");
+        [&] { the_seed::internal::CheckPeSignatureSize(largest_signature + 1); }, "PE", "signature");
     seedtest::malformed::RequireRejected(
-        [&] { seed::internal::CheckPeSignatureSize(std::numeric_limits<std::uint32_t>::max()); },
+        [&] { the_seed::internal::CheckPeSignatureSize(std::numeric_limits<std::uint32_t>::max()); },
         "PE", "signature");
 }
 

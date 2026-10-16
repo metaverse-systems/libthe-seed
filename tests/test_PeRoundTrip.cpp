@@ -478,7 +478,7 @@ TEST_CASE("unsigned: strip leaves the file alone and writes nothing",
                 const std::string path = seedtest::malformed::WriteScratch(scratch, fixture, input);
                 REQUIRE_FALSE(PeSigner::HasEmbeddedSignature(path));
 
-                seed::internal::FileReplaceHooksScope scope;
+                the_seed::internal::FileReplaceHooksScope scope;
                 CHECK_NOTHROW(PeSigner::StripSignature(path));
 
                 CHECK(scope.Calls().empty());

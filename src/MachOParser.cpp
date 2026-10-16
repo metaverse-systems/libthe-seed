@@ -9,15 +9,16 @@
 
 namespace {
 
-using seed::internal::ByteSpan;
-using seed::internal::ClassifyMachOMagic;
-using seed::internal::DeclineText;
-using seed::internal::GuardEntryPoint;
-using seed::internal::MachOContainer;
-using seed::internal::MachOKind;
-using seed::internal::ParseMachOContainer;
-using seed::internal::SliceSupport;
-using seed::internal::ThrowMalformed;
+using the_seed::internal::ByteSpan;
+using the_seed::internal::ClassifyMachOMagic;
+using the_seed::internal::DeclineText;
+using the_seed::internal::GuardEntryPoint;
+using the_seed::internal::MachOContainer;
+using the_seed::internal::MachOKind;
+using the_seed::internal::ParseMachOContainer;
+using the_seed::internal::ReadFileBytes;
+using the_seed::internal::SliceSupport;
+using the_seed::internal::ThrowMalformed;
 
 constexpr const char *kFormat = "Mach-O";
 
@@ -109,10 +110,10 @@ std::vector<std::string> MachOParser::ListDependencies(const std::string &file_p
             if(slice.support != SliceSupport::Supported)
             {
                 const auto &entry = container.entries[i];
-                const std::string where = container.form == seed::internal::ContainerForm::Thin
+                const std::string where = container.form == the_seed::internal::ContainerForm::Thin
                                               ? std::string()
                                               : "slice " + std::to_string(i) + " (" +
-                                                    seed::internal::ArchName(entry.cputype) + "): ";
+                                                    the_seed::internal::ArchName(entry.cputype) + "): ";
                 throw std::runtime_error(file_path + ": " + where + DeclineText(slice.support));
             }
             for(const std::string &library : slice.dylibs)

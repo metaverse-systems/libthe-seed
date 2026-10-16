@@ -4,6 +4,9 @@
 #include <string>
 #include <vector>
 
+namespace the_seed::internal
+{
+
 // Reads a whole file. Throws std::runtime_error when it cannot be opened or read.
 std::vector<std::uint8_t> ReadFileBytes(const std::string &file_path);
 
@@ -46,3 +49,5 @@ void ResetReadFileBytesCallCount();
 // last move wins); preservation of extended attributes, ACLs, creation time or
 // hard-link identity (the target becomes a new file).
 void WriteFileBytes(const std::string &file_path, const std::vector<std::uint8_t> &bytes);
+
+} // namespace the_seed::internal

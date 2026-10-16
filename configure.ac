@@ -14,6 +14,7 @@ PKG_INSTALLDIR
 
 # Checks for programs.
 AC_PROG_CXX
+AC_CHECK_TOOL([CXXFILT], [c++filt])
 AM_INIT_AUTOMAKE([subdir-objects])
 
 # Checks for libraries.

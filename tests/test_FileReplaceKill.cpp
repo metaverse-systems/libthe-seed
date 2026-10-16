@@ -47,6 +47,7 @@ namespace {
 
 using namespace seedtest::replace;
 namespace fs = std::filesystem;
+using the_seed::internal::WriteFileBytes;
 
 constexpr std::size_t kLargeSize = 4ull * 1024 * 1024;
 constexpr int kRounds = 200;

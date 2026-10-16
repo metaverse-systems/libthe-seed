@@ -1,8 +1,8 @@
 #include <libthe-seed/DependencyLister.hpp>
 #include <libthe-seed/MachOParser.hpp>
 
-#include "ElfParser.hpp"
-#include "PeParser.hpp"
+#include "internal/ElfParser.hpp"
+#include "internal/PeParser.hpp"
 #include "internal/DependencyGraph.hpp"
 #include "internal/FileIO.hpp"
 
@@ -18,11 +18,18 @@
 
 namespace {
 namespace fs = std::filesystem;
-using seed::internal::DependencyGraph;
-using seed::internal::DependencyNode;
-using seed::internal::NodeFormat;
-using seed::internal::NodeId;
-using seed::internal::NodeStatus;
+using the_seed::internal::DependencyGraph;
+using the_seed::internal::DependencyNode;
+using the_seed::internal::ElfParser;
+using the_seed::internal::NodeFormat;
+using the_seed::internal::NodeId;
+using the_seed::internal::NodeStatus;
+using the_seed::internal::PeParser;
+using the_seed::internal::ReadFileBytes;
+using the_seed::internal::elf::kElfMag0;
+using the_seed::internal::elf::kElfMag1;
+using the_seed::internal::elf::kElfMag2;
+using the_seed::internal::elf::kElfMag3;
 
 std::string LowerAscii(std::string text)
 {
@@ -86,8 +93,8 @@ std::vector<std::string> ParseBytes(const std::vector<std::uint8_t> &bytes, Node
         throw std::runtime_error("File is too small to determine binary format");
     }
 
-    if(bytes.size() >= 4 && bytes[0] == ELFMAG0 && bytes[1] == ELFMAG1 && bytes[2] == ELFMAG2 &&
-       bytes[3] == ELFMAG3)
+    if(bytes.size() >= 4 && bytes[0] == kElfMag0 && bytes[1] == kElfMag1 && bytes[2] == kElfMag2 &&
+       bytes[3] == kElfMag3)
     {
         format = NodeFormat::Elf;
         return ElfParser::ListDependenciesFromBytes(bytes);

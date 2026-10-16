@@ -30,7 +30,7 @@
 #include <sys/types.h>
 #endif
 
-namespace seed::internal
+namespace the_seed::internal
 {
 
 #if defined(_WIN32)

@@ -160,7 +160,7 @@ namespace
 
 TEST_CASE("PakLoader loads a writer's pak and reads the description once per loader", "[PakLoader]")
 {
-    using namespace seed::internal;
+    using namespace the_seed::internal;
     seedtest::ScratchDir scratch;
     const std::vector<std::pair<std::string, std::vector<std::uint8_t>>> contents = {
         {"zeta", Pattern(300, 1)}, {"alpha", Pattern(5, 40)}, {"empty", {}}, {"mid", Pattern(70000, 9)}};
@@ -255,7 +255,7 @@ TEST_CASE("PakLoader loads a pak with no resources", "[PakLoader]")
 
 TEST_CASE("PakLoader reports requested resources that the pak does not contain", "[PakLoader]")
 {
-    using namespace seed::internal;
+    using namespace the_seed::internal;
     seedtest::ScratchDir scratch;
     const std::filesystem::path file = seedtest::WritePak(
         scratch.Path(), "missing", {{"a", Pattern(40, 1)}, {"b", Pattern(300000, 2)}});
@@ -426,7 +426,7 @@ TEST_CASE("PakLoader validates the pak before an empty list returns", "[PakLoade
 
 TEST_CASE("PakLoader picks up a pak that is replaced, rewritten or removed", "[PakLoader]")
 {
-    using namespace seed::internal;
+    using namespace the_seed::internal;
     seedtest::ScratchDir scratch;
     const std::filesystem::path location = scratch.Path() / "location";
     const std::filesystem::path stage = scratch.Path() / "stage";

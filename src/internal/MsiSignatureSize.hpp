@@ -8,7 +8,7 @@
 #include <cstdint>
 #include <string>
 
-namespace seed::internal
+namespace the_seed::internal
 {
 
 inline void CheckMsiSignatureSize(std::uint64_t size, std::uint16_t major_version)
@@ -21,4 +21,4 @@ inline void CheckMsiSignatureSize(std::uint64_t size, std::uint16_t major_versio
     }
 }
 
-} // namespace seed::internal
+} // namespace the_seed::internal

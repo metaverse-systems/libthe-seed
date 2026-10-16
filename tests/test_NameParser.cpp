@@ -1,8 +1,10 @@
 #include <catch_amalgamated.hpp>
 #include <libthe-seed/LoadError.hpp>
-#include "../src/NameParser.hpp"
+#include "../src/internal/NameParser.hpp"
 
 #include <string>
+
+using the_seed::internal::NameParser;
 
 namespace
 {

@@ -5,7 +5,7 @@
 #include <new>
 #include <stdexcept>
 
-namespace seed::internal
+namespace the_seed::internal
 {
 
 void PakFailureThrow(const std::string &name, const std::string &file,
@@ -97,4 +97,4 @@ void PakEntryRead(const PakFile &file, const PakEntry &entry, ecs::Resource &res
     }
 }
 
-} // namespace seed::internal
+} // namespace the_seed::internal

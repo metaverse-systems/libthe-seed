@@ -2,21 +2,21 @@
 #include <libthe-seed/LoadError.hpp>
 #include "internal/PluginCache.hpp"
 #include "internal/PluginSearch.hpp"
-#include "NameParser.hpp"
+#include "internal/NameParser.hpp"
 #include <memory>
 
 namespace
 {
-seed::internal::PluginCache<ComponentLoader::ComponentCreator>::Entry Resolve(seed::internal::PluginCache<ComponentLoader::ComponentCreator> &cache,
+the_seed::internal::PluginCache<ComponentLoader::ComponentCreator>::Entry Resolve(the_seed::internal::PluginCache<ComponentLoader::ComponentCreator> &cache,
                                                          const std::string &name)
 {
     // Reject names that could address anything but a plain file first.
-    NameParser parsed(name, "component plugin");
+    the_seed::internal::NameParser parsed(name, "component plugin");
     return cache.Get(name, parsed.org, parsed.library, "create_component", "component plugin");
 }
 } // namespace
 
-ComponentLoader::ComponentLoader() : cache(std::make_unique<seed::internal::PluginCache<ComponentCreator>>())
+ComponentLoader::ComponentLoader() : cache(std::make_unique<the_seed::internal::PluginCache<ComponentCreator>>())
 {
 }
 
@@ -32,7 +32,7 @@ std::unique_ptr<ecs::Component> ComponentLoader::Create(const std::string &name,
     auto entry = Resolve(*this->cache, name);
     ecs::Component *object = entry.creator(data);
     if (object == nullptr)
-        seed::internal::NoObjectThrow(entry.file, name, "create_component", "component plugin");
+        the_seed::internal::NoObjectThrow(entry.file, name, "create_component", "component plugin");
     return std::unique_ptr<ecs::Component>(object);
 }
 
@@ -53,6 +53,6 @@ std::vector<std::string> ComponentLoader::PathsGet() const
 
 std::vector<std::string> ComponentLoader::SearchPathsGet(const std::string &name) const
 {
-    NameParser parsed(name, "component plugin");
+    the_seed::internal::NameParser parsed(name, "component plugin");
     return this->cache->SearchPathsGet(parsed.org, parsed.library);
 }

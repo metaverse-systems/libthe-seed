@@ -1,8 +1,8 @@
 #include "PeParser.hpp"
 
 #include "ByteSwap.hpp"
-#include "internal/BoundedBytes.hpp"
-#include "internal/FileIO.hpp"
+#include "BoundedBytes.hpp"
+#include "FileIO.hpp"
 
 #include <algorithm>
 #include <cstddef>
@@ -12,11 +12,13 @@
 #include <string>
 #include <vector>
 
-namespace {
+namespace the_seed::internal
+{
 
-using seed::internal::ByteOrder;
-using seed::internal::ByteSpan;
-using seed::internal::ThrowMalformed;
+namespace
+{
+
+using namespace pe;
 
 constexpr const char *kFormat = "PE";
 constexpr std::uint64_t kMaxNameLength = 4096;
@@ -46,7 +48,7 @@ T FromLittleEndian(T value)
 // near the top of the 32-bit range does not wrap.
 std::uint64_t RvaToOffset(
     std::uint32_t rva,
-    const std::vector<IMAGE_SECTION_HEADER> &sections,
+    const std::vector<ImageSectionHeader> &sections,
     std::uint32_t size_of_headers,
     std::uint64_t file_size,
     const std::string &what
@@ -91,14 +93,14 @@ std::vector<std::string> PeParser::ListDependenciesFromBytes(const std::vector<s
     const ByteSpan file(bytes, kFormat);
     const std::uint64_t file_size = file.Size();
 
-    const ByteSpan dos = file.Sub(0, sizeof(IMAGE_DOS_HEADER), "DOS header");
-    if(dos.Read<std::uint16_t>(0, ByteOrder::Little, "DOS header signature") != IMAGE_DOS_SIGNATURE)
+    const ByteSpan dos = file.Sub(0, sizeof(ImageDosHeader), "DOS header");
+    if(dos.Read<std::uint16_t>(0, ByteOrder::Little, "DOS header signature") != kImageDosSignature)
     {
         ThrowMalformed(kFormat, "DOS header signature is not MZ");
     }
 
     const std::int32_t e_lfanew =
-        dos.Read<std::int32_t>(offsetof(IMAGE_DOS_HEADER, e_lfanew), ByteOrder::Little, "e_lfanew");
+        dos.Read<std::int32_t>(offsetof(ImageDosHeader, e_lfanew), ByteOrder::Little, "e_lfanew");
     if(e_lfanew < 0)
     {
         ThrowMalformed(kFormat, "e_lfanew " + std::to_string(e_lfanew) + " is negative");
@@ -106,30 +108,30 @@ std::vector<std::string> PeParser::ListDependenciesFromBytes(const std::vector<s
 
     const std::uint64_t pe_header_offset = static_cast<std::uint64_t>(e_lfanew);
     const std::uint64_t optional_header_offset =
-        pe_header_offset + sizeof(std::uint32_t) + sizeof(IMAGE_FILE_HEADER);
+        pe_header_offset + sizeof(std::uint32_t) + sizeof(ImageFileHeader);
 
     // Signature, file header and the optional header's magic.
     const ByteSpan pe_header =
-        file.Sub(pe_header_offset, sizeof(std::uint32_t) + sizeof(IMAGE_FILE_HEADER) + 2, "PE header");
-    if(pe_header.Read<std::uint32_t>(0, ByteOrder::Little, "PE signature") != IMAGE_NT_SIGNATURE)
+        file.Sub(pe_header_offset, sizeof(std::uint32_t) + sizeof(ImageFileHeader) + 2, "PE header");
+    if(pe_header.Read<std::uint32_t>(0, ByteOrder::Little, "PE signature") != kImageNtSignature)
     {
         ThrowMalformed(kFormat, "PE header signature is invalid");
     }
 
-    const auto coff_header = pe_header.Read<IMAGE_FILE_HEADER>(sizeof(std::uint32_t), ByteOrder::Little,
+    const auto coff_header = pe_header.Read<ImageFileHeader>(sizeof(std::uint32_t), ByteOrder::Little,
                                                                "PE file header");
     const std::uint16_t section_count = FromLittleEndian(coff_header.NumberOfSections);
     const std::uint16_t optional_header_size = FromLittleEndian(coff_header.SizeOfOptionalHeader);
 
     const std::uint16_t optional_magic_value = FromLittleEndian(pe_header.Read<std::uint16_t>(
-        sizeof(std::uint32_t) + sizeof(IMAGE_FILE_HEADER), ByteOrder::Little, "optional header magic"));
+        sizeof(std::uint32_t) + sizeof(ImageFileHeader), ByteOrder::Little, "optional header magic"));
 
     std::uint64_t data_directory_offset = 0;
-    if(optional_magic_value == IMAGE_NT_OPTIONAL_HDR32_MAGIC)
+    if(optional_magic_value == kImageNtOptionalHdr32Magic)
     {
         data_directory_offset = 96;
     }
-    else if(optional_magic_value == IMAGE_NT_OPTIONAL_HDR64_MAGIC)
+    else if(optional_magic_value == kImageNtOptionalHdr64Magic)
     {
         data_directory_offset = 112;
     }
@@ -139,15 +141,15 @@ std::vector<std::string> PeParser::ListDependenciesFromBytes(const std::vector<s
                                     std::to_string(optional_magic_value) + " is not supported");
     }
 
-    if(optional_header_size < data_directory_offset + (2 * sizeof(IMAGE_DATA_DIRECTORY)))
+    if(optional_header_size < data_directory_offset + (2 * sizeof(ImageDataDirectory)))
     {
         ThrowMalformed(kFormat, "PE header: optional header size " +
                                     std::to_string(optional_header_size) +
                                     " is too small for the import directory");
     }
 
-    const auto import_directory = file.Read<IMAGE_DATA_DIRECTORY>(
-        optional_header_offset + data_directory_offset + sizeof(IMAGE_DATA_DIRECTORY),
+    const auto import_directory = file.Read<ImageDataDirectory>(
+        optional_header_offset + data_directory_offset + sizeof(ImageDataDirectory),
         ByteOrder::Little, "import directory");
 
     const std::uint32_t import_table_rva = FromLittleEndian(import_directory.VirtualAddress);
@@ -160,10 +162,10 @@ std::vector<std::string> PeParser::ListDependenciesFromBytes(const std::vector<s
         optional_header_offset + data_directory_offset - sizeof(std::uint32_t), ByteOrder::Little,
         "NumberOfRvaAndSizes"));
     if(directory_count > kDelayImportDirectory &&
-       optional_header_size >= data_directory_offset + ((kDelayImportDirectory + 1) * sizeof(IMAGE_DATA_DIRECTORY)))
+       optional_header_size >= data_directory_offset + ((kDelayImportDirectory + 1) * sizeof(ImageDataDirectory)))
     {
-        const auto delay_directory = file.Read<IMAGE_DATA_DIRECTORY>(
-            optional_header_offset + data_directory_offset + (kDelayImportDirectory * sizeof(IMAGE_DATA_DIRECTORY)),
+        const auto delay_directory = file.Read<ImageDataDirectory>(
+            optional_header_offset + data_directory_offset + (kDelayImportDirectory * sizeof(ImageDataDirectory)),
             ByteOrder::Little, "delay-load directory");
         delay_table_rva = FromLittleEndian(delay_directory.VirtualAddress);
         delay_table_size = FromLittleEndian(delay_directory.Size);
@@ -181,13 +183,13 @@ std::vector<std::string> PeParser::ListDependenciesFromBytes(const std::vector<s
     // The whole table must fit before any space is reserved for it.
     const ByteSpan section_table = file.Sub(
         optional_header_offset + optional_header_size,
-        static_cast<std::uint64_t>(section_count) * sizeof(IMAGE_SECTION_HEADER), "section table");
-    std::vector<IMAGE_SECTION_HEADER> sections;
+        static_cast<std::uint64_t>(section_count) * sizeof(ImageSectionHeader), "section table");
+    std::vector<ImageSectionHeader> sections;
     sections.reserve(section_count);
     for(std::uint16_t index = 0; index < section_count; ++index)
     {
-        sections.push_back(section_table.Read<IMAGE_SECTION_HEADER>(
-            static_cast<std::uint64_t>(index) * sizeof(IMAGE_SECTION_HEADER), ByteOrder::Little,
+        sections.push_back(section_table.Read<ImageSectionHeader>(
+            static_cast<std::uint64_t>(index) * sizeof(ImageSectionHeader), ByteOrder::Little,
             "section table entry"));
     }
 
@@ -201,7 +203,7 @@ std::vector<std::string> PeParser::ListDependenciesFromBytes(const std::vector<s
     }
     while(import_table_rva != 0)
     {
-        const auto descriptor = file.Read<IMAGE_IMPORT_DESCRIPTOR>(descriptor_offset, ByteOrder::Little,
+        const auto descriptor = file.Read<ImageImportDescriptor>(descriptor_offset, ByteOrder::Little,
                                                                    "import descriptor");
         const std::uint32_t original_first_thunk = FromLittleEndian(descriptor.OriginalFirstThunk);
         const std::uint32_t time_date_stamp = FromLittleEndian(descriptor.TimeDateStamp);
@@ -216,7 +218,7 @@ std::vector<std::string> PeParser::ListDependenciesFromBytes(const std::vector<s
         }
 
         name_rvas.push_back(name_rva);
-        descriptor_offset += sizeof(IMAGE_IMPORT_DESCRIPTOR);
+        descriptor_offset += sizeof(ImageImportDescriptor);
     }
 
     // Delay-load descriptors: 32 bytes each, ended by an all-zero descriptor.
@@ -224,7 +226,7 @@ std::vector<std::string> PeParser::ListDependenciesFromBytes(const std::vector<s
     if(delay_table_rva != 0)
     {
         const std::uint64_t image_base =
-            (optional_magic_value == IMAGE_NT_OPTIONAL_HDR32_MAGIC)
+            (optional_magic_value == kImageNtOptionalHdr32Magic)
                 ? file.Read<std::uint32_t>(optional_header_offset + 28, ByteOrder::Little, "ImageBase")
                 : file.Read<std::uint64_t>(optional_header_offset + 24, ByteOrder::Little, "ImageBase");
 
@@ -314,3 +316,5 @@ std::vector<std::string> PeParser::ListDependenciesFromBytes(const std::vector<s
 
     return dependencies;
 }
+
+} // namespace the_seed::internal

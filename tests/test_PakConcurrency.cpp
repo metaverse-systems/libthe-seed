@@ -31,8 +31,8 @@
 #include <utility>
 #include <vector>
 
-using seed::internal::PakDescriptionParseCount;
-using seed::internal::ResetPakDescriptionParseCount;
+using the_seed::internal::PakDescriptionParseCount;
+using the_seed::internal::ResetPakDescriptionParseCount;
 
 namespace
 {

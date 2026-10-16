@@ -5,7 +5,7 @@
 
 #include "../../external/picosha2.h"
 
-namespace seed::internal
+namespace the_seed::internal
 {
 
 namespace
@@ -156,4 +156,4 @@ std::vector<std::uint8_t> ComputeMsiFingerprint(PackageModel &model)
     return digest;
 }
 
-} // namespace seed::internal
+} // namespace the_seed::internal

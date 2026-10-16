@@ -3,7 +3,7 @@
 
 #include <libthe-seed/DependencyLister.hpp>
 
-#include "../src/PeParser.hpp"
+#include "../src/internal/PeParser.hpp"
 
 #include <algorithm>
 #include <cctype>
@@ -292,7 +292,7 @@ TEST_CASE("DependencyLister searches only the given folders", "[DependencyLister
 
 TEST_CASE("PeParser reads DLL dependencies from fixture", "[DependencyLister][US3]")
 {
-    const auto dependencies = PeParser::ListDependencies(seedtest::FixturePath("test.dll"));
+    const auto dependencies = the_seed::internal::PeParser::ListDependencies(seedtest::FixturePath("test.dll"));
 
     REQUIRE(HasDll(dependencies, "kernel32.dll"));
     REQUIRE(HasDll(dependencies, "msvcrt.dll"));

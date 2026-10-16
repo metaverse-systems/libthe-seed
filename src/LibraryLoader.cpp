@@ -35,8 +35,8 @@ void LibraryLoader::Load()
     // Plugins are pinned: the platform never unmaps their code, so objects
     // and function pointers stay valid after this loader is gone. Only the
     // added locations are searched and the first one holding the file decides.
-    seed::internal::SearchResult search;
-    void *lib = seed::internal::PluginOpen(this->paths, this->paths.size(), this->name, this->name, "library", search);
+    the_seed::internal::SearchResult search;
+    void *lib = the_seed::internal::PluginOpen(this->paths, this->paths.size(), this->name, this->name, "library", search);
     this->library_handle.reset(lib);
     this->loaded_file = search.file.string();
 }
@@ -46,10 +46,10 @@ void *LibraryLoader::FunctionGet(const std::string &FunctionName)
     this->Load();
 
     std::string error;
-    void *ptr = seed::internal::SymbolFind(this->library_handle.get(), FunctionName, error);
+    void *ptr = the_seed::internal::SymbolFind(this->library_handle.get(), FunctionName, error);
     if(!ptr)
     {
-        seed::internal::EntryPointMissingThrow(this->loaded_file, this->name, FunctionName, error, "library");
+        the_seed::internal::EntryPointMissingThrow(this->loaded_file, this->name, FunctionName, error, "library");
     }
     return ptr;
 }

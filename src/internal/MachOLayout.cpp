@@ -6,7 +6,7 @@
 #include <cstdio>
 #include <numeric>
 
-namespace seed::internal
+namespace the_seed::internal
 {
 
 namespace
@@ -460,4 +460,4 @@ MachOContainer ParseMachOContainer(const ByteSpan &file)
     return container;
 }
 
-} // namespace seed::internal
+} // namespace the_seed::internal

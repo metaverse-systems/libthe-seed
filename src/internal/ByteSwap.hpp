@@ -4,6 +4,9 @@
 #include <cstdint>
 #include <type_traits>
 
+namespace the_seed::internal
+{
+
 template <typename T>
 inline T ByteSwap(T value)
 {
@@ -56,3 +59,5 @@ inline T ByteSwapIfNeeded(T value, bool file_is_little_endian)
 
     return ByteSwap(value);
 }
+
+} // namespace the_seed::internal

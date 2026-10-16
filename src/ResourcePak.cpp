@@ -4,7 +4,7 @@
 #include <filesystem>
 #include <mutex>
 
-using namespace seed::internal;
+using namespace the_seed::internal;
 
 // Shared by every copy of a ResourcePak. The description is replaced when the
 // file on disk is found to be a different version.

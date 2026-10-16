@@ -3,7 +3,7 @@
 #include <libthe-seed/LoadError.hpp>
 #include "internal/PluginSearch.hpp"
 #include "internal/PakAccess.hpp"
-#include "NameParser.hpp"
+#include "internal/NameParser.hpp"
 #include <shared_mutex>
 #include <stdexcept>
 #include <algorithm>
@@ -12,7 +12,7 @@
 
 PakLoader::PakLoader() = default;
 
-using namespace seed::internal;
+using namespace the_seed::internal;
 
 // A validation under way: the version of the file it is for and its outcome.
 struct PakLoader::InFlight
@@ -208,5 +208,5 @@ std::vector<std::string> PakLoader::SearchPathsGet(const std::string &pak_name, 
     NameParser parsed(pak_name, "resource pak");
 
     std::shared_lock lock(this->mutex);
-    return seed::internal::SearchListBuild(this->paths, parsed.org, parsed.library, true, configured_count);
+    return the_seed::internal::SearchListBuild(this->paths, parsed.org, parsed.library, true, configured_count);
 }

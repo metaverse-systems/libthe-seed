@@ -4,13 +4,19 @@
 #include <string>
 #include <vector>
 
-constexpr std::uint16_t IMAGE_DOS_SIGNATURE = 0x5A4D;
-constexpr std::uint32_t IMAGE_NT_SIGNATURE = 0x00004550;
-constexpr std::uint16_t IMAGE_NT_OPTIONAL_HDR32_MAGIC = 0x10B;
-constexpr std::uint16_t IMAGE_NT_OPTIONAL_HDR64_MAGIC = 0x20B;
+namespace the_seed::internal
+{
+
+namespace pe
+{
+
+constexpr std::uint16_t kImageDosSignature = 0x5A4D;
+constexpr std::uint32_t kImageNtSignature = 0x00004550;
+constexpr std::uint16_t kImageNtOptionalHdr32Magic = 0x10B;
+constexpr std::uint16_t kImageNtOptionalHdr64Magic = 0x20B;
 
 #pragma pack(push, 1)
-struct IMAGE_DOS_HEADER
+struct ImageDosHeader
 {
     std::uint16_t e_magic;
     std::uint16_t e_cblp;
@@ -33,7 +39,7 @@ struct IMAGE_DOS_HEADER
     std::int32_t e_lfanew;
 };
 
-struct IMAGE_FILE_HEADER
+struct ImageFileHeader
 {
     std::uint16_t Machine;
     std::uint16_t NumberOfSections;
@@ -44,13 +50,13 @@ struct IMAGE_FILE_HEADER
     std::uint16_t Characteristics;
 };
 
-struct IMAGE_DATA_DIRECTORY
+struct ImageDataDirectory
 {
     std::uint32_t VirtualAddress;
     std::uint32_t Size;
 };
 
-struct IMAGE_OPTIONAL_HEADER32
+struct ImageOptionalHeader32
 {
     std::uint16_t Magic;
     std::uint8_t MajorLinkerVersion;
@@ -84,7 +90,7 @@ struct IMAGE_OPTIONAL_HEADER32
     std::uint32_t NumberOfRvaAndSizes;
 };
 
-struct IMAGE_OPTIONAL_HEADER64
+struct ImageOptionalHeader64
 {
     std::uint16_t Magic;
     std::uint8_t MajorLinkerVersion;
@@ -117,7 +123,7 @@ struct IMAGE_OPTIONAL_HEADER64
     std::uint32_t NumberOfRvaAndSizes;
 };
 
-struct IMAGE_SECTION_HEADER
+struct ImageSectionHeader
 {
     std::uint8_t Name[8];
     union
@@ -135,7 +141,7 @@ struct IMAGE_SECTION_HEADER
     std::uint32_t Characteristics;
 };
 
-struct IMAGE_IMPORT_DESCRIPTOR
+struct ImageImportDescriptor
 {
     std::uint32_t OriginalFirstThunk;
     std::uint32_t TimeDateStamp;
@@ -145,6 +151,8 @@ struct IMAGE_IMPORT_DESCRIPTOR
 };
 #pragma pack(pop)
 
+} // namespace pe
+
 class PeParser
 {
   public:
@@ -153,3 +161,5 @@ class PeParser
     // The same listing for a file already held in memory.
     static std::vector<std::string> ListDependenciesFromBytes(const std::vector<std::uint8_t> &bytes);
 };
+
+} // namespace the_seed::internal

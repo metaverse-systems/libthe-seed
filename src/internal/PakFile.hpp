@@ -6,7 +6,7 @@
 #include <stdexcept>
 #include <string>
 
-namespace seed::internal
+namespace the_seed::internal
 {
 
 // Identifies one version of a pak file, taken from an open handle. Two stamps
@@ -129,4 +129,4 @@ class PakFile
 std::uint64_t PakBytesReadCount();
 void ResetPakBytesReadCount();
 
-} // namespace seed::internal
+} // namespace the_seed::internal

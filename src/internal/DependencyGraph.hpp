@@ -7,7 +7,7 @@
 #include <unordered_map>
 #include <vector>
 
-namespace seed::internal
+namespace the_seed::internal
 {
 
 // Index of a node in a DependencyGraph.
@@ -71,4 +71,4 @@ struct DependencyGraph
     std::unordered_map<std::string, NodeId> resolved_ignoring_case;
 };
 
-} // namespace seed::internal
+} // namespace the_seed::internal

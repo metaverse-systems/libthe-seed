@@ -1,7 +1,7 @@
 #include <libthe-seed/PeSigner.hpp>
 
-#include "PeParser.hpp"
-#include "ByteSwap.hpp"
+#include "internal/PeParser.hpp"
+#include "internal/ByteSwap.hpp"
 #include "internal/BoundedBytes.hpp"
 #include "internal/FileIO.hpp"
 #include "internal/PeCertificate.hpp"
@@ -18,11 +18,18 @@
 
 namespace {
 
-using seed::internal::ByteOrder;
-using seed::internal::ByteSpan;
-using seed::internal::GuardEntryPoint;
-using seed::internal::MutableByteSpan;
-using seed::internal::ThrowMalformed;
+using the_seed::internal::ByteOrder;
+using the_seed::internal::ByteSpan;
+using the_seed::internal::GuardEntryPoint;
+using the_seed::internal::MutableByteSpan;
+using the_seed::internal::ReadFileBytes;
+using the_seed::internal::WriteFileBytes;
+using the_seed::internal::pe::ImageDosHeader;
+using the_seed::internal::pe::kImageDosSignature;
+using the_seed::internal::pe::kImageNtOptionalHdr32Magic;
+using the_seed::internal::pe::kImageNtOptionalHdr64Magic;
+using the_seed::internal::pe::kImageNtSignature;
+using the_seed::internal::ThrowMalformed;
 
 constexpr const char *kFormat = "PE";
 constexpr std::uint64_t kUint32Max = 0xFFFFFFFFull;
@@ -38,8 +45,8 @@ struct PeLayout
 
 PeLayout ParsePeLayout(const ByteSpan &file)
 {
-    const ByteSpan dos = file.Sub(0, sizeof(IMAGE_DOS_HEADER), "DOS header");
-    if(dos.Read<std::uint16_t>(0, ByteOrder::Little, "DOS header signature") != IMAGE_DOS_SIGNATURE)
+    const ByteSpan dos = file.Sub(0, sizeof(ImageDosHeader), "DOS header");
+    if(dos.Read<std::uint16_t>(0, ByteOrder::Little, "DOS header signature") != kImageDosSignature)
     {
         ThrowMalformed(kFormat, "DOS header signature is not MZ");
     }
@@ -54,7 +61,7 @@ PeLayout ParsePeLayout(const ByteSpan &file)
 
     // Signature (4), file header (20) and the optional header's magic (2).
     const ByteSpan pe_header = file.Sub(layout.pe_header_offset, 4 + 20 + 2, "PE header");
-    if(pe_header.Read<std::uint32_t>(0, ByteOrder::Little, "PE signature") != IMAGE_NT_SIGNATURE)
+    if(pe_header.Read<std::uint32_t>(0, ByteOrder::Little, "PE signature") != kImageNtSignature)
     {
         ThrowMalformed(kFormat, "PE header signature is invalid");
     }
@@ -63,12 +70,12 @@ PeLayout ParsePeLayout(const ByteSpan &file)
     layout.optional_header_offset = layout.pe_header_offset + 4 + 20;
 
     const auto optional_magic = pe_header.Read<std::uint16_t>(24, ByteOrder::Little, "optional header magic");
-    if(optional_magic != IMAGE_NT_OPTIONAL_HDR32_MAGIC && optional_magic != IMAGE_NT_OPTIONAL_HDR64_MAGIC)
+    if(optional_magic != kImageNtOptionalHdr32Magic && optional_magic != kImageNtOptionalHdr64Magic)
     {
         ThrowMalformed(kFormat, "PE header: optional header format " + std::to_string(optional_magic) +
                                     " is not supported");
     }
-    layout.is_pe32_plus = (optional_magic == IMAGE_NT_OPTIONAL_HDR64_MAGIC);
+    layout.is_pe32_plus = (optional_magic == kImageNtOptionalHdr64Magic);
 
     // CheckSum is at offset 64 from start of optional header
     layout.checksum_offset = layout.optional_header_offset + 64;
@@ -335,7 +342,7 @@ void PeSigner::EmbedSignature(
             layout = ParsePeLayout(file);
             existing = ValidateCertificateTable(file, layout);
         }
-        seed::internal::CheckPeSignatureSize(pkcs7_der.size());
+        the_seed::internal::CheckPeSignatureSize(pkcs7_der.size());
 
         // Strip any existing signature first
         const std::uint64_t kept_size = existing.present ? existing.address : bytes.size();

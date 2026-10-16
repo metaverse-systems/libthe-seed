@@ -11,7 +11,7 @@
 #include <typeinfo>
 #include <vector>
 
-namespace bb = seed::internal;
+namespace bb = the_seed::internal;
 
 namespace {
 

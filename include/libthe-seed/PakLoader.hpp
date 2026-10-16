@@ -10,11 +10,11 @@
 #include <libecs-cpp/ecs.hpp>
 #include <libthe-seed/LoadError.hpp>
 
-namespace seed::internal
+namespace the_seed::internal
 {
 class PakFile;
 struct PakIndex;
-} // namespace seed::internal
+} // namespace the_seed::internal
 
 /**
  * @brief Loads resource paks by name.
@@ -96,15 +96,15 @@ class PakLoader
     // The remembered description of the version of `file` that was just opened:
     // the one kept for `identity` when it matches, otherwise one validated from
     // `file` and kept in its place. Failures are not kept.
-    std::shared_ptr<const seed::internal::PakIndex> IndexGet(const std::string &identity,
-                                                              seed::internal::PakFile &file, const std::string &pak_name,
+    std::shared_ptr<const the_seed::internal::PakIndex> IndexGet(const std::string &identity,
+                                                              the_seed::internal::PakFile &file, const std::string &pak_name,
                                                               const std::string &file_name,
                                                               const std::vector<LoadError::Location> &locations);
 
     // The result of validating one version of a pak file, shared with waiters.
     struct Outcome
     {
-        std::shared_ptr<const seed::internal::PakIndex> index;
+        std::shared_ptr<const the_seed::internal::PakIndex> index;
         bool failed = false;
         LoadError::Reason reason = LoadError::Reason::NotLoadable;
         std::string detail;
@@ -113,7 +113,7 @@ class PakLoader
 
     std::vector<std::string> paths;
     // Validated descriptions by canonical path of the pak file.
-    std::map<std::string, std::shared_ptr<const seed::internal::PakIndex>> remembered;
+    std::map<std::string, std::shared_ptr<const the_seed::internal::PakIndex>> remembered;
     // Validations under way by canonical path of the pak file.
     std::map<std::string, std::shared_ptr<InFlight>> in_flight;
     mutable std::shared_mutex mutex;

@@ -15,15 +15,17 @@
 
 namespace {
 
-using seed::internal::ByteOrder;
-using seed::internal::ByteSpan;
-using seed::internal::ContainerForm;
-using seed::internal::GuardEntryPoint;
-using seed::internal::MachOContainer;
-using seed::internal::ContainerEntry;
-using seed::internal::ParseMachOContainer;
-using seed::internal::SliceLayout;
-using seed::internal::SliceSupport;
+using the_seed::internal::ByteOrder;
+using the_seed::internal::ByteSpan;
+using the_seed::internal::ContainerForm;
+using the_seed::internal::GuardEntryPoint;
+using the_seed::internal::MachOContainer;
+using the_seed::internal::ContainerEntry;
+using the_seed::internal::ParseMachOContainer;
+using the_seed::internal::ReadFileBytes;
+using the_seed::internal::WriteFileBytes;
+using the_seed::internal::SliceLayout;
+using the_seed::internal::SliceSupport;
 
 constexpr const char *kProgramFormat = "Mach-O";
 
@@ -139,7 +141,7 @@ std::vector<std::uint8_t> ReadInput(const std::string &path)
     }
     catch(const std::runtime_error &error)
     {
-        seed::internal::ThrowMalformed(kProgramFormat, error.what());
+        the_seed::internal::ThrowMalformed(kProgramFormat, error.what());
     }
 }
 
@@ -148,7 +150,7 @@ MachOContainer ParseInput(const std::vector<std::uint8_t> &bytes)
 {
     if(bytes.size() < 4)
     {
-        seed::internal::ThrowMalformed(kProgramFormat, "File too small to be a Mach-O binary");
+        the_seed::internal::ThrowMalformed(kProgramFormat, "File too small to be a Mach-O binary");
     }
     return ParseMachOContainer(ByteSpan(bytes, kProgramFormat));
 }
@@ -164,7 +166,7 @@ MachOContainer ParseInput(const std::vector<std::uint8_t> &bytes)
 {
     if(universal)
     {
-        Refuse(path, "slice " + std::to_string(index) + " (" + seed::internal::ArchName(cputype) + "): " + reason);
+        Refuse(path, "slice " + std::to_string(index) + " (" + the_seed::internal::ArchName(cputype) + "): " + reason);
     }
     Refuse(path, reason);
 }
@@ -177,7 +179,7 @@ void RequireSupported(const std::string &path, const MachOContainer &container)
         if(entry.slice.support != SliceSupport::Supported)
         {
             RefuseSlice(path, container.form != ContainerForm::Thin, i, entry.cputype,
-                        seed::internal::DeclineText(entry.slice.support));
+                        the_seed::internal::DeclineText(entry.slice.support));
         }
     }
 }
@@ -188,7 +190,7 @@ void RequireSupported(const std::string &path, const MachOContainer &container)
 template <typename RefuseFn>
 std::uint64_t RequireSignatureAtEnd(const RefuseFn &refuse, const SliceLayout &layout)
 {
-    const seed::internal::CodeSignatureLayout &sig = *layout.codesig;
+    const the_seed::internal::CodeSignatureLayout &sig = *layout.codesig;
     if(sig.dataoff == 0 && sig.datasize == 0)
     {
         return layout.size; // a command that points at nothing
@@ -374,8 +376,8 @@ void RequireZeroPadding(const std::string &path, const ByteSpan &file, const Mac
             if(file.Data()[at] != 0)
             {
                 Refuse(path, "the bytes between slice " + std::to_string(order[k - 1]) + " (" +
-                                 seed::internal::ArchName(previous.cputype) + ") and slice " +
-                                 std::to_string(order[k]) + " (" + seed::internal::ArchName(next.cputype) +
+                                 the_seed::internal::ArchName(previous.cputype) + ") and slice " +
+                                 std::to_string(order[k]) + " (" + the_seed::internal::ArchName(next.cputype) +
                                  ") are not all zero (the first is at offset " + std::to_string(at) +
                                  "); they would be replaced by zero padding");
             }
@@ -429,7 +431,7 @@ std::vector<std::uint8_t> AssembleUniversal(const std::string &path, const ByteS
         const ContainerEntry &entry = container.entries[i];
         if(entry.align >= 32)
         {
-            Refuse(path, "slice " + std::to_string(i) + " (" + seed::internal::ArchName(entry.cputype) +
+            Refuse(path, "slice " + std::to_string(i) + " (" + the_seed::internal::ArchName(entry.cputype) +
                              "): alignment 2^" + std::to_string(entry.align) + " is not supported");
         }
         offsets[i] = AlignUp(cursor, std::uint64_t{1} << entry.align);
@@ -437,7 +439,7 @@ std::vector<std::uint8_t> AssembleUniversal(const std::string &path, const ByteS
         old_end = std::max(old_end, entry.offset + entry.size);
         if(!wide && cursor > UINT32_MAX)
         {
-            Refuse(path, "slice " + std::to_string(i) + " (" + seed::internal::ArchName(entry.cputype) + ") would end at offset " +
+            Refuse(path, "slice " + std::to_string(i) + " (" + the_seed::internal::ArchName(entry.cputype) + ") would end at offset " +
                              std::to_string(cursor) + ", past what a 32-bit universal table can describe");
         }
     }
@@ -477,7 +479,7 @@ std::optional<std::vector<std::uint8_t>> SignatureOfSlice(const std::string &pat
     if(entry.slice.support != SliceSupport::Supported)
     {
         RefuseSlice(path, container.form != ContainerForm::Thin, index, entry.cputype,
-                    seed::internal::DeclineText(entry.slice.support));
+                    the_seed::internal::DeclineText(entry.slice.support));
     }
     if(!entry.slice.codesig.has_value() || entry.slice.codesig->dataoff == 0 ||
        entry.slice.codesig->datasize == 0)
@@ -788,10 +790,10 @@ std::optional<std::pair<std::uint64_t, std::uint64_t>> FindSuperBlobSlot(
     const std::vector<std::uint8_t> &super_blob, std::uint32_t slot, std::uint32_t blob_magic,
     const char *blob_name)
 {
-    using seed::internal::ByteOrder;
-    using seed::internal::ByteSpan;
-    using seed::internal::RangeFits;
-    using seed::internal::ThrowMalformed;
+    using the_seed::internal::ByteOrder;
+    using the_seed::internal::ByteSpan;
+    using the_seed::internal::RangeFits;
+    using the_seed::internal::ThrowMalformed;
 
     const ByteSpan data(super_blob, kSignatureFormat, "the SuperBlob");
     if(data.Size() < 12)
@@ -880,7 +882,7 @@ std::optional<std::pair<std::uint64_t, std::uint64_t>> FindSuperBlobSlot(
 std::optional<std::vector<std::uint8_t>> MachOSigner::ExtractCmsFromSuperBlob(
     const std::vector<std::uint8_t> &super_blob)
 {
-    return seed::internal::GuardEntryPoint(
+    return the_seed::internal::GuardEntryPoint(
         kSignatureFormat, [&]() -> std::optional<std::vector<std::uint8_t>> {
             const auto found =
                 FindSuperBlobSlot(super_blob, CSSLOT_CMS_SIGNATURE, CSMAGIC_BLOBWRAPPER, "CMS blob");
@@ -897,7 +899,7 @@ std::optional<std::vector<std::uint8_t>> MachOSigner::ExtractCmsFromSuperBlob(
 std::optional<std::vector<std::uint8_t>> MachOSigner::ExtractCodeDirectoryFromSuperBlob(
     const std::vector<std::uint8_t> &super_blob)
 {
-    return seed::internal::GuardEntryPoint(
+    return the_seed::internal::GuardEntryPoint(
         kSignatureFormat, [&]() -> std::optional<std::vector<std::uint8_t>> {
             const auto found = FindSuperBlobSlot(super_blob, CSSLOT_CODEDIRECTORY,
                                                  CSMAGIC_CODEDIRECTORY, "code directory");

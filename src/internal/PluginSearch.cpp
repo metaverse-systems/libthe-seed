@@ -15,7 +15,7 @@
 #include <system_error>
 #include <utility>
 
-namespace seed::internal
+namespace the_seed::internal
 {
 
 namespace
@@ -129,9 +129,9 @@ void ResetPluginOpenCallCount()
     open_calls.store(0, std::memory_order_relaxed);
 }
 
-} // namespace seed::internal
+} // namespace the_seed::internal
 
-namespace seed::internal
+namespace the_seed::internal
 {
 
 std::string PluginFileName(const std::string &library)
@@ -307,4 +307,4 @@ void *SymbolFind(void *handle, const std::string &symbol, std::string &error)
     return address;
 }
 
-} // namespace seed::internal
+} // namespace the_seed::internal

@@ -841,18 +841,18 @@ TEST_CASE("edge: MSI oversized signature size check", "[MalformedMsi][edge]")
     const std::uint64_t largest = std::numeric_limits<std::uint32_t>::max();
     constexpr std::uint16_t kVersion3 = 3;
     constexpr std::uint16_t kVersion4 = 4;
-    CHECK_NOTHROW(seed::internal::CheckMsiSignatureSize(0, kVersion3));
-    CHECK_NOTHROW(seed::internal::CheckMsiSignatureSize(largest, kVersion3));
-    sm::RequireRejected([&] { seed::internal::CheckMsiSignatureSize(largest + 1, kVersion3); },
+    CHECK_NOTHROW(the_seed::internal::CheckMsiSignatureSize(0, kVersion3));
+    CHECK_NOTHROW(the_seed::internal::CheckMsiSignatureSize(largest, kVersion3));
+    sm::RequireRejected([&] { the_seed::internal::CheckMsiSignatureSize(largest + 1, kVersion3); },
                         kFormat, "signature size");
     sm::RequireRejected(
         [&] {
-            seed::internal::CheckMsiSignatureSize(std::numeric_limits<std::uint64_t>::max(),
+            the_seed::internal::CheckMsiSignatureSize(std::numeric_limits<std::uint64_t>::max(),
                                                   kVersion3);
         },
         kFormat, "signature size");
     // Version 4 stores a 64-bit stream size.
-    CHECK_NOTHROW(seed::internal::CheckMsiSignatureSize(largest + 1, kVersion4));
+    CHECK_NOTHROW(the_seed::internal::CheckMsiSignatureSize(largest + 1, kVersion4));
 }
 
 // ── What the reader that parses the whole package adds ────

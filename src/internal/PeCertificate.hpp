@@ -7,7 +7,7 @@
 #include <cstdint>
 #include <string>
 
-namespace seed::internal
+namespace the_seed::internal
 {
 
 // A WIN_CERTIFICATE holds an 8-byte header and the signature, and its length
@@ -26,4 +26,4 @@ inline void CheckPeSignatureSize(std::uint64_t signature_size)
     }
 }
 
-} // namespace seed::internal
+} // namespace the_seed::internal

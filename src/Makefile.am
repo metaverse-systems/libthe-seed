@@ -14,13 +14,13 @@ pkginclude_HEADERS = \
 	../include/libthe-seed/MsiSigner.hpp
 
 noinst_HEADERS = \
-	ElfParser.hpp \
-	PeParser.hpp \
-	ByteSwap.hpp \
+	internal/ElfParser.hpp \
+	internal/PeParser.hpp \
+	internal/ByteSwap.hpp \
 	internal/BoundedBytes.hpp \
 	internal/DependencyGraph.hpp \
 	internal/PeCertificate.hpp \
-	NameParser.hpp \
+	internal/NameParser.hpp \
 	internal/FileIO.hpp \
 	internal/PluginSearch.hpp \
 	internal/PakFile.hpp \
@@ -46,11 +46,11 @@ libthe_seed_la_SOURCES = LoadError.cpp \
 		ComponentLoader.cpp \
 		JSONLoader.cpp \
 		ResourcePak.cpp \
-		NameParser.cpp \
+		internal/NameParser.cpp \
 		DependencyLister.cpp \
-		ElfParser.cpp \
+		internal/ElfParser.cpp \
 		PakLoader.cpp \
-		PeParser.cpp \
+		internal/PeParser.cpp \
 		PeSigner.cpp \
 		MachOParser.cpp \
 		MachOSigner.cpp \

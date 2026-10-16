@@ -6,7 +6,7 @@
 #include <cstring>
 #include <string>
 
-namespace seed::internal
+namespace the_seed::internal
 {
 
 namespace
@@ -643,4 +643,4 @@ std::vector<std::uint8_t> WriteCfb(PackageModel &model, const std::vector<std::u
     return out;
 }
 
-} // namespace seed::internal
+} // namespace the_seed::internal

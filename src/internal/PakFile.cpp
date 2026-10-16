@@ -22,7 +22,7 @@
 #include <system_error>
 #include <utility>
 
-namespace seed::internal
+namespace the_seed::internal
 {
 
 namespace
@@ -252,4 +252,4 @@ void PakFile::ReadAt(std::uint64_t offset, void *destination, std::uint64_t coun
 
 #endif
 
-} // namespace seed::internal
+} // namespace the_seed::internal

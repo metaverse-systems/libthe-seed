@@ -56,8 +56,9 @@ namespace {
 
 using namespace seedtest::replace;
 namespace fs = std::filesystem;
-using seed::internal::FileReplaceHooks;
-using seed::internal::FileReplaceHooksScope;
+using the_seed::internal::FileReplaceHooks;
+using the_seed::internal::FileReplaceHooksScope;
+using the_seed::internal::WriteFileBytes;
 
 constexpr std::size_t kOldSize = 100000;
 constexpr std::size_t kNewSize = 150000;
@@ -134,7 +135,7 @@ struct Subject
     std::vector<FolderEntry> before;
 
     explicit Subject(unsigned file_mode = 0640)
-        : scratch("seed-replace"), path(scratch.File("target.bin")),
+        : scratch("seed-replace"), path(this->scratch.File("target.bin")),
           old_content(DistinctContent(1, kOldSize)), mode(file_mode)
     {
         WriteAll(this->path, this->old_content);
@@ -355,13 +356,13 @@ int HookFsyncFolder(const char *folder)
         ++g.hits;
         return g.err;
     }
-    static const FileReplaceHooks real = seed::internal::DefaultFileReplaceHooks();
+    static const FileReplaceHooks real = the_seed::internal::DefaultFileReplaceHooks();
     return real.fsync_folder(folder);
 }
 
 FileReplaceHooks InjectingHooks()
 {
-    FileReplaceHooks hooks = seed::internal::DefaultFileReplaceHooks();
+    FileReplaceHooks hooks = the_seed::internal::DefaultFileReplaceHooks();
     hooks.open = &HookOpen;
     hooks.write = &HookWrite;
     hooks.fchmod = &HookFchmod;

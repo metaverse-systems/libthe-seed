@@ -14,7 +14,7 @@
 
 #include "PluginSearch.hpp"
 
-namespace seed::internal
+namespace the_seed::internal
 {
 
 // The shared state and loading logic of ComponentLoader and SystemLoader.
@@ -246,4 +246,4 @@ template <typename Creator> class PluginCache
     std::map<std::string, void *> libraries;
 };
 
-} // namespace seed::internal
+} // namespace the_seed::internal

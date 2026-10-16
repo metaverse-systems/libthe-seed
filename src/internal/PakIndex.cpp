@@ -8,7 +8,7 @@
 #include <atomic>
 #include <cstring>
 
-namespace seed::internal
+namespace the_seed::internal
 {
 
 namespace
@@ -249,4 +249,4 @@ std::shared_ptr<const PakIndex> PakIndexRead(PakFile &file)
     return index;
 }
 
-} // namespace seed::internal
+} // namespace the_seed::internal

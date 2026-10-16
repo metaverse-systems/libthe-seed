@@ -366,7 +366,7 @@ TEST_CASE("MachOParser reads the same values from explicit byte orders on any ho
     // The reads below name their byte order; none uses the byte order of this
     // machine, so a big-endian host reads the same values. The parser's answers
     // are compared with fields composed from the raw bytes.
-    namespace si = seed::internal;
+    namespace si = the_seed::internal;
     using si::ByteOrder;
 
     const Bytes universal = LoadBytes("tiny-macho-universal");

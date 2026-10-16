@@ -50,10 +50,13 @@ jobs:
         # resource pak writer's own code in test_PakWriterCompat; a missing node
         # fails that test (SEED_TOOLS_OPTIONAL is not set in CI), and the version
         # is printed here so a missing node fails visibly before the tests.
+        # clang runs tests/check-style.sh, which skips itself without it; it is
+        # installed here so the style check always runs in the hosted job.
         run: |
           sudo apt-get update
           sudo apt-get install -y build-essential autoconf automake libtool pkg-config uuid-dev \
-            osslsigncode wine wine64
+            osslsigncode wine wine64 clang
+          clang++ --version
           osslsigncode --version
           wine --version
           node --version

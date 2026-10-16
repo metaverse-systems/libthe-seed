@@ -4,36 +4,42 @@
 #include <string>
 #include <vector>
 
-constexpr std::uint8_t EI_MAG0 = 0;
-constexpr std::uint8_t EI_MAG1 = 1;
-constexpr std::uint8_t EI_MAG2 = 2;
-constexpr std::uint8_t EI_MAG3 = 3;
-constexpr std::uint8_t EI_CLASS = 4;
-constexpr std::uint8_t EI_DATA = 5;
-constexpr std::uint8_t EI_NIDENT = 16;
+namespace the_seed::internal
+{
 
-constexpr std::uint8_t ELFMAG0 = 0x7F;
-constexpr std::uint8_t ELFMAG1 = 'E';
-constexpr std::uint8_t ELFMAG2 = 'L';
-constexpr std::uint8_t ELFMAG3 = 'F';
+namespace elf
+{
 
-constexpr std::uint8_t ELFCLASS32 = 1;
-constexpr std::uint8_t ELFCLASS64 = 2;
-constexpr std::uint8_t ELFDATA2LSB = 1;
-constexpr std::uint8_t ELFDATA2MSB = 2;
+constexpr std::uint8_t kEiMag0 = 0;
+constexpr std::uint8_t kEiMag1 = 1;
+constexpr std::uint8_t kEiMag2 = 2;
+constexpr std::uint8_t kEiMag3 = 3;
+constexpr std::uint8_t kEiClass = 4;
+constexpr std::uint8_t kEiData = 5;
+constexpr std::uint8_t kEiNident = 16;
 
-constexpr std::uint32_t PT_LOAD = 1;
-constexpr std::uint32_t PT_DYNAMIC = 2;
+constexpr std::uint8_t kElfMag0 = 0x7F;
+constexpr std::uint8_t kElfMag1 = 'E';
+constexpr std::uint8_t kElfMag2 = 'L';
+constexpr std::uint8_t kElfMag3 = 'F';
 
-constexpr std::int64_t DT_NULL = 0;
-constexpr std::int64_t DT_NEEDED = 1;
-constexpr std::int64_t DT_STRTAB = 5;
-constexpr std::int64_t DT_STRSZ = 10;
+constexpr std::uint8_t kElfClass32 = 1;
+constexpr std::uint8_t kElfClass64 = 2;
+constexpr std::uint8_t kElfData2Lsb = 1;
+constexpr std::uint8_t kElfData2Msb = 2;
+
+constexpr std::uint32_t kPtLoad = 1;
+constexpr std::uint32_t kPtDynamic = 2;
+
+constexpr std::int64_t kDtNull = 0;
+constexpr std::int64_t kDtNeeded = 1;
+constexpr std::int64_t kDtStrtab = 5;
+constexpr std::int64_t kDtStrsz = 10;
 
 #pragma pack(push, 1)
 struct Elf32_Ehdr
 {
-    std::uint8_t e_ident[EI_NIDENT];
+    std::uint8_t e_ident[kEiNident];
     std::uint16_t e_type;
     std::uint16_t e_machine;
     std::uint32_t e_version;
@@ -51,7 +57,7 @@ struct Elf32_Ehdr
 
 struct Elf64_Ehdr
 {
-    std::uint8_t e_ident[EI_NIDENT];
+    std::uint8_t e_ident[kEiNident];
     std::uint16_t e_type;
     std::uint16_t e_machine;
     std::uint32_t e_version;
@@ -112,6 +118,8 @@ struct Elf64_Dyn
 };
 #pragma pack(pop)
 
+} // namespace elf
+
 class ElfParser
 {
   public:
@@ -120,3 +128,5 @@ class ElfParser
     // The same listing for a file already held in memory.
     static std::vector<std::string> ListDependenciesFromBytes(const std::vector<std::uint8_t> &bytes);
 };
+
+} // namespace the_seed::internal

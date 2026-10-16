@@ -53,7 +53,7 @@
 #include <cstdint>
 #include <vector>
 
-namespace seed::internal
+namespace the_seed::internal
 {
 
 // The highest sector number the format allows is 0xFFFFFFF9.
@@ -68,4 +68,4 @@ inline constexpr std::uint64_t kCfbMaxSectors = 0xFFFFFFFA;
 // sectors than the format allows.
 std::vector<std::uint8_t> WriteCfb(PackageModel &model, const std::vector<std::uint8_t> *signature);
 
-} // namespace seed::internal
+} // namespace the_seed::internal

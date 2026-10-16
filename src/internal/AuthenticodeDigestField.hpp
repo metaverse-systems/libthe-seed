@@ -19,7 +19,7 @@
 #include <string>
 #include <vector>
 
-namespace seed::internal
+namespace the_seed::internal
 {
 
 struct AuthenticodeDigestField
@@ -35,4 +35,4 @@ struct AuthenticodeDigestField
 
 AuthenticodeDigestField ReadAuthenticodeDigestField(const std::vector<std::uint8_t> &blob);
 
-} // namespace seed::internal
+} // namespace the_seed::internal

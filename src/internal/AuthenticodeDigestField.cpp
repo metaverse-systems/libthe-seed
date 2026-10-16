@@ -5,7 +5,7 @@
 #include <cstddef>
 #include <stdexcept>
 
-namespace seed::internal
+namespace the_seed::internal
 {
 
 namespace
@@ -178,4 +178,4 @@ AuthenticodeDigestField ReadAuthenticodeDigestField(const std::vector<std::uint8
     return field;
 }
 
-} // namespace seed::internal
+} // namespace the_seed::internal
