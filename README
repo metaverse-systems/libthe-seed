@@ -39,7 +39,7 @@ cd libthe-seed
 ./autogen.sh && ./configure && make && make check
 ```
 
-`make check` builds every test program, runs them all and fails if any test fails, if a program leaves files behind, or if a sample file under `tests/fixtures/` is missing or changed. Use `make check -j4` to run in parallel. The tests do not depend on the directory they are started from. When cross-compiling (for example `--host=x86_64-w64-mingw32`) the test programs are built but not run, a notice says so, and only `tests/check-fixtures.sh` runs.
+`make check` builds every test program, runs them all and fails if any test fails, if a program leaves files behind, or if a sample file under `tests/fixtures/` is missing or changed. Use `make check -j4` to run in parallel. The tests do not depend on the directory they are started from. When cross-compiling (for example `--host=x86_64-w64-mingw32`) the test programs are built but not run, a notice says so, and only the scripts run: `tests/check-fixtures.sh`, `tests/check-exports.sh` (reads the DLL's export table) and `tests/check-public-headers.sh` (compiles the installed headers with the cross compiler); `tests/check-style.sh` skips itself.
 
 To check for memory errors and undefined behaviour, configure a build with the sanitizer variant (AddressSanitizer and UndefinedBehaviorSanitizer for the library and every test):
 
@@ -50,6 +50,8 @@ make && make check VERBOSE=1
 ```
 
 `--enable-sanitizer=no`, or leaving the option out, builds without a sanitizer. Any other value is an error.
+
+Three scripts in `make check` guard the public surface and the code style: `tests/check-exports.sh` fails when the shared library exports anything outside `tests/public-symbols.txt`, `tests/check-public-headers.sh` checks that the installed headers are the ones in `tests/public-headers.txt`, compile alone, leak no platform header and keep the compatibility switch working, and `tests/check-style.sh` fails on a member used without `this->` or a member name ending in an underscore. The style check needs `clang++` and `python3` and skips itself without them.
 
 ### Known gaps
 
@@ -65,7 +67,7 @@ The sample executables, DLL, installer and Mach-O files in `tests/fixtures/` are
 
 ### Hosted checks
 
-The workflow in `.github/workflows/ci.yaml` runs `make check` for the plain and the address+undefined variants on every pull request and on pushes to `main`. It builds libecs-cpp from commit `bd84b5a5bee05bed2006fc9ef9dbbfe3e58f9f7e` (version 2.1.0). Update `LIBECS_CPP_REF` in the workflow when the required libecs-cpp changes.
+The workflow in `.github/workflows/ci.yaml` runs `make check` for the plain, the address+undefined and the thread variants on every pull request and on pushes to `main`. It builds libecs-cpp from commit `bd84b5a5bee05bed2006fc9ef9dbbfe3e58f9f7e` (version 2.1.0). Update `LIBECS_CPP_REF` in the workflow when the required libecs-cpp changes.
 
 ## Dependency listing
 

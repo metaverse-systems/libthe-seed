@@ -12,6 +12,18 @@ libthe-seed (unreleased)
 * The shared library exports only the public classes (new installed header
   libthe-seed/Export.hpp defines THE_SEED_API). Internal helpers are hidden.
 
+* Simple questions about a file read only what answers them.
+  MachOParser::DetectFormat, IsMachO and IsFatBinary read the first page of
+  the file, and PeSigner, MachOSigner and MsiSigner HasEmbeddedSignature read
+  only the headers, tables and signature that locate the signature, so the
+  cost no longer grows with the size of the file. Answers and errors are
+  unchanged.
+
+* Documentation: the configuration pointer a plugin receives from JSONLoader is
+  a nlohmann::json * from the JSON library libecs-cpp provides. A plugin that
+  reads it must be built against the same libecs-cpp as libthe-seed; nothing
+  checks this and a mismatch is undefined behaviour.
+
 * LibraryLoader.hpp no longer includes <windows.h> or <dlfcn.h>, LibraryDeleter
   is removed, and a LibraryLoader can be neither copied nor moved.
 
