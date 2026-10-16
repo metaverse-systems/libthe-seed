@@ -29,6 +29,12 @@ class ComponentLoader;
  * container, and there is no teardown order. The components of a scene come
  * from pinned plugins, so they stay valid and destructible after both are
  * destroyed, whether the container is destroyed before or after them.
+ *
+ * Data format: the configuration pointer a plugin receives (the `data` argument
+ * of `create_component`) is a `nlohmann::json *` from the JSON library that
+ * libecs-cpp provides. A plugin that reads it must be built against the same
+ * libecs-cpp, and so the same JSON library version, as libthe-seed. Nothing
+ * checks this; a mismatch is undefined behaviour, typically a crash.
  */
 class THE_SEED_API JSONLoader
 {

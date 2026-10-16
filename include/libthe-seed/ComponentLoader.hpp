@@ -30,6 +30,13 @@ namespace the_seed
  * file system is searched or a plugin is opened. A plugin's static initialiser
  * must not load through the same loader. A request made after PathAdd
  * returned uses the new location.
+ *
+ * Data format: the configuration pointer passed to Create as `data`, which is
+ * what a plugin's `create_component` receives, is a `nlohmann::json *` from the
+ * JSON library that libecs-cpp provides (JSONLoader passes one). A plugin that
+ * reads it must be built against the same libecs-cpp, and so the same JSON
+ * library version, as libthe-seed. Nothing checks this; a mismatch is
+ * undefined behaviour, typically a crash.
  */
 class THE_SEED_API ComponentLoader
 {

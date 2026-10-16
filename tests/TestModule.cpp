@@ -2,7 +2,10 @@
 #include <libecs-cpp/json.hpp>
 
 #include <atomic>
+#include <cstddef>
 #include <cstdint>
+#include <mutex>
+#include <vector>
 
 #ifndef TEST_MODULE_VARIANT
 #define TEST_MODULE_VARIANT 1
@@ -49,6 +52,19 @@ namespace
         int Value = 0;
         std::atomic<int> *Counter = nullptr;
     };
+
+    /*! The configuration pointers that create_component received, in call order. */
+    std::mutex &RecordedLock()
+    {
+        static std::mutex lock;
+        return lock;
+    }
+
+    std::vector<const void *> &Recorded()
+    {
+        static std::vector<const void *> pointers;
+        return pointers;
+    }
 }
 
 extern "C"
@@ -62,11 +78,36 @@ extern "C"
             return new ModuleComponent();
         }
 
+        {
+            std::lock_guard<std::mutex> guard(RecordedLock());
+            Recorded().push_back(p);
+        }
         auto *config = static_cast<nlohmann::json *>(p);
         if(config->value("null", false))
         {
             return nullptr;
         }
         return new ModuleComponent(*config);
+    }
+
+    /*! Test hook: how many configuration pointers create_component has recorded since the last reset. */
+    std::size_t test_module_recorded_count()
+    {
+        std::lock_guard<std::mutex> guard(RecordedLock());
+        return Recorded().size();
+    }
+
+    /*! Test hook: the recorded configuration pointer at the index, or nullptr past the end. */
+    const void *test_module_recorded_at(std::size_t index)
+    {
+        std::lock_guard<std::mutex> guard(RecordedLock());
+        return index < Recorded().size() ? Recorded()[index] : nullptr;
+    }
+
+    /*! Test hook: forgets every recorded pointer. */
+    void test_module_recorded_reset()
+    {
+        std::lock_guard<std::mutex> guard(RecordedLock());
+        Recorded().clear();
     }
 }

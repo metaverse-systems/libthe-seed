@@ -336,6 +336,8 @@ Scenes are all or nothing: the whole scene is read, checked and every component 
 * `SceneNotUnderstood`: the text is not a valid scene. A syntax error gives the line and column; a missing `entities`, or an entity without `Handle` or `Components`, names the entity (its index and handle) and the missing item.
 * `SceneComponentFailed`: a component could not be made. The message names the entity, the component type and the plugin's own message.
 
+**Data format.** The configuration a plugin receives (the `data` argument of `create_component`) is a `nlohmann::json *` from the JSON library that libecs-cpp provides. A plugin that reads it must be built against the same libecs-cpp, and so the same JSON library version, as libthe-seed. Nothing checks this; a mismatch is undefined behaviour, typically a crash.
+
 `JSONLoader` hands the `std::unique_ptr` returned by `ComponentLoader::Create` to `Entity::Component` unchanged. libthe-seed 0.3.1 needs libecs-cpp 1.7.0 or later.
 
 ### Thread Safety

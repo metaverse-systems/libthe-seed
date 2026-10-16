@@ -3,17 +3,22 @@
 #include <libthe-seed/LoadError.hpp>
 #include <libthe-seed/ComponentLoader.hpp>
 #include <libthe-seed/JSONLoader.hpp>
+#include <libthe-seed/LibraryLoader.hpp>
 #include <libecs-cpp/ecs.hpp>
 #include <libecs-cpp/json.hpp>
 #include <filesystem>
 #include <fstream>
+#include <functional>
+#include <cstddef>
 #include <iostream>
 #include <stdexcept>
 #ifndef _WIN32
 #include <unistd.h>
 #include <sys/stat.h>
 #endif
+#include <set>
 #include <string>
+#include <vector>
 
 namespace
 {
@@ -469,4 +474,196 @@ TEST_CASE("JSONLoader loads a good scene file", "[JSONLoader]")
 
     REQUIRE_NOTHROW(loader.FileParse(file));
     REQUIRE(scene.world->ComponentGet("e1", "TestModule")->Export()["value"] == 5);
+}
+
+namespace
+{
+    /*! A container that already holds several entities with components, and the loader that made them. */
+    struct Populated
+    {
+        Populated()
+        {
+            the_seed::JSONLoader existing(this->scene.world, this->scene.loader);
+            nlohmann::json document;
+            document["entities"] = nlohmann::json::array();
+            for(int index = 0; index < 3; index++)
+            {
+                nlohmann::json entity;
+                entity["Handle"] = "kept" + std::to_string(index);
+                entity["Components"]["testmodule"]["value"] = 10 + index;
+                document["entities"].push_back(entity);
+            }
+            existing.StringParse(document.dump());
+            this->before = this->scene.world->Export();
+        }
+
+        /*! Runs the action, which must fail with the reason, and checks the whole container is unchanged. */
+        Failure Fails(the_seed::LoadError::Reason reason, const std::function<void()> &action)
+        {
+            Failure failure{the_seed::LoadError::Reason::NotFound, ""};
+            try
+            {
+                action();
+                FAIL("no error was thrown");
+            }
+            catch(const the_seed::LoadError &e)
+            {
+                failure.reason = e.ReasonGet();
+                failure.message = e.what();
+            }
+            REQUIRE(failure.reason == reason);
+            REQUIRE(this->scene.world->Export() == this->before);
+            REQUIRE(this->scene.world->Entities.size() == 3);
+            return failure;
+        }
+
+        Scene scene;
+        nlohmann::json before;
+    };
+
+    /*! A scene of entities, each with a testmodule component and, for the entities named, a component
+     *  that no plugin provides. */
+    std::string SceneOf(const std::vector<std::string> &handles, const std::set<std::string> &broken)
+    {
+        nlohmann::json document;
+        document["entities"] = nlohmann::json::array();
+        int value = 0;
+        for(const std::string &handle : handles)
+        {
+            nlohmann::json entity;
+            entity["Handle"] = handle;
+            entity["Components"]["testmodule"]["value"] = ++value;
+            if(broken.count(handle) != 0)
+            {
+                entity["Components"]["missingplugin"] = nlohmann::json::object();
+            }
+            document["entities"].push_back(entity);
+        }
+        return document.dump();
+    }
+}
+
+TEST_CASE("JSONLoader leaves a populated container unchanged when each stage fails", "[JSONLoader]")
+{
+    Populated world;
+    REQUIRE(world.before.dump().find("kept2") != std::string::npos);
+    the_seed::JSONLoader loader(world.scene.world, world.scene.loader);
+    seedtest::ScratchDir scratch;
+
+    SECTION("the scene file cannot be opened")
+    {
+        const std::string file = scratch.File("absent.json");
+        Failure failure = world.Fails(the_seed::LoadError::Reason::SceneUnopenable, [&] { loader.FileParse(file); });
+        REQUIRE(Contains(failure.message, file));
+    }
+
+    SECTION("the scene is not understood")
+    {
+        Failure failure = world.Fails(the_seed::LoadError::Reason::SceneNotUnderstood,
+                                      [&] { loader.StringParse(R"({"entities": [{"Handle": "a"}]})"); });
+        REQUIRE(Contains(failure.message, "Components"));
+    }
+
+    SECTION("a component cannot be made on the first entity")
+    {
+        Failure failure = world.Fails(the_seed::LoadError::Reason::SceneComponentFailed, [&] {
+            loader.StringParse(SceneOf({"first", "second", "third"}, {"first"}));
+        });
+        REQUIRE(Contains(failure.message, "first"));
+        REQUIRE(Contains(failure.message, "missingplugin"));
+        REQUIRE_FALSE(world.scene.world->Entities.contains("first"));
+        REQUIRE_FALSE(world.scene.world->Entities.contains("second"));
+    }
+
+    SECTION("a component cannot be made on the last of several entities")
+    {
+        Failure failure = world.Fails(the_seed::LoadError::Reason::SceneComponentFailed, [&] {
+            loader.StringParse(SceneOf({"first", "second", "third", "last"}, {"last"}));
+        });
+        REQUIRE(Contains(failure.message, "\"last\""));
+        REQUIRE(Contains(failure.message, "missingplugin"));
+        REQUIRE(Contains(failure.message, "not found"));
+        REQUIRE_FALSE(world.scene.world->Entities.contains("first"));
+        REQUIRE_FALSE(world.scene.world->Entities.contains("third"));
+    }
+}
+
+TEST_CASE("JSONLoader adds every entity and component of a valid scene to a populated container", "[JSONLoader]")
+{
+    Populated world;
+    the_seed::JSONLoader loader(world.scene.world, world.scene.loader);
+
+    REQUIRE_NOTHROW(loader.StringParse(SceneOf({"one", "two", "three"}, {})));
+
+    REQUIRE(world.scene.world->Entities.size() == 6);
+    for(int index = 0; index < 3; index++)
+    {
+        REQUIRE(world.scene.world->ComponentGet("kept" + std::to_string(index), "TestModule")->Export()["value"] ==
+                10 + index);
+    }
+    int value = 0;
+    for(const std::string handle : {"one", "two", "three"})
+    {
+        REQUIRE(world.scene.world->Entities.contains(handle));
+        REQUIRE(world.scene.world->ComponentHas(handle, "TestModule"));
+        REQUIRE(world.scene.world->ComponentGet(handle, "TestModule")->Export()["value"] == ++value);
+    }
+    REQUIRE(ComponentsCount(world.scene.world) == 6);
+}
+
+/*  The document a JSONLoader keeps is private and has no accessor, so the configuration it hands to a
+ *  plugin is checked through lifetime. libtestmodule records the pointer each create_component call
+ *  receives. If the loader copied each entity's description into a temporary, the pointer would lead into
+ *  that temporary, destroyed at the end of its loop iteration. The address-sanitizer run reports reading
+ *  it as a heap-use-after-free; a plain run may also show a wrong value but is not relied on. */
+TEST_CASE("JSONLoader hands plugins configurations that stay alive with the loader", "[JSONLoader]")
+{
+    using CountFn = std::size_t (*)();
+    using AtFn = const void *(*)(std::size_t);
+    using ResetFn = void (*)();
+
+    the_seed::LibraryLoader module("testmodule");
+    module.PathAdd(seedtest::ModuleDir());
+    auto count = reinterpret_cast<CountFn>(module.FunctionGet("test_module_recorded_count"));
+    auto at = reinterpret_cast<AtFn>(module.FunctionGet("test_module_recorded_at"));
+    auto reset = reinterpret_cast<ResetFn>(module.FunctionGet("test_module_recorded_reset"));
+    REQUIRE(count != nullptr);
+    REQUIRE(at != nullptr);
+    REQUIRE(reset != nullptr);
+
+    Scene scene;
+    the_seed::JSONLoader loader(scene.world, scene.loader);
+
+    nlohmann::json document;
+    document["entities"] = nlohmann::json::array();
+    std::vector<nlohmann::json> configs;
+    for(int index = 0; index < 5; index++)
+    {
+        nlohmann::json config;
+        config["value"] = 100 + index;
+        config["label"] = "configuration number " + std::to_string(index) + std::string(40, 'x');
+        config["list"] = nlohmann::json::array({index, index + 1, index + 2});
+        configs.push_back(config);
+        nlohmann::json entity;
+        entity["Handle"] = "entity" + std::to_string(index);
+        entity["Components"]["testmodule"] = config;
+        document["entities"].push_back(entity);
+    }
+
+    reset();
+    REQUIRE_NOTHROW(loader.StringParse(document.dump()));
+
+    REQUIRE(count() == configs.size());
+    std::set<const void *> distinct;
+    for(std::size_t index = 0; index < configs.size(); index++)
+    {
+        const void *pointer = at(index);
+        REQUIRE(pointer != nullptr);
+        distinct.insert(pointer);
+        // The loader is still alive, so the value must be too, and equal to the scene text.
+        const auto *value = static_cast<const nlohmann::json *>(pointer);
+        REQUIRE(*value == configs[index]);
+    }
+    REQUIRE(distinct.size() == configs.size());
+    reset();
 }
