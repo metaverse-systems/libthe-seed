@@ -2,6 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.69])
+m4_define([the_seed_libecs_min], [2.1.0])
 AC_INIT([libthe-seed], [0.7.0], [tim@metaverse.systems])
 LT_INIT
 AC_CONFIG_SRCDIR([src/LibraryLoader.cpp])
@@ -20,7 +21,9 @@ AM_INIT_AUTOMAKE([subdir-objects])
 # Checks for libraries.
 AC_CHECK_LIB([pthread], [pthread_exit])
 
-PKG_CHECK_MODULES([LIBECS], [ecs-cpp >= 2.0.0])
+LIBECS_MIN_VERSION=the_seed_libecs_min
+AC_SUBST([LIBECS_MIN_VERSION])
+PKG_CHECK_MODULES([LIBECS], [ecs-cpp >= the_seed_libecs_min])
 dnl AC_CHECK_FILE refuses to run when cross compiling, so test the file directly.
 AS_IF([test -f "$srcdir/external/Catch2/extras/catch_amalgamated.hpp"],
     [],

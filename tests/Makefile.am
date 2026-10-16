@@ -36,6 +36,7 @@ AM_TESTS_ENVIRONMENT = \
     SEED_BUILDDIR='$(abs_top_builddir)'; export SEED_BUILDDIR; \
     SEED_PREFIX='$(prefix)'; export SEED_PREFIX; \
     SEED_VERSION='$(PACKAGE_VERSION)'; export SEED_VERSION; \
+    SEED_LIBECS_MIN='@LIBECS_MIN_VERSION@'; export SEED_LIBECS_MIN; \
     SEED_HOST_OS='@host_os@'; export SEED_HOST_OS; \
     SEED_SANITIZER_FLAGS='$(SANITIZER_CXXFLAGS) $(SANITIZER_LDFLAGS)'; export SEED_SANITIZER_FLAGS;
 
@@ -53,7 +54,7 @@ seed_test_programs = test_NameParser test_LoadError test_LibraryLoader test_Depe
 check_PROGRAMS = $(seed_test_programs)
 
 # Scripts listed here run in every build, including cross builds.
-host_independent_tests = check-fixtures.sh check-style.sh check-exports.sh check-public-headers.sh
+host_independent_tests = check-fixtures.sh check-style.sh check-exports.sh check-public-headers.sh check-versions.sh
 
 if CROSS_COMPILING
 cross_compiling_flag = yes
@@ -263,7 +264,7 @@ test_ReadmeExamples_LDFLAGS = $(AM_LDFLAGS) -pthread
 
 EXTRA_DIST = TestPaths.hpp LoaderTestSupport.hpp PakTestSupport.hpp CfbReference.hpp MsiTestSupport.hpp ToolSupport.hpp MachOReference.hpp MachOSigningSupport.hpp HeapCounter.hpp MalformedInput.hpp ReplaceTestSupport.hpp \
              reference/reference-dump.cpp reference/compare-reference.sh \
-             reference/make-generated-references.sh run-test.sh run-test-selftest.sh check-fixtures.sh check-style.sh check-exports.sh public-symbols.txt check-public-headers.sh public-headers.txt \
+             reference/make-generated-references.sh run-test.sh run-test-selftest.sh check-fixtures.sh check-style.sh check-exports.sh public-symbols.txt check-public-headers.sh public-headers.txt check-versions.sh \
              fuzz/FuzzTargets.hpp fuzz/FuzzTargets.cpp fuzz/fuzz_entry.cpp \
              fuzz/build-fuzzers.sh fuzz/run-fuzzers.sh \
              fuzz/corpus \

@@ -19,6 +19,6 @@
   },
   "homepage": "https://github.com/metaverse-systems/libthe-seed#readme",
   "dependencies": {
-    "@metaverse-systems/libecs-cpp": "^1.0.0"
+    "@metaverse-systems/libecs-cpp": "^2.1.0"
   }
 }

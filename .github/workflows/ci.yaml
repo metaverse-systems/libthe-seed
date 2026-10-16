@@ -20,7 +20,7 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
-  # libecs-cpp 2.1.0 (provides ecs-cpp >= 2.0.0), fetched anonymously at this exact commit.
+  # libecs-cpp 2.1.0 (provides ecs-cpp >= 2.1.0), fetched anonymously at this exact commit.
   LIBECS_CPP_REF: bd84b5a5bee05bed2006fc9ef9dbbfe3e58f9f7e
 
 jobs:
@@ -85,9 +85,9 @@ jobs:
         run: |
           echo "PKG_CONFIG_PATH=$HOME/ecs/lib/pkgconfig" >> "$GITHUB_ENV"
           echo "LD_LIBRARY_PATH=$HOME/ecs/lib" >> "$GITHUB_ENV"
-          if ! PKG_CONFIG_PATH="$HOME/ecs/lib/pkgconfig" pkg-config --atleast-version=2.0.0 ecs-cpp; then
+          if ! PKG_CONFIG_PATH="$HOME/ecs/lib/pkgconfig" pkg-config --atleast-version=2.1.0 ecs-cpp; then
             found=$(PKG_CONFIG_PATH="$HOME/ecs/lib/pkgconfig" pkg-config --modversion ecs-cpp 2>/dev/null || echo none)
-            echo "::error::ecs-cpp >= 2.0.0 is required, found $found"
+            echo "::error::ecs-cpp >= 2.1.0 is required, found $found"
             exit 1
           fi
 

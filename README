@@ -2,7 +2,7 @@
 
 ## Build library
 
-* Build and install libecs-cpp
+* Build and install libecs-cpp 2.1.0 or later
 
   https://github.com/metaverse-systems/libecs-cpp
 
@@ -361,7 +361,7 @@ Scenes are all or nothing: the whole scene is read, checked and every component 
 
 **Data format.** The configuration a plugin receives (the `data` argument of `create_component`) is a `nlohmann::json *` from the JSON library that libecs-cpp provides. A plugin that reads it must be built against the same libecs-cpp, and so the same JSON library version, as libthe-seed. Nothing checks this; a mismatch is undefined behaviour, typically a crash.
 
-`JSONLoader` hands the `std::unique_ptr` returned by `ComponentLoader::Create` to `Entity::Component` unchanged. libthe-seed 0.3.1 needs libecs-cpp 1.7.0 or later.
+`JSONLoader` hands the `std::unique_ptr` returned by `ComponentLoader::Create` to `Entity::Component` unchanged.
 
 ### Thread Safety
 

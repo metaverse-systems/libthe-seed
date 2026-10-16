@@ -86,3 +86,6 @@ src/internal/.dirstamp
 tests/*.log
 tests/*.trs
 tests/test-suite.log
+
+# npm lock file is not kept
+/package-lock.json
