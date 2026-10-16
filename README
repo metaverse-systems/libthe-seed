@@ -129,6 +129,27 @@ The signature container that the-seed builds has no signed attributes and its cr
 * `PeSigner`: the fingerprint of an unsigned program includes the zero padding that embedding adds, so it is the same before and after embedding. Stripping removes up to seven trailing zero bytes of padding, never below the end of the last section, so a program whose last byte is not zero is restored to its original length and content, except that the CheckSum field holds the calculated checksum (embedding and stripping both recalculate it); one that ends in zeros may lose up to seven when its length was a multiple of eight.
 * The tests of the replacement run the PE, Mach-O and MSI signers.
 
+## Public surface
+
+The library exports exactly the classes below, each in the `the_seed` namespace and each installed as `<libthe-seed/Name.hpp>`. Everything else in the shared library is internal (`the_seed::internal`) and is neither installed nor exported. Including a public header introduces no name outside `the_seed`, except the macros `THE_SEED_API` and, when you set it, `THE_SEED_LEGACY_NAMES`.
+
+| Public name | Header | Nested public names |
+|---|---|---|
+| `the_seed::ComponentLoader` | `ComponentLoader.hpp` | `ComponentCreator` |
+| `the_seed::SystemLoader` | `SystemLoader.hpp` | `SystemCreator` |
+| `the_seed::JSONLoader` | `JSONLoader.hpp` | |
+| `the_seed::PakLoader` | `PakLoader.hpp` | |
+| `the_seed::ResourcePak` | `ResourcePak.hpp` | |
+| `the_seed::LoadError` | `LoadError.hpp` | `Reason`, `LocationState`, `Location` |
+| `the_seed::LibraryLoader` | `LibraryLoader.hpp` | |
+| `the_seed::DependencyLister`, `DependencyResult`, `LibraryError` | `DependencyLister.hpp` | |
+| `the_seed::MachOParser` | `MachOParser.hpp` | `Format`, `ArchSlice` |
+| `the_seed::PeSigner` | `PeSigner.hpp` | `DigestResult` |
+| `the_seed::MachOSigner` | `MachOSigner.hpp` | `PreparedSlice`, `PreparedSignature` |
+| `the_seed::MsiSigner` | `MsiSigner.hpp` | `DigestResult`, `SignatureState`, `SignatureCheck` |
+
+`Export.hpp` defines `THE_SEED_API`, which marks these classes as exported. The tests check the list: `tests/public-symbols.txt` names every allowed exported symbol and `tests/check-exports.sh` fails when the library exports anything else. See "Migrating from earlier versions" if your code used the former global names.
+
 ## Usage
 
 All loaders are instance-based classes. Each instance owns its own search locations and caches, and is safe for concurrent use from multiple threads. Every failure to load a plugin, a resource pak or a scene is a `LoadError`, which is a `std::runtime_error`.
@@ -358,7 +379,7 @@ t2.join();
 
 ### Error Handling
 
-Every loader throws `LoadError` (`#include <libthe-seed/LoadError.hpp>`, in the global namespace) when a plugin, resource pak or scene cannot be loaded. It derives from `std::runtime_error`, so existing `catch (const std::runtime_error &)` code keeps working. `what()` is a summary line followed by indented detail lines; `ReasonGet()`, `NameGet()`, `FileGet()`, `LocationsGet()` and `DetailGet()` give the same facts in structured form.
+Every loader throws `LoadError` (`#include <libthe-seed/LoadError.hpp>`, in the `the_seed` namespace) when a plugin, resource pak or scene cannot be loaded. It derives from `std::runtime_error`, so existing `catch (const std::runtime_error &)` code keeps working. `what()` is a summary line followed by indented detail lines; `ReasonGet()`, `NameGet()`, `FileGet()`, `LocationsGet()` and `DetailGet()` give the same facts in structured form.
 
 | `Reason` | Meaning |
 |---|---|

@@ -2,20 +2,22 @@
 
 #include <cstdint>
 
-inline constexpr std::uint32_t MH_MAGIC    = 0xFEEDFACE;
-inline constexpr std::uint32_t MH_CIGAM    = 0xCEFAEDFE;
-inline constexpr std::uint32_t MH_MAGIC_64 = 0xFEEDFACF;
-inline constexpr std::uint32_t MH_CIGAM_64 = 0xCFFAEDFE;
-inline constexpr std::uint32_t FAT_MAGIC   = 0xCAFEBABE;
-inline constexpr std::uint32_t FAT_CIGAM   = 0xBEBAFECA;
+namespace the_seed::internal::macho
+{
+
+// Host-order magic numbers. The names carry the k prefix because the platform
+// headers define the unprefixed spellings as macros, which no namespace hides.
+inline constexpr std::uint32_t kMhMagic   = 0xFEEDFACE;
+inline constexpr std::uint32_t kMhCigam   = 0xCEFAEDFE;
+inline constexpr std::uint32_t kMhMagic64 = 0xFEEDFACF;
+inline constexpr std::uint32_t kMhCigam64 = 0xCFFAEDFE;
+inline constexpr std::uint32_t kFatMagic  = 0xCAFEBABE;
+inline constexpr std::uint32_t kFatCigam  = 0xBEBAFECA;
 
 // Names by on-disk byte order. A value here is the first four bytes of a file
 // read in file order (first byte most significant), so it does not depend on the
 // byte order of the host: CF FA ED FE is 0xCFFAEDFE. These are the names the
-// layout module uses; the older names above are host-order integers and are
-// kept for the code that has not moved to the layout module yet.
-namespace the_seed::internal::macho
-{
+// layout module uses.
 
 inline constexpr std::uint32_t kBytesThin64Little = 0xCFFAEDFE; // CF FA ED FE
 inline constexpr std::uint32_t kBytesThin32Little = 0xCEFAEDFE; // CE FA ED FE
@@ -46,8 +48,6 @@ inline constexpr std::uint64_t kCodeSignatureCommandSize = 16;
 inline constexpr std::uint64_t kFatArch32Size           = 20;
 inline constexpr std::uint64_t kFatArch64Size           = 32;
 inline constexpr std::uint64_t kFatHeaderSize           = 8;
-
-} // namespace the_seed::internal::macho
 
 #pragma pack(push, 1)
 struct MachHeader32
@@ -104,3 +104,5 @@ struct FatArch64
     std::uint32_t reserved;
 };
 #pragma pack(pop)
+
+} // namespace the_seed::internal::macho
