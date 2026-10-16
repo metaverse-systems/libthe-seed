@@ -1,12 +1,12 @@
 #include "FileIO.hpp"
 #include "FileReplaceHooks.hpp"
+#include "RandomAccessFile.hpp"
 
 #include <algorithm>
 #include <atomic>
 #include <cstdio>
 #include <cstring>
 #include <filesystem>
-#include <fstream>
 #include <mutex>
 #include <random>
 #include <stdexcept>
@@ -160,23 +160,35 @@ void ResetReadFileBytesCallCount()
 std::vector<std::uint8_t> ReadFileBytes(const std::string &file_path)
 {
     ++read_file_bytes_calls;
-    std::ifstream input(file_path, std::ios::binary);
-    if(!input.is_open())
+    const RandomAccessFile file = [&] {
+        try
+        {
+            return RandomAccessFile::Open(file_path);
+        }
+        catch(const FileOpenError &)
+        {
+            throw std::runtime_error("Unable to open file: " + file_path);
+        }
+    }();
+
+    std::uint64_t size = 0;
+    try
     {
-        throw std::runtime_error("Unable to open file: " + file_path);
+        size = file.Size();
     }
-    input.seekg(0, std::ios::end);
-    const std::streamsize size = input.tellg();
-    input.seekg(0, std::ios::beg);
-    if(size < 0)
+    catch(const FileReadError &)
     {
         throw std::runtime_error("Unable to read file size: " + file_path);
     }
+
     std::vector<std::uint8_t> bytes(static_cast<std::size_t>(size));
     if(size > 0)
     {
-        input.read(reinterpret_cast<char *>(bytes.data()), size);
-        if(!input)
+        try
+        {
+            file.ReadAt(0, bytes.data(), size);
+        }
+        catch(const std::runtime_error &)
         {
             throw std::runtime_error("Unable to read file: " + file_path);
         }

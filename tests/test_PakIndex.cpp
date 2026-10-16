@@ -6,7 +6,7 @@
 #include "TestPaths.hpp"
 
 #include "internal/PakAccess.hpp"
-#include "internal/PakFile.hpp"
+#include "internal/RandomAccessFile.hpp"
 #include "internal/PakIndex.hpp"
 
 #include <chrono>

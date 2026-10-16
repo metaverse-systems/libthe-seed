@@ -8,9 +8,11 @@
 // whose message starts with "<Format>: ".
 
 #include "ByteSwap.hpp"
+#include "PagedFile.hpp"
 
 #include <cstddef>
 #include <cstdint>
+#include <algorithm>
 #include <cstring>
 #include <exception>
 #include <stdexcept>
@@ -122,6 +124,11 @@ inline std::string StructurePastTheEnd(std::string_view structure, std::uint64_t
 } // namespace detail
 
 // Read-only view of a byte range. Every access is checked against the view.
+//
+// The range is either a buffer in memory or a part of a PagedFile. The size,
+// every bounds check and every message are worked out the same way for both;
+// only where the bytes come from differs. A view of a PagedFile fetches the
+// pages it needs when a value is read, so Sub makes no read.
 class ByteSpan
 {
 public:
@@ -137,6 +144,12 @@ public:
     {
     }
 
+    // The whole file. The file must outlive the view.
+    ByteSpan(const PagedFile &file, std::string_view format, std::string_view scope = "the file")
+        : size(file.Size()), format(format), scope(scope), paged(&file)
+    {
+    }
+
     template <typename T>
     T Read(std::uint64_t offset, ByteOrder order, std::string_view field) const
     {
@@ -147,7 +160,7 @@ public:
                            detail::PastTheEnd(field, offset, this->scope, this->size));
         }
         T value;
-        std::memcpy(&value, this->data + offset, sizeof(T));
+        std::memcpy(&value, this->At(offset, sizeof(T)), sizeof(T));
         return detail::ToHostOrder(value, order);
     }
 
@@ -157,6 +170,10 @@ public:
         {
             ThrowMalformed(this->format, detail::StructurePastTheEnd(structure, offset, length,
                                                                      this->scope, this->size));
+        }
+        if(this->paged != nullptr)
+        {
+            return ByteSpan(this->paged, this->base + offset, length, this->format, structure);
         }
         return ByteSpan(this->data + offset, length, this->format, structure);
     }
@@ -175,14 +192,26 @@ public:
         }
         std::uint64_t available = this->size - offset;
         std::uint64_t limit = max_length < available ? max_length : available;
-        const std::uint8_t *start = this->data + offset;
-        for(std::uint64_t i = 0; i < limit; ++i)
+        std::string text;
+        for(std::uint64_t done = 0; done < limit;)
         {
-            if(start[i] == 0)
+            // A buffer in memory is scanned whole; a file, a step at a time.
+            const std::uint64_t step =
+                this->paged == nullptr ? limit : std::min<std::uint64_t>(limit - done, 4096);
+            const std::uint8_t *start = this->At(offset + done, step);
+            for(std::uint64_t i = 0; i < step; ++i)
             {
-                return std::string(reinterpret_cast<const char *>(start),
-                                   static_cast<std::size_t>(i));
+                if(start[i] == 0)
+                {
+                    text.append(reinterpret_cast<const char *>(start), static_cast<std::size_t>(i));
+                    return text;
+                }
             }
+            if(this->paged != nullptr)
+            {
+                text.append(reinterpret_cast<const char *>(start), static_cast<std::size_t>(step));
+            }
+            done += step;
         }
         if(limit == max_length && max_length < available)
         {
@@ -201,16 +230,35 @@ public:
         return this->size;
     }
 
+    // The bytes of the view. For a view of a file this reads the whole range,
+    // so it is for a range that is wanted whole.
     const std::uint8_t *Data() const
     {
-        return this->data;
+        return this->At(0, this->size);
     }
 
 private:
-    const std::uint8_t *data;
+    ByteSpan(const PagedFile *paged, std::uint64_t base, std::uint64_t size,
+             std::string_view format, std::string_view scope)
+        : size(size), format(format), scope(scope), paged(paged), base(base)
+    {
+    }
+
+    const std::uint8_t *At(std::uint64_t offset, std::uint64_t length) const
+    {
+        if(this->paged != nullptr)
+        {
+            return this->paged->Ensure(this->base + offset, length);
+        }
+        return this->data + offset;
+    }
+
+    const std::uint8_t *data = nullptr;
     std::uint64_t size;
     std::string format;
     std::string scope;
+    const PagedFile *paged = nullptr;
+    std::uint64_t base = 0;
 };
 
 // Writable view used by the signers for in-place updates.

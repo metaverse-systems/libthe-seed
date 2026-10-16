@@ -14,7 +14,7 @@
 
 namespace the_seed::internal
 {
-class PakFile;
+class RandomAccessFile;
 struct PakIndex;
 } // namespace the_seed::internal
 
@@ -101,7 +101,7 @@ class THE_SEED_API PakLoader
     // the one kept for `identity` when it matches, otherwise one validated from
     // `file` and kept in its place. Failures are not kept.
     std::shared_ptr<const the_seed::internal::PakIndex> IndexGet(const std::string &identity,
-                                                              the_seed::internal::PakFile &file, const std::string &pak_name,
+                                                              the_seed::internal::RandomAccessFile &file, const std::string &pak_name,
                                                               const std::string &file_name,
                                                               const std::vector<LoadError::Location> &locations);
 

@@ -423,8 +423,10 @@ std::optional<std::vector<std::uint8_t>> PeSigner::ExtractSignature(const std::s
 bool PeSigner::HasEmbeddedSignature(const std::string &file_path)
 {
     return GuardEntryPoint(kFormat, [&] {
-        const auto bytes = ReadFileBytes(file_path);
-        const ByteSpan file(bytes, kFormat);
+        // The headers and the certificate table entry answer it, so only the
+        // pages that hold them are read.
+        const the_seed::internal::PagedFile paged(file_path);
+        const ByteSpan file(paged, kFormat);
         const auto layout = ParsePeLayout(file);
         return ValidateCertificateTable(file, layout).present;
     });

@@ -26,9 +26,11 @@ using the_seed::internal::CfbReader;
 using the_seed::internal::CheckMsiSignatureSize;
 using the_seed::internal::ComputeMsiFingerprint;
 using the_seed::internal::GuardEntryPoint;
+using the_seed::internal::ByteSpan;
 using the_seed::internal::MsiSignatureExName;
 using the_seed::internal::MsiSignatureName;
 using the_seed::internal::PackageModel;
+using the_seed::internal::PagedFile;
 using the_seed::internal::ReadAuthenticodeDigestField;
 using the_seed::internal::ReadFileBytes;
 using the_seed::internal::WriteCfb;
@@ -201,8 +203,10 @@ std::optional<std::vector<std::uint8_t>> MsiSigner::ExtractSignature(
 bool MsiSigner::HasEmbeddedSignature(const std::string &file_path)
 {
     return Guarded(file_path, [&] {
-        const std::vector<std::uint8_t> bytes = ReadFileBytes(file_path);
-        PackageModel model = CfbReader::Parse(bytes);
+        // The header, the allocation tables on the chains that matter and the
+        // directory answer it, so only the pages that hold them are read.
+        const PagedFile paged(file_path);
+        PackageModel model = CfbReader::Parse(ByteSpan(paged, kFormat));
 
         const CfbNode *entry = FindSignatureEntry(model);
         if(entry == nullptr || entry->size == 0)

@@ -3,6 +3,7 @@
 #include "internal/BoundedBytes.hpp"
 #include "internal/FileIO.hpp"
 #include "internal/MachOLayout.hpp"
+#include "internal/PagedFile.hpp"
 
 #include <algorithm>
 #include <cstdio>
@@ -474,9 +475,10 @@ std::vector<std::uint8_t> AssembleUniversal(const std::string &path, const ByteS
     return out;
 }
 
-// The signature region of a slice, or nullopt when the slice has none.
-std::optional<std::vector<std::uint8_t>> SignatureOfSlice(const std::string &path, const ByteSpan &file,
-                                                          const MachOContainer &container, std::size_t index)
+// Where the signature of a slice lies in the file, or nullopt when the slice
+// has none. Nothing of the signature is read.
+std::optional<ByteSpan> SignatureRegion(const std::string &path, const ByteSpan &file,
+                                        const MachOContainer &container, std::size_t index)
 {
     const ContainerEntry &entry = container.entries[index];
     if(entry.slice.support != SliceSupport::Supported)
@@ -489,8 +491,20 @@ std::optional<std::vector<std::uint8_t>> SignatureOfSlice(const std::string &pat
     {
         return std::nullopt;
     }
-    const ByteSpan region = file.Sub(entry.offset + entry.slice.codesig->dataoff, entry.slice.codesig->datasize,
-                                     "LC_CODE_SIGNATURE data");
+    return file.Sub(entry.offset + entry.slice.codesig->dataoff, entry.slice.codesig->datasize,
+                    "LC_CODE_SIGNATURE data");
+}
+
+// The signature region of a slice, or nullopt when the slice has none.
+std::optional<std::vector<std::uint8_t>> SignatureOfSlice(const std::string &path, const ByteSpan &file,
+                                                          const MachOContainer &container, std::size_t index)
+{
+    const std::optional<ByteSpan> found = SignatureRegion(path, file, container, index);
+    if(!found.has_value())
+    {
+        return std::nullopt;
+    }
+    const ByteSpan &region = *found;
     std::uint64_t length = region.Size();
     if(region.Size() >= 12 &&
        region.Read<std::uint32_t>(0, ByteOrder::Big, "SuperBlob magic") == CSMAGIC_EMBEDDED_SIGNATURE)
@@ -766,17 +780,36 @@ std::optional<std::vector<std::uint8_t>> MachOSigner::ExtractSignature(
 bool MachOSigner::HasEmbeddedSignature(const std::string &file_path)
 {
     return GuardEntryPoint(kProgramFormat, [&]() {
-        const auto bytes = ReadInput(file_path);
-        const ByteSpan file(bytes, kProgramFormat);
-        const MachOContainer container = ParseInput(bytes);
-        for(std::size_t i = 0; i < container.entries.size(); ++i)
+        // Only the headers, the load commands and the place of each signature
+        // are looked at, so only the pages that hold them are read.
+        try
         {
-            if(!SignatureOfSlice(file_path, file, container, i).has_value())
+            const the_seed::internal::PagedFile paged(file_path);
+            const ByteSpan file(paged, kProgramFormat);
+            if(file.Size() < 4)
             {
-                return false;
+                the_seed::internal::ThrowMalformed(kProgramFormat, "File too small to be a Mach-O binary");
             }
+            const MachOContainer container = ParseMachOContainer(file);
+            for(std::size_t i = 0; i < container.entries.size(); ++i)
+            {
+                if(!SignatureRegion(file_path, file, container, i).has_value())
+                {
+                    return false;
+                }
+            }
+            return true;
         }
-        return true;
+        catch(const std::runtime_error &error)
+        {
+            // A failure to read the file begins with the format name.
+            const std::string text = error.what();
+            if(text.rfind("Unable to ", 0) == 0)
+            {
+                the_seed::internal::ThrowMalformed(kProgramFormat, text);
+            }
+            throw;
+        }
     });
 }
 

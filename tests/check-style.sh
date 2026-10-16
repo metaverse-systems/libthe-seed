@@ -230,7 +230,7 @@ for f in "$top"/tests/*.cpp "$top"/tests/fuzz/*.cpp; do
     [ -f "$f" ] || continue
     extra=$tdefs
     case "$f" in
-    */test_FuzzCorpus.cpp) extra="$extra -DFUZZ_CORPUS_DIR=\"$top/tests/fuzz/corpus\"" ;;
+    */test_FuzzCorpus.cpp | */test_QueryEquivalence.cpp) extra="$extra -DFUZZ_CORPUS_DIR=\"$top/tests/fuzz/corpus\"" ;;
     */fuzz_entry.cpp) extra="$extra -DSEED_FUZZ_TARGET=FuzzElf" ;;
     */TestModule.cpp)
         printf '%s\t%s\n' "$f" "$extra -DTEST_MODULE_VARIANT=2" >>"$cases"

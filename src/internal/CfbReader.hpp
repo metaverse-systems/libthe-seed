@@ -10,6 +10,10 @@
 // live (the mini stream or ordinary sectors) is decided by the recorded size
 // and the header's cut-off, never by guessing.
 //
+// The source is a ByteSpan: a buffer in memory or a file read in pages. The
+// FAT is not copied: a table entry is read from its sector when a chain is
+// followed, so a model of a big package holds only what the walks needed.
+//
 // Every read of the source goes through the bounds-checked views of
 // BoundedBytes.hpp. A rejection is a std::runtime_error whose message starts
 // with "MSI: ".
@@ -81,7 +85,55 @@ struct CfbNode
     std::uint32_t right = kNone;
 };
 
+// Number of times the chain of a mini stream (the root's stream) has been
+// resolved since the process started or since the last reset, summed over all
+// models. A model resolves it at most once. Tests use it to check that; it has
+// no effect on behaviour.
+std::uint64_t MiniStreamResolveCount();
+void ResetMiniStreamResolveCount();
+
 class CfbReader;
+
+// Which stream used each sector, held in blocks that exist only where a sector
+// was used, so a big package that is read in a few places costs little. Zero
+// means not used.
+class SectorOwners
+{
+public:
+    SectorOwners() = default;
+
+    explicit SectorOwners(std::uint64_t count)
+        : count(count), blocks(static_cast<std::size_t>((count + kBlockSize - 1) / kBlockSize))
+    {
+    }
+
+    std::uint64_t Count() const
+    {
+        return this->count;
+    }
+
+    std::uint32_t Get(std::uint32_t sector) const
+    {
+        const std::vector<std::uint32_t> &block = this->blocks[sector / kBlockSize];
+        return block.empty() ? 0 : block[sector % kBlockSize];
+    }
+
+    void Set(std::uint32_t sector, std::uint32_t id)
+    {
+        std::vector<std::uint32_t> &block = this->blocks[sector / kBlockSize];
+        if(block.empty())
+        {
+            block.assign(kBlockSize, 0);
+        }
+        block[sector % kBlockSize] = id;
+    }
+
+private:
+    static constexpr std::uint32_t kBlockSize = 4096;
+
+    std::uint64_t count = 0;
+    std::vector<std::vector<std::uint32_t>> blocks;
+};
 
 class PackageModel
 {
@@ -96,15 +148,17 @@ public:
         return this->root;
     }
 
-    // The source bytes the model refers to; the caller keeps them alive.
+    // The source bytes the model refers to; the caller keeps them alive. For a
+    // model over a file this reads the whole file, so only a model over a
+    // buffer in memory is asked for it.
     const std::uint8_t *Source() const
     {
-        return this->data;
+        return this->source.Data();
     }
 
     std::uint64_t SourceSize() const
     {
-        return this->data_size;
+        return this->source.Size();
     }
 
     // The byte ranges that hold a stream, in order. Chains are bounds-checked
@@ -130,14 +184,21 @@ public:
 private:
     friend class CfbReader;
 
+    explicit PackageModel(const ByteSpan &source) : source(source)
+    {
+    }
+
     std::uint64_t HeaderSize() const;
     std::uint64_t SectorCount() const;
     std::uint64_t SectorStart(std::uint32_t sector_id) const;
     ByteSpan Sector(std::uint32_t sector_id, std::uint64_t length, std::string_view what) const;
 
-    std::vector<std::uint32_t> WalkChain(std::uint32_t start_sector,
-                                         std::vector<std::uint32_t> &owner, std::uint32_t id,
-                                         std::string_view what) const;
+    // The table has one entry for each four bytes of each FAT sector.
+    std::uint64_t FatSize() const;
+    std::uint32_t FatEntry(std::uint32_t sector_id) const;
+
+    std::vector<std::uint32_t> WalkChain(std::uint32_t start_sector, SectorOwners &owner,
+                                         std::uint32_t id, std::string_view what) const;
     std::vector<std::uint32_t> FollowChain(std::uint32_t start_sector, std::string_view what) const;
     std::vector<std::uint32_t> WalkMiniChain(std::uint32_t start_sector, std::uint32_t id);
 
@@ -147,8 +208,7 @@ private:
     ByteExtents ResolveMini(const CfbNode &stream);
     void EnsureMiniStream();
 
-    const std::uint8_t *data = nullptr;
-    std::uint64_t data_size = 0;
+    ByteSpan source;
     CfbHeader header;
     CfbNode root;
 
@@ -158,7 +218,8 @@ private:
     std::uint32_t first_difat_sector = 0;
     std::uint32_t total_difat_sectors = 0;
 
-    std::vector<std::uint32_t> fat;
+    // The sectors that hold the FAT, in table order.
+    std::vector<std::uint32_t> fat_sectors;
     std::vector<std::uint32_t> mini_fat;
 
     // The mini stream (the root's stream), resolved on first use.
@@ -168,7 +229,7 @@ private:
     bool mini_container_ready = false;
 
     // Which stream used each sector and mini sector.
-    std::vector<std::uint32_t> sector_owner;
+    SectorOwners sector_owner;
     std::vector<std::uint32_t> mini_owner;
     std::uint32_t last_owner = 0;
 };
@@ -176,8 +237,11 @@ private:
 class CfbReader
 {
 public:
-    // Parses and validates a package. The model refers to `bytes`, which must
-    // outlive it and stay unchanged.
+    // Parses and validates a package. The model refers to `source`, which must
+    // outlive it and stay unchanged. The span is made with the format "MSI".
+    static PackageModel Parse(const ByteSpan &source);
+
+    // The same for a package held whole in memory.
     static PackageModel Parse(const std::vector<std::uint8_t> &bytes);
 
 private:

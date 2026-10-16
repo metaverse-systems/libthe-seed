@@ -1,7 +1,7 @@
 #include "CfbReader.hpp"
 
 #include <algorithm>
-#include <cstring>
+#include <atomic>
 #include <string_view>
 #include <unordered_map>
 #include <utility>
@@ -65,12 +65,12 @@ std::uint64_t PackageModel::HeaderSize() const
 std::uint64_t PackageModel::SectorCount() const
 {
     const std::uint64_t header_size = this->HeaderSize();
-    if(this->data_size <= header_size)
+    if(this->source.Size() <= header_size)
     {
         return 0;
     }
     const std::uint64_t sector_size = this->header.sector_size;
-    return (this->data_size - header_size + sector_size - 1) / sector_size;
+    return (this->source.Size() - header_size + sector_size - 1) / sector_size;
 }
 
 std::uint64_t PackageModel::SectorStart(std::uint32_t sector_id) const
@@ -89,8 +89,24 @@ ByteSpan PackageModel::Sector(std::uint32_t sector_id, std::uint64_t length,
                                     " is past the end of the file (" + std::to_string(count) +
                                     " sectors)");
     }
-    const ByteSpan file(this->data, this->data_size, kFormat);
-    return file.Sub(this->SectorStart(sector_id), length, what);
+    return this->source.Sub(this->SectorStart(sector_id), length, what);
+}
+
+// Entries in the FAT: one for each four bytes of each FAT sector.
+std::uint64_t PackageModel::FatSize() const
+{
+    return static_cast<std::uint64_t>(this->fat_sectors.size()) * (this->header.sector_size / 4);
+}
+
+// One FAT entry, read from its sector. The sectors were checked to lie inside
+// the file when the model was built, so the read cannot be out of bounds.
+std::uint32_t PackageModel::FatEntry(std::uint32_t sector_id) const
+{
+    const std::uint64_t per_sector = this->header.sector_size / 4;
+    const std::uint32_t fat_sector = this->fat_sectors[static_cast<std::size_t>(sector_id / per_sector)];
+    return this->source.Read<std::uint32_t>(
+        this->SectorStart(fat_sector) + static_cast<std::uint64_t>(sector_id % per_sector) * 4, kLittle,
+        "FAT entry");
 }
 
 // ── Chains ─────────────────────────────────────────────────
@@ -100,7 +116,7 @@ ByteSpan PackageModel::Sector(std::uint32_t sector_id, std::uint64_t length,
 // visit by the same walk is a loop, a visit by another walk means the sector
 // belongs to two streams.
 std::vector<std::uint32_t> PackageModel::WalkChain(std::uint32_t start_sector,
-                                                   std::vector<std::uint32_t> &owner,
+                                                   SectorOwners &owner,
                                                    std::uint32_t id, std::string_view what) const
 {
     std::vector<std::uint32_t> chain;
@@ -109,11 +125,11 @@ std::vector<std::uint32_t> PackageModel::WalkChain(std::uint32_t start_sector,
 
     while(current != kCfbEndOfChain)
     {
-        if(current >= this->fat.size())
+        if(current >= this->FatSize())
         {
             ThrowMalformed(kFormat, std::string(what) + " chain sector " +
                                         std::to_string(current) + " is past the end of the FAT (" +
-                                        std::to_string(this->fat.size()) + " entries)");
+                                        std::to_string(this->FatSize()) + " entries)");
         }
         if(current >= count)
         {
@@ -122,19 +138,19 @@ std::vector<std::uint32_t> PackageModel::WalkChain(std::uint32_t start_sector,
                                         " is past the end of the file (" + std::to_string(count) +
                                         " sectors)");
         }
-        if(owner[current] == id)
+        if(owner.Get(current) == id)
         {
             ThrowMalformed(kFormat, std::string(what) + " chain has a loop at sector " +
                                         std::to_string(current));
         }
-        if(owner[current] != 0)
+        if(owner.Get(current) != 0)
         {
             ThrowMalformed(kFormat, "sector " + std::to_string(current) +
                                         " is used by more than one stream");
         }
-        owner[current] = id;
+        owner.Set(current, id);
         chain.push_back(current);
-        current = this->fat[current];
+        current = this->FatEntry(current);
     }
 
     return chain;
@@ -144,7 +160,7 @@ std::vector<std::uint32_t> PackageModel::WalkChain(std::uint32_t start_sector,
 std::vector<std::uint32_t> PackageModel::FollowChain(std::uint32_t start_sector,
                                                      std::string_view what) const
 {
-    std::vector<std::uint32_t> owner(static_cast<std::size_t>(this->SectorCount()), 0);
+    SectorOwners owner(this->SectorCount());
     return this->WalkChain(start_sector, owner, 1, what);
 }
 
@@ -206,9 +222,9 @@ void PackageModel::CheckChainLength(std::uint64_t size, std::uint64_t chain_leng
 
 ByteExtents PackageModel::ResolveOrdinary(const CfbNode &stream)
 {
-    if(this->sector_owner.size() != this->SectorCount())
+    if(this->sector_owner.Count() != this->SectorCount())
     {
-        this->sector_owner.assign(static_cast<std::size_t>(this->SectorCount()), 0);
+        this->sector_owner = SectorOwners(this->SectorCount());
     }
     const std::uint32_t id = ++this->last_owner;
     const auto chain = this->WalkChain(stream.start_sector, this->sector_owner, id, "stream");
@@ -221,16 +237,31 @@ ByteExtents PackageModel::ResolveOrdinary(const CfbNode &stream)
     for(const std::uint32_t sector : chain)
     {
         const std::uint64_t chunk = std::min(sector_size, remaining);
-        if(!RangeFits(this->SectorStart(sector), chunk, this->data_size))
+        if(!RangeFits(this->SectorStart(sector), chunk, this->source.Size()))
         {
             ThrowMalformed(kFormat, "stream sector " + std::to_string(sector) +
                                         " extends past the end of the file (" +
-                                        std::to_string(this->data_size) + " bytes)");
+                                        std::to_string(this->source.Size()) + " bytes)");
         }
         AppendExtent(extents, this->SectorStart(sector), chunk);
         remaining -= chunk;
     }
     return extents;
+}
+
+namespace
+{
+std::atomic<std::uint64_t> mini_stream_resolves{0};
+}
+
+std::uint64_t MiniStreamResolveCount()
+{
+    return mini_stream_resolves.load();
+}
+
+void ResetMiniStreamResolveCount()
+{
+    mini_stream_resolves.store(0);
 }
 
 // The mini stream is the root's stream, held in ordinary sectors. Its chain
@@ -243,11 +274,12 @@ void PackageModel::EnsureMiniStream()
     }
     if(this->mini_container_size != 0)
     {
-        if(this->sector_owner.size() != this->SectorCount())
+        if(this->sector_owner.Count() != this->SectorCount())
         {
-            this->sector_owner.assign(static_cast<std::size_t>(this->SectorCount()), 0);
+            this->sector_owner = SectorOwners(this->SectorCount());
         }
         const std::uint32_t id = ++this->last_owner;
+        ++mini_stream_resolves;
         auto chain = this->WalkChain(this->mini_container_start, this->sector_owner, id, "stream");
         const std::uint64_t sector_size = this->header.sector_size;
         const std::uint64_t needed = UnitsFor(this->mini_container_size, sector_size);
@@ -261,11 +293,11 @@ void PackageModel::EnsureMiniStream()
         for(std::uint64_t i = 0; i < needed; ++i)
         {
             const std::uint64_t chunk = std::min(sector_size, remaining);
-            if(!RangeFits(this->SectorStart(chain[i]), chunk, this->data_size))
+            if(!RangeFits(this->SectorStart(chain[i]), chunk, this->source.Size()))
             {
                 ThrowMalformed(kFormat, "stream sector " + std::to_string(chain[i]) +
                                             " extends past the end of the file (" +
-                                            std::to_string(this->data_size) + " bytes)");
+                                            std::to_string(this->source.Size()) + " bytes)");
             }
             remaining -= chunk;
         }
@@ -318,7 +350,7 @@ ByteExtents PackageModel::Resolve(const CfbNode &stream)
 std::vector<std::uint8_t> PackageModel::ReadStream(const CfbNode &stream)
 {
     const ByteExtents extents = this->Resolve(stream);
-    const ByteSpan file(this->data, this->data_size, kFormat);
+    const ByteSpan &file = this->source;
     std::vector<std::uint8_t> bytes;
     bytes.reserve(static_cast<std::size_t>(stream.size));
     for(const ByteExtent &extent : extents)
@@ -403,17 +435,20 @@ struct CfbReader::TreeState
 
 void CfbReader::ParseHeader(PackageModel &model)
 {
-    if(model.data_size < 512)
+    if(model.source.Size() < 512)
     {
         ThrowMalformed(kFormat, "file is too small for the header (" +
-                                    std::to_string(model.data_size) + " bytes)");
+                                    std::to_string(model.source.Size()) + " bytes)");
     }
-    if(std::memcmp(model.data, kMagic, 8) != 0)
+    const ByteSpan &file = model.source;
+    for(std::uint64_t i = 0; i < 8; ++i)
     {
-        ThrowMalformed(kFormat, "signature is not the compound file magic");
+        if(file.Read<std::uint8_t>(i, kLittle, "signature") != kMagic[i])
+        {
+            ThrowMalformed(kFormat, "signature is not the compound file magic");
+        }
     }
 
-    const ByteSpan file(model.data, model.data_size, kFormat);
     CfbHeader &header = model.header;
     header.minor_version = file.Read<std::uint16_t>(24, kLittle, "minor version");
     header.major_version = file.Read<std::uint16_t>(26, kLittle, "major version");
@@ -449,10 +484,10 @@ void CfbReader::ParseHeader(PackageModel &model)
         ThrowMalformed(kFormat, "mini-sector exponent " + std::to_string(mini_power) +
                                     " is not 6");
     }
-    if(model.data_size < model.HeaderSize())
+    if(model.source.Size() < model.HeaderSize())
     {
         ThrowMalformed(kFormat, "file is too small for the version 4 header (" +
-                                    std::to_string(model.data_size) + " bytes)");
+                                    std::to_string(model.source.Size()) + " bytes)");
     }
 
     header.sector_size = 1u << sector_power;
@@ -475,7 +510,7 @@ void CfbReader::ParseHeader(PackageModel &model)
 // Builds the full FAT from the DIFAT entries in the header and the DIFAT chain.
 void CfbReader::BuildFat(PackageModel &model)
 {
-    const ByteSpan file(model.data, model.data_size, kFormat);
+    const ByteSpan &file = model.source;
     const std::uint64_t count = model.SectorCount();
     const std::uint32_t sector_size = model.header.sector_size;
 
@@ -526,11 +561,12 @@ void CfbReader::BuildFat(PackageModel &model)
     }
 
     // Each FAT sector is listed once, so the table cannot outgrow the file.
-    model.fat.clear();
+    // Only the sector numbers are kept; an entry is read when a chain needs it.
+    model.fat_sectors.clear();
     std::vector<bool> used(static_cast<std::size_t>(count), false);
     for(const std::uint32_t fat_sector_id : fat_sectors)
     {
-        const ByteSpan sector = model.Sector(fat_sector_id, sector_size, "FAT sector");
+        (void)model.Sector(fat_sector_id, sector_size, "FAT sector");
         if(used[fat_sector_id])
         {
             ThrowMalformed(kFormat,
@@ -538,11 +574,7 @@ void CfbReader::BuildFat(PackageModel &model)
         }
         used[fat_sector_id] = true;
 
-        const std::size_t entries_per_sector = sector_size / 4;
-        for(std::size_t i = 0; i < entries_per_sector; ++i)
-        {
-            model.fat.push_back(sector.Read<std::uint32_t>(i * 4, kLittle, "FAT entry"));
-        }
+        model.fat_sectors.push_back(fat_sector_id);
     }
 }
 
@@ -770,9 +802,12 @@ void CfbReader::BuildTree(PackageModel &model, const std::vector<DirEntry> &dire
 
 PackageModel CfbReader::Parse(const std::vector<std::uint8_t> &bytes)
 {
-    PackageModel model;
-    model.data = bytes.data();
-    model.data_size = bytes.size();
+    return Parse(ByteSpan(bytes, kFormat));
+}
+
+PackageModel CfbReader::Parse(const ByteSpan &source)
+{
+    PackageModel model(source);
 
     ParseHeader(model);
     BuildFat(model);

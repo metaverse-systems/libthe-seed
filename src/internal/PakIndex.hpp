@@ -1,6 +1,6 @@
 #pragma once
 
-#include "PakFile.hpp"
+#include "RandomAccessFile.hpp"
 
 #include <cstddef>
 #include <cstdint>

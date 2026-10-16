@@ -19,7 +19,7 @@
 #include <libthe-seed/PakLoader.hpp>
 #include <libthe-seed/ResourcePak.hpp>
 
-#include "internal/PakFile.hpp"
+#include "internal/RandomAccessFile.hpp"
 #include "internal/PakIndex.hpp"
 
 #include <cstdint>

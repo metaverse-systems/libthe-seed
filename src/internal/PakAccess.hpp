@@ -1,6 +1,6 @@
 #pragma once
 
-#include "PakFile.hpp"
+#include "RandomAccessFile.hpp"
 #include "PakIndex.hpp"
 
 #include <libthe-seed/LoadError.hpp>

@@ -12,7 +12,7 @@
     #include <unistd.h>
 #endif
 
-#include "PakFile.hpp"
+#include "RandomAccessFile.hpp"
 
 #include "PluginSearch.hpp"
 
@@ -39,31 +39,31 @@ std::string ShortReadText(std::uint64_t offset, std::uint64_t expected, std::uin
 }
 } // namespace
 
-PakShortRead::PakShortRead(std::uint64_t offset, std::uint64_t expected, std::uint64_t got)
+FileShortRead::FileShortRead(std::uint64_t offset, std::uint64_t expected, std::uint64_t got)
     : std::runtime_error(ShortReadText(offset, expected, got)), offset(offset), expected(expected), got(got)
 {
 }
 
-std::uint64_t PakBytesReadCount()
+std::uint64_t BytesReadCount()
 {
     return bytes_read.load(std::memory_order_relaxed);
 }
 
-void ResetPakBytesReadCount()
+void ResetBytesReadCount()
 {
     bytes_read.store(0, std::memory_order_relaxed);
 }
 
-PakFile::PakFile(std::filesystem::path path, std::intptr_t handle) : path(std::move(path)), handle(handle)
+RandomAccessFile::RandomAccessFile(std::filesystem::path path, std::intptr_t handle) : path(std::move(path)), handle(handle)
 {
 }
 
-PakFile::PakFile(PakFile &&other) noexcept : path(std::move(other.path)), handle(other.handle)
+RandomAccessFile::RandomAccessFile(RandomAccessFile &&other) noexcept : path(std::move(other.path)), handle(other.handle)
 {
     other.handle = -1;
 }
 
-PakFile &PakFile::operator=(PakFile &&other) noexcept
+RandomAccessFile &RandomAccessFile::operator=(RandomAccessFile &&other) noexcept
 {
     if(this != &other)
     {
@@ -75,7 +75,7 @@ PakFile &PakFile::operator=(PakFile &&other) noexcept
     return *this;
 }
 
-PakFile::~PakFile()
+RandomAccessFile::~RandomAccessFile()
 {
     this->Close();
 }
@@ -90,19 +90,19 @@ std::uint64_t Join(DWORD high, DWORD low)
 }
 } // namespace
 
-PakFile PakFile::Open(const std::filesystem::path &path)
+RandomAccessFile RandomAccessFile::Open(const std::filesystem::path &path)
 {
     HANDLE handle = CreateFileW(path.c_str(), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
                                 nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
     if(handle == INVALID_HANDLE_VALUE)
     {
         const DWORD id = GetLastError();
-        throw PakOpenError(PlatformMessage(id), id == ERROR_FILE_NOT_FOUND || id == ERROR_PATH_NOT_FOUND);
+        throw FileOpenError(PlatformMessage(id), id == ERROR_FILE_NOT_FOUND || id == ERROR_PATH_NOT_FOUND);
     }
-    return PakFile(path, reinterpret_cast<std::intptr_t>(handle));
+    return RandomAccessFile(path, reinterpret_cast<std::intptr_t>(handle));
 }
 
-void PakFile::Close() noexcept
+void RandomAccessFile::Close() noexcept
 {
     if(this->handle != -1)
     {
@@ -111,15 +111,15 @@ void PakFile::Close() noexcept
     }
 }
 
-PakStamp PakFile::Stamp() const
+FileStamp RandomAccessFile::Stamp() const
 {
     BY_HANDLE_FILE_INFORMATION info;
     if(!GetFileInformationByHandle(reinterpret_cast<HANDLE>(this->handle), &info))
     {
-        throw PakReadError(PlatformMessage(GetLastError()));
+        throw FileReadError(PlatformMessage(GetLastError()));
     }
 
-    PakStamp stamp;
+    FileStamp stamp;
     stamp.device = info.dwVolumeSerialNumber;
     stamp.file = Join(info.nFileIndexHigh, info.nFileIndexLow);
     stamp.size = Join(info.nFileSizeHigh, info.nFileSizeLow);
@@ -127,7 +127,17 @@ PakStamp PakFile::Stamp() const
     return stamp;
 }
 
-void PakFile::ReadAt(std::uint64_t offset, void *destination, std::uint64_t count) const
+std::uint64_t RandomAccessFile::Size() const
+{
+    LARGE_INTEGER size;
+    if(!GetFileSizeEx(reinterpret_cast<HANDLE>(this->handle), &size))
+    {
+        throw FileReadError(PlatformMessage(GetLastError()));
+    }
+    return static_cast<std::uint64_t>(size.QuadPart);
+}
+
+void RandomAccessFile::ReadAt(std::uint64_t offset, void *destination, std::uint64_t count) const
 {
     std::uint8_t *out = static_cast<std::uint8_t *>(destination);
     std::uint64_t done = 0;
@@ -137,7 +147,7 @@ void PakFile::ReadAt(std::uint64_t offset, void *destination, std::uint64_t coun
         const std::uint64_t at = offset + done;
         if(at < offset)
         {
-            throw PakShortRead(offset, count, done);
+            throw FileShortRead(offset, count, done);
         }
 
         OVERLAPPED overlapped = {};
@@ -150,27 +160,27 @@ void PakFile::ReadAt(std::uint64_t offset, void *destination, std::uint64_t coun
             const DWORD id = GetLastError();
             if(id == ERROR_HANDLE_EOF)
             {
-                throw PakShortRead(offset, count, done);
+                throw FileShortRead(offset, count, done);
             }
-            throw PakReadError(PlatformMessage(id));
+            throw FileReadError(PlatformMessage(id));
         }
         if(got == 0)
         {
-            throw PakShortRead(offset, count, done);
+            throw FileShortRead(offset, count, done);
         }
         done += got;
         bytes_read.fetch_add(got, std::memory_order_relaxed);
         if(got < want)
         {
             // A short count from a file read means the end of the file.
-            throw PakShortRead(offset, count, done);
+            throw FileShortRead(offset, count, done);
         }
     }
 }
 
 #else
 
-PakFile PakFile::Open(const std::filesystem::path &path)
+RandomAccessFile RandomAccessFile::Open(const std::filesystem::path &path)
 {
     int descriptor;
     do
@@ -181,12 +191,12 @@ PakFile PakFile::Open(const std::filesystem::path &path)
     if(descriptor < 0)
     {
         const int id = errno;
-        throw PakOpenError(std::generic_category().message(id), id == ENOENT || id == ENOTDIR);
+        throw FileOpenError(std::generic_category().message(id), id == ENOENT || id == ENOTDIR);
     }
-    return PakFile(path, static_cast<std::intptr_t>(descriptor));
+    return RandomAccessFile(path, static_cast<std::intptr_t>(descriptor));
 }
 
-void PakFile::Close() noexcept
+void RandomAccessFile::Close() noexcept
 {
     if(this->handle != -1)
     {
@@ -195,12 +205,12 @@ void PakFile::Close() noexcept
     }
 }
 
-PakStamp PakFile::Stamp() const
+FileStamp RandomAccessFile::Stamp() const
 {
     struct stat info;
     if(::fstat(static_cast<int>(this->handle), &info) != 0)
     {
-        throw PakReadError(std::generic_category().message(errno));
+        throw FileReadError(std::generic_category().message(errno));
     }
 
 #ifdef __APPLE__
@@ -209,7 +219,7 @@ PakStamp PakFile::Stamp() const
     const struct timespec &time = info.st_mtim;
 #endif
 
-    PakStamp stamp;
+    FileStamp stamp;
     stamp.device = static_cast<std::uint64_t>(info.st_dev);
     stamp.file = static_cast<std::uint64_t>(info.st_ino);
     stamp.size = static_cast<std::uint64_t>(info.st_size);
@@ -217,7 +227,17 @@ PakStamp PakFile::Stamp() const
     return stamp;
 }
 
-void PakFile::ReadAt(std::uint64_t offset, void *destination, std::uint64_t count) const
+std::uint64_t RandomAccessFile::Size() const
+{
+    const off_t end = ::lseek(static_cast<int>(this->handle), 0, SEEK_END);
+    if(end < 0)
+    {
+        throw FileReadError(std::generic_category().message(errno));
+    }
+    return static_cast<std::uint64_t>(end);
+}
+
+void RandomAccessFile::ReadAt(std::uint64_t offset, void *destination, std::uint64_t count) const
 {
     constexpr std::uint64_t offset_limit = static_cast<std::uint64_t>(std::numeric_limits<off_t>::max());
 
@@ -228,7 +248,7 @@ void PakFile::ReadAt(std::uint64_t offset, void *destination, std::uint64_t coun
         // A position the system cannot express is past the end of any file.
         if(offset > offset_limit || done > offset_limit - offset)
         {
-            throw PakShortRead(offset, count, done);
+            throw FileShortRead(offset, count, done);
         }
 
         const size_t want = static_cast<size_t>(std::min(count - done, chunk_limit));
@@ -239,11 +259,11 @@ void PakFile::ReadAt(std::uint64_t offset, void *destination, std::uint64_t coun
             {
                 continue;
             }
-            throw PakReadError(std::generic_category().message(errno));
+            throw FileReadError(std::generic_category().message(errno));
         }
         if(got == 0)
         {
-            throw PakShortRead(offset, count, done);
+            throw FileShortRead(offset, count, done);
         }
         done += static_cast<std::uint64_t>(got);
         bytes_read.fetch_add(static_cast<std::uint64_t>(got), std::memory_order_relaxed);

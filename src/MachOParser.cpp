@@ -3,6 +3,7 @@
 #include "internal/BoundedBytes.hpp"
 #include "internal/FileIO.hpp"
 #include "internal/MachOLayout.hpp"
+#include "internal/PagedFile.hpp"
 
 #include <algorithm>
 #include <stdexcept>
@@ -18,6 +19,7 @@ using the_seed::internal::DeclineText;
 using the_seed::internal::GuardEntryPoint;
 using the_seed::internal::MachOContainer;
 using the_seed::internal::MachOKind;
+using the_seed::internal::PagedFile;
 using the_seed::internal::ParseMachOContainer;
 using the_seed::internal::ReadFileBytes;
 using the_seed::internal::SliceSupport;
@@ -38,8 +40,9 @@ void RequireFourBytes(const std::vector<std::uint8_t> &bytes)
 MachOParser::Format MachOParser::DetectFormat(const std::string &file_path)
 {
     return GuardEntryPoint(kFormat, [&]() {
-        const auto bytes = ReadFileBytes(file_path);
-        switch(ClassifyMachOMagic(ByteSpan(bytes, kFormat)))
+        // Only the first bytes decide the kind, so only they are read.
+        const PagedFile file(file_path);
+        switch(ClassifyMachOMagic(ByteSpan(file, kFormat)))
         {
         case MachOKind::Thin32Little:
         case MachOKind::Thin32Big:

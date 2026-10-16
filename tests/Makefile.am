@@ -41,7 +41,8 @@ seed_test_programs = test_NameParser test_LoadError test_LibraryLoader test_Depe
                  test_LoaderConcurrency test_JSONLoader test_PluginLifetime test_PluginSearchOrder test_PluginLoadErrors test_ReadmeExamples test_BoundedBytes test_MalformedPe test_PeDigestReference test_PeRoundTrip test_MalformedElf test_MalformedMachO test_MachONoRoom test_MachOLayout test_MachOReference \
                  test_MalformedMsi test_MsiDigestReference test_MsiSignatureSizes test_MsiLayouts test_MsiCheckSignature test_MsiPreservation test_MsiLarge test_MsiLiveTools test_TruncatedSamples test_FuzzCorpus \
                  test_FileReplace test_FileReplaceKill test_SignersUseReplace \
-                 test_PakIndex test_PakWriterCompat test_PakCost test_PakDamage test_PakConcurrency
+                 test_PakIndex test_PakWriterCompat test_PakCost test_PakDamage test_PakConcurrency \
+                 test_QueryEquivalence test_QueryCost
 
 check_PROGRAMS = $(seed_test_programs)
 
@@ -117,6 +118,14 @@ test_PakWriterCompat_LDADD = libcatch.la ../src/libthe-seed.la ${LIBECS_LIBS}
 test_PakCost_SOURCES = test_PakCost.cpp
 test_PakCost_CPPFLAGS = $(AM_CPPFLAGS) -I$(top_srcdir)/src
 test_PakCost_LDADD = libcatch.la ../src/libthe-seed-core.la ${LIBECS_LIBS}
+
+test_QueryEquivalence_SOURCES = test_QueryEquivalence.cpp fuzz/FuzzTargets.cpp
+test_QueryEquivalence_CPPFLAGS = $(AM_CPPFLAGS) -I$(top_srcdir)/src -DFUZZ_CORPUS_DIR=\"$(abs_srcdir)/fuzz/corpus\"
+test_QueryEquivalence_LDADD = libcatch.la ../src/libthe-seed-core.la ${LIBECS_LIBS}
+
+test_QueryCost_SOURCES = test_QueryCost.cpp
+test_QueryCost_CPPFLAGS = $(AM_CPPFLAGS) -I$(top_srcdir)/src
+test_QueryCost_LDADD = libcatch.la ../src/libthe-seed-core.la ${LIBECS_LIBS}
 
 test_PakDamage_SOURCES = test_PakDamage.cpp
 test_PakDamage_LDADD = libcatch.la ../src/libthe-seed.la ${LIBECS_LIBS}
