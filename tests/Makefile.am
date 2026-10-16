@@ -40,6 +40,11 @@ AM_TESTS_ENVIRONMENT = \
     SEED_HOST_OS='@host_os@'; export SEED_HOST_OS; \
     SEED_SANITIZER_FLAGS='$(SANITIZER_CXXFLAGS) $(SANITIZER_LDFLAGS)'; export SEED_SANITIZER_FLAGS;
 
+# Everything that needs the test framework is in this conditional. Without it
+# "make", "make install" and "make uninstall" do not touch this directory, and
+# "make check" says why it cannot run.
+if ENABLE_TESTS
+
 # Bare program names: run-test.sh compares them with known-gaps.txt, and
 # check_PROGRAMS gets $(EXEEXT) appended when cross-compiling for Windows.
 seed_test_programs = test_NameParser test_LoadError test_LibraryLoader test_DependencyLister test_DependencyAttribution test_DependencyReporting \
@@ -261,6 +266,18 @@ test_PluginLoadErrors_LDFLAGS = $(AM_LDFLAGS) -pthread
 test_ReadmeExamples_SOURCES = test_ReadmeExamples.cpp
 test_ReadmeExamples_LDADD = libcatch.la ../src/libthe-seed.la ${LIBECS_LIBS}
 test_ReadmeExamples_LDFLAGS = $(AM_LDFLAGS) -pthread
+
+else
+
+if TESTS_DISABLED_BY_OPTION
+check-local:
+	@echo "make check: the tests are not enabled: configured with --enable-tests=no; configure with --enable-tests=auto to run them" >&2; exit 1
+else
+check-local:
+	@echo "make check: the tests are not enabled: the test framework (external/Catch2) is missing; run git submodule update --init external/Catch2 and then ./configure again" >&2; exit 1
+endif
+
+endif
 
 EXTRA_DIST = TestPaths.hpp LoaderTestSupport.hpp PakTestSupport.hpp CfbReference.hpp MsiTestSupport.hpp ToolSupport.hpp MachOReference.hpp MachOSigningSupport.hpp HeapCounter.hpp MalformedInput.hpp ReplaceTestSupport.hpp \
              reference/reference-dump.cpp reference/compare-reference.sh \

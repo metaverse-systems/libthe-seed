@@ -31,13 +31,19 @@ unset PKG_CONFIG_PATH
 
 ## Running the tests
 
-The tests need libecs-cpp installed where `pkg-config` finds it, and the Catch2 submodule, so clone with submodules:
+Building and installing the library does not need the test framework. Only the tests do: they need libecs-cpp installed where `pkg-config` finds it, and the Catch2 submodule (`external/Catch2`). Clone with submodules, or fetch the framework into an existing clone:
 
 ```
 git clone --recurse-submodules git@github.com:metaverse-systems/libthe-seed.git
 cd libthe-seed
 ./autogen.sh && ./configure && make && make check
 ```
+
+```
+git submodule update --init external/Catch2
+```
+
+`./configure --enable-tests=auto` (the default) enables the tests when the framework is present. `--enable-tests=yes` stops with an error when it is missing, and `--enable-tests=no` does not look for it. On a clone without the submodule, `make check` fails with a message saying the tests are not enabled and how to fetch the framework; run `./configure` again afterwards.
 
 `make check` builds every test program, runs them all and fails if any test fails, if a program leaves files behind, or if a sample file under `tests/fixtures/` is missing or changed. Use `make check -j4` to run in parallel. The tests do not depend on the directory they are started from. When cross-compiling (for example `--host=x86_64-w64-mingw32`) the test programs are built but not run, a notice says so, and only the scripts run: `tests/check-fixtures.sh`, `tests/check-exports.sh` (reads the DLL's export table) and `tests/check-public-headers.sh` (compiles the installed headers with the cross compiler); `tests/check-style.sh` skips itself.
 

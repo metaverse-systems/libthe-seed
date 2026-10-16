@@ -24,10 +24,35 @@ AC_CHECK_LIB([pthread], [pthread_exit])
 LIBECS_MIN_VERSION=the_seed_libecs_min
 AC_SUBST([LIBECS_MIN_VERSION])
 PKG_CHECK_MODULES([LIBECS], [ecs-cpp >= the_seed_libecs_min])
+# The test framework is the vendored Catch2 submodule. Building and installing
+# the library never needs it; only "make check" does.
+# --enable-tests=auto (default) enables the tests when the framework is present,
+# yes requires it, no does not look for it.
 dnl AC_CHECK_FILE refuses to run when cross compiling, so test the file directly.
-AS_IF([test -f "$srcdir/external/Catch2/extras/catch_amalgamated.hpp"],
+AC_ARG_ENABLE([tests],
+    [AS_HELP_STRING([--enable-tests@<:@=auto|yes|no@:>@],
+        [build and run the tests, which need the framework in external/Catch2 (default: auto, enabled when the framework is present)])],
     [],
-    [AC_MSG_ERROR([external/Catch2 is missing: run git submodule update --init])])
+    [enable_tests=auto])
+case "$enable_tests" in
+    yes|no|auto) ;;
+    *)
+        AC_MSG_ERROR([invalid value '$enable_tests' for --enable-tests; accepted values are: auto, yes, no])
+        ;;
+esac
+tests_status=
+AS_IF([test "x$enable_tests" = xno],
+    [tests_status="no (--enable-tests=no)"
+     tests_enabled=no],
+    [AS_IF([test -f "$srcdir/external/Catch2/extras/catch_amalgamated.hpp"],
+        [tests_status="yes (found)"
+         tests_enabled=yes],
+        [AS_IF([test "x$enable_tests" = xyes],
+            [AC_MSG_ERROR([--enable-tests=yes requires the test framework in external/Catch2; run: git submodule update --init external/Catch2])],
+            [tests_status="no (not found)"
+             tests_enabled=no])])])
+AM_CONDITIONAL([ENABLE_TESTS], [test "x$tests_enabled" = xyes])
+AM_CONDITIONAL([TESTS_DISABLED_BY_OPTION], [test "x$enable_tests" = xno])
 
 # Optional runtime checking: --enable-sanitizer=address builds the library and
 # the tests with AddressSanitizer and UndefinedBehaviorSanitizer;
@@ -82,3 +107,6 @@ AC_CONFIG_FILES([Makefile
                  Doxyfile
 		 tests/Makefile])
 AC_OUTPUT
+
+AC_MSG_NOTICE([tests: $tests_status])
+AC_MSG_NOTICE([sanitizer: $SANITIZER])
