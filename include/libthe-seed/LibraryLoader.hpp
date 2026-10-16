@@ -1,5 +1,7 @@
 #pragma once
 
+#include <libthe-seed/Export.hpp>
+
 #include <string>
 #include <vector>
 #include <memory>
@@ -39,7 +41,7 @@ struct LibraryDeleter
  * EntryPointMissing, InvalidName). The library name given to the constructor
  * must not contain '/', '\\' or ':'.
  */
-class LibraryLoader
+class THE_SEED_API LibraryLoader
 {
   public:
     /**

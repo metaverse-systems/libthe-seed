@@ -1,6 +1,6 @@
 #include <catch_amalgamated.hpp>
 #include <libthe-seed/LoadError.hpp>
-#include "../src/internal/NameParser.hpp"
+#include "internal/NameParser.hpp"
 
 #include <string>
 

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <libthe-seed/Export.hpp>
+
 #include <string>
 #include <libecs-cpp/ecs.hpp>
 #include <libecs-cpp/json.hpp>
@@ -26,7 +28,7 @@ class ComponentLoader;
  * from pinned plugins, so they stay valid and destructible after both are
  * destroyed, whether the container is destroyed before or after them.
  */
-class JSONLoader
+class THE_SEED_API JSONLoader
 {
   public:
     JSONLoader(ecs::Container *container, ComponentLoader &loader);

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <libthe-seed/Export.hpp>
+
 #include <cstdint>
 #include <string>
 #include <vector>
@@ -33,7 +35,7 @@
  * that nothing refers to, free directory entries and the old signature streams
  * are not carried over.
  */
-class MsiSigner
+class THE_SEED_API MsiSigner
 {
 public:
     /** Result of computing an MSI Authenticode digest. */

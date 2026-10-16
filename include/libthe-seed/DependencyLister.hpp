@@ -1,5 +1,7 @@
 #pragma once
 
+#include <libthe-seed/Export.hpp>
+
 #include <map>
 #include <string>
 #include <vector>
@@ -10,7 +12,7 @@
  * The library stays in DependencyResult::dependencies; this record says why
  * what it needs could not be listed.
  */
-struct LibraryError
+struct THE_SEED_API LibraryError
 {
     /**
      * @brief Human-readable reason, beginning with the library's path and
@@ -32,7 +34,7 @@ struct LibraryError
  * per-library errors. The fields may be populated simultaneously (partial
  * success).
  */
-struct DependencyResult
+struct THE_SEED_API DependencyResult
 {
     /**
      * @brief Reverse dependency map.
@@ -100,7 +102,7 @@ struct DependencyResult
  *   // result.libraryErrors: library path -> why it could not be read
  * @endcode
  */
-class DependencyLister
+class THE_SEED_API DependencyLister
 {
   public:
     /**

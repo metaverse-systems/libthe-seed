@@ -1,5 +1,7 @@
 #pragma once
 
+#include <libthe-seed/Export.hpp>
+
 #include <cstdint>
 #include <string>
 #include <vector>
@@ -47,7 +49,7 @@
  * Apple's tools. Programs signed by earlier versions of the-seed are malformed
  * after re-signing and may need to be rebuilt from their unsigned originals.
  */
-class MachOSigner
+class THE_SEED_API MachOSigner
 {
 public:
     /** The CodeDirectory of one program (one slice of a universal file). */

@@ -1,7 +1,11 @@
-AM_CPPFLAGS = -I$(top_srcdir)/include ${LIBECS_CFLAGS} -I$(top_srcdir)/src -I$(top_srcdir)/external/Catch2/extras -I$(srcdir) \
+AM_CPPFLAGS = -I$(top_srcdir)/include ${LIBECS_CFLAGS} -I$(top_srcdir)/external/Catch2/extras -I$(srcdir) \
               -DFIXTURES_DIR=\"$(abs_srcdir)/fixtures\" \
               -DLIBRARY_PATH_UNDER_TEST=\"$(abs_top_builddir)/src/.libs/libthe-seed.so\" \
               -DMODULE_DIR=\"$(abs_builddir)/.libs\"
+# Tests are public tests unless they are listed with a per-program
+# _CPPFLAGS that adds -I$(top_srcdir)/src. Public tests link the shared library
+# only and cannot include internal headers. Internal tests link
+# ../src/libthe-seed-core.la statically (one copy of every internal counter).
 AM_CXXFLAGS = -std=c++20 $(SANITIZER_CXXFLAGS)
 AM_LDFLAGS = $(SANITIZER_LDFLAGS)
 
@@ -42,12 +46,20 @@ check_PROGRAMS = $(seed_test_programs)
 
 if CROSS_COMPILING
 cross_compiling_flag = yes
-TESTS = check-fixtures.sh check-style.sh
+TESTS = check-fixtures.sh check-style.sh check-exports.sh
+# check-exports.sh is expected to fail until the public classes are in the
+# the_seed namespace; the entry is removed then, so an unexpected pass is
+# reported.
+XFAIL_TESTS = check-exports.sh
 check-local:
 	@echo "Test programs were built but not run: cross-compiling."
 else
 cross_compiling_flag = no
-TESTS = $(seed_test_programs) run-test-selftest.sh check-fixtures.sh check-style.sh
+TESTS = $(seed_test_programs) run-test-selftest.sh check-fixtures.sh check-style.sh check-exports.sh
+# check-exports.sh is expected to fail until the public classes are in the
+# the_seed namespace; the entry is removed then, so an unexpected pass is
+# reported.
+XFAIL_TESTS = check-exports.sh
 endif
 
 check_LTLIBRARIES = libtestmodule.la libtestmodulealt.la libtestsystem.la libcatch.la
@@ -55,7 +67,8 @@ check_LTLIBRARIES = libtestmodule.la libtestmodulealt.la libtestsystem.la libcat
 libcatch_la_SOURCES = ../external/Catch2/extras/catch_amalgamated.cpp
 
 test_NameParser_SOURCES = test_NameParser.cpp
-test_NameParser_LDADD = libcatch.la ../src/libthe-seed.la ${LIBECS_LIBS}
+test_NameParser_CPPFLAGS = $(AM_CPPFLAGS) -I$(top_srcdir)/src
+test_NameParser_LDADD = libcatch.la ../src/libthe-seed-core.la ${LIBECS_LIBS}
 
 test_LoadError_SOURCES = test_LoadError.cpp
 test_LoadError_LDADD = libcatch.la ../src/libthe-seed.la ${LIBECS_LIBS}
@@ -64,13 +77,16 @@ test_LibraryLoader_SOURCES = test_LibraryLoader.cpp
 test_LibraryLoader_LDADD = libcatch.la ../src/libthe-seed.la ${LIBECS_LIBS}
 
 test_DependencyLister_SOURCES = test_DependencyLister.cpp
-test_DependencyLister_LDADD = libcatch.la ../src/libthe-seed.la ${LIBECS_LIBS}
+test_DependencyLister_CPPFLAGS = $(AM_CPPFLAGS) -I$(top_srcdir)/src
+test_DependencyLister_LDADD = libcatch.la ../src/libthe-seed-core.la ${LIBECS_LIBS}
 
 test_DependencyAttribution_SOURCES = test_DependencyAttribution.cpp
-test_DependencyAttribution_LDADD = libcatch.la ../src/libthe-seed.la ${LIBECS_LIBS}
+test_DependencyAttribution_CPPFLAGS = $(AM_CPPFLAGS) -I$(top_srcdir)/src
+test_DependencyAttribution_LDADD = libcatch.la ../src/libthe-seed-core.la ${LIBECS_LIBS}
 
 test_DependencyReporting_SOURCES = test_DependencyReporting.cpp
-test_DependencyReporting_LDADD = libcatch.la ../src/libthe-seed.la ${LIBECS_LIBS}
+test_DependencyReporting_CPPFLAGS = $(AM_CPPFLAGS) -I$(top_srcdir)/src
+test_DependencyReporting_LDADD = libcatch.la ../src/libthe-seed-core.la ${LIBECS_LIBS}
 
 test_PeSigner_SOURCES = test_PeSigner.cpp
 test_PeSigner_LDADD = libcatch.la ../src/libthe-seed.la ${LIBECS_LIBS}
@@ -79,7 +95,8 @@ test_MachOSigner_SOURCES = test_MachOSigner.cpp
 test_MachOSigner_LDADD = libcatch.la ../src/libthe-seed.la ${LIBECS_LIBS}
 
 test_MachOParser_SOURCES = test_MachOParser.cpp
-test_MachOParser_LDADD = libcatch.la ../src/libthe-seed.la ${LIBECS_LIBS}
+test_MachOParser_CPPFLAGS = $(AM_CPPFLAGS) -I$(top_srcdir)/src
+test_MachOParser_LDADD = libcatch.la ../src/libthe-seed-core.la ${LIBECS_LIBS}
 
 test_MsiSigner_SOURCES = test_MsiSigner.cpp
 test_MsiSigner_LDADD = libcatch.la ../src/libthe-seed.la ${LIBECS_LIBS}
@@ -94,57 +111,68 @@ test_SystemLoader_SOURCES = test_SystemLoader.cpp
 test_SystemLoader_LDADD = libcatch.la ../src/libthe-seed.la ${LIBECS_LIBS}
 
 test_PakLoader_SOURCES = test_PakLoader.cpp
-test_PakLoader_LDADD = libcatch.la ../src/libthe-seed.la ${LIBECS_LIBS}
+test_PakLoader_CPPFLAGS = $(AM_CPPFLAGS) -I$(top_srcdir)/src
+test_PakLoader_LDADD = libcatch.la ../src/libthe-seed-core.la ${LIBECS_LIBS}
 
 test_PakIndex_SOURCES = test_PakIndex.cpp
-test_PakIndex_LDADD = libcatch.la ../src/libthe-seed.la ${LIBECS_LIBS}
+test_PakIndex_CPPFLAGS = $(AM_CPPFLAGS) -I$(top_srcdir)/src
+test_PakIndex_LDADD = libcatch.la ../src/libthe-seed-core.la ${LIBECS_LIBS}
 
 test_PakWriterCompat_SOURCES = test_PakWriterCompat.cpp
 test_PakWriterCompat_LDADD = libcatch.la ../src/libthe-seed.la ${LIBECS_LIBS}
 
 test_PakCost_SOURCES = test_PakCost.cpp
-test_PakCost_LDADD = libcatch.la ../src/libthe-seed.la ${LIBECS_LIBS}
+test_PakCost_CPPFLAGS = $(AM_CPPFLAGS) -I$(top_srcdir)/src
+test_PakCost_LDADD = libcatch.la ../src/libthe-seed-core.la ${LIBECS_LIBS}
 
 test_PakDamage_SOURCES = test_PakDamage.cpp
 test_PakDamage_LDADD = libcatch.la ../src/libthe-seed.la ${LIBECS_LIBS}
 
 test_PakConcurrency_SOURCES = test_PakConcurrency.cpp
-test_PakConcurrency_LDADD = libcatch.la ../src/libthe-seed.la ${LIBECS_LIBS}
+test_PakConcurrency_CPPFLAGS = $(AM_CPPFLAGS) -I$(top_srcdir)/src
+test_PakConcurrency_LDADD = libcatch.la ../src/libthe-seed-core.la ${LIBECS_LIBS}
 test_PakConcurrency_LDFLAGS = $(AM_LDFLAGS) -pthread
 
 test_LoaderConcurrency_SOURCES = test_LoaderConcurrency.cpp
-test_LoaderConcurrency_LDADD = libcatch.la ../src/libthe-seed.la ${LIBECS_LIBS}
+test_LoaderConcurrency_CPPFLAGS = $(AM_CPPFLAGS) -I$(top_srcdir)/src
+test_LoaderConcurrency_LDADD = libcatch.la ../src/libthe-seed-core.la ${LIBECS_LIBS}
 test_LoaderConcurrency_LDFLAGS = $(AM_LDFLAGS) -pthread
 
 test_BoundedBytes_SOURCES = test_BoundedBytes.cpp
-test_BoundedBytes_LDADD = libcatch.la ../src/libthe-seed.la ${LIBECS_LIBS}
+test_BoundedBytes_CPPFLAGS = $(AM_CPPFLAGS) -I$(top_srcdir)/src
+test_BoundedBytes_LDADD = libcatch.la ../src/libthe-seed-core.la ${LIBECS_LIBS}
 
 test_MalformedPe_SOURCES = test_MalformedPe.cpp
-test_MalformedPe_LDADD = libcatch.la ../src/libthe-seed.la ${LIBECS_LIBS}
+test_MalformedPe_CPPFLAGS = $(AM_CPPFLAGS) -I$(top_srcdir)/src
+test_MalformedPe_LDADD = libcatch.la ../src/libthe-seed-core.la ${LIBECS_LIBS}
 
 test_PeDigestReference_SOURCES = test_PeDigestReference.cpp
 test_PeDigestReference_LDADD = libcatch.la ../src/libthe-seed.la ${LIBECS_LIBS}
 
 test_PeRoundTrip_SOURCES = test_PeRoundTrip.cpp
-test_PeRoundTrip_LDADD = libcatch.la ../src/libthe-seed.la ${LIBECS_LIBS}
+test_PeRoundTrip_CPPFLAGS = $(AM_CPPFLAGS) -I$(top_srcdir)/src
+test_PeRoundTrip_LDADD = libcatch.la ../src/libthe-seed-core.la ${LIBECS_LIBS}
 
 test_MalformedElf_SOURCES = test_MalformedElf.cpp
 test_MalformedElf_LDADD = libcatch.la ../src/libthe-seed.la ${LIBECS_LIBS}
 
 test_MalformedMachO_SOURCES = test_MalformedMachO.cpp
-test_MalformedMachO_LDADD = libcatch.la ../src/libthe-seed.la ${LIBECS_LIBS}
+test_MalformedMachO_CPPFLAGS = $(AM_CPPFLAGS) -I$(top_srcdir)/src
+test_MalformedMachO_LDADD = libcatch.la ../src/libthe-seed-core.la ${LIBECS_LIBS}
 
 test_MachONoRoom_SOURCES = test_MachONoRoom.cpp
 test_MachONoRoom_LDADD = libcatch.la ../src/libthe-seed.la ${LIBECS_LIBS}
 
 test_MachOLayout_SOURCES = test_MachOLayout.cpp
-test_MachOLayout_LDADD = libcatch.la ../src/libthe-seed.la ${LIBECS_LIBS}
+test_MachOLayout_CPPFLAGS = $(AM_CPPFLAGS) -I$(top_srcdir)/src
+test_MachOLayout_LDADD = libcatch.la ../src/libthe-seed-core.la ${LIBECS_LIBS}
 
 test_MachOReference_SOURCES = test_MachOReference.cpp
 test_MachOReference_LDADD = libcatch.la ../src/libthe-seed.la ${LIBECS_LIBS}
 
 test_MalformedMsi_SOURCES = test_MalformedMsi.cpp
-test_MalformedMsi_LDADD = libcatch.la ../src/libthe-seed.la ${LIBECS_LIBS}
+test_MalformedMsi_CPPFLAGS = $(AM_CPPFLAGS) -I$(top_srcdir)/src
+test_MalformedMsi_LDADD = libcatch.la ../src/libthe-seed-core.la ${LIBECS_LIBS}
 
 test_MsiDigestReference_SOURCES = test_MsiDigestReference.cpp
 test_MsiDigestReference_LDADD = libcatch.la ../src/libthe-seed.la ${LIBECS_LIBS}
@@ -175,14 +203,17 @@ test_FuzzCorpus_CPPFLAGS = $(AM_CPPFLAGS) -DFUZZ_CORPUS_DIR=\"$(abs_srcdir)/fuzz
 test_FuzzCorpus_LDADD = libcatch.la ../src/libthe-seed.la ${LIBECS_LIBS}
 
 test_FileReplace_SOURCES = test_FileReplace.cpp
-test_FileReplace_LDADD = libcatch.la ../src/libthe-seed.la ${LIBECS_LIBS}
+test_FileReplace_CPPFLAGS = $(AM_CPPFLAGS) -I$(top_srcdir)/src
+test_FileReplace_LDADD = libcatch.la ../src/libthe-seed-core.la ${LIBECS_LIBS}
 test_FileReplace_LDFLAGS = $(AM_LDFLAGS) -pthread
 
 test_FileReplaceKill_SOURCES = test_FileReplaceKill.cpp
-test_FileReplaceKill_LDADD = libcatch.la ../src/libthe-seed.la ${LIBECS_LIBS}
+test_FileReplaceKill_CPPFLAGS = $(AM_CPPFLAGS) -I$(top_srcdir)/src
+test_FileReplaceKill_LDADD = libcatch.la ../src/libthe-seed-core.la ${LIBECS_LIBS}
 
 test_SignersUseReplace_SOURCES = test_SignersUseReplace.cpp
-test_SignersUseReplace_LDADD = libcatch.la ../src/libthe-seed.la ${LIBECS_LIBS}
+test_SignersUseReplace_CPPFLAGS = $(AM_CPPFLAGS) -I$(top_srcdir)/src
+test_SignersUseReplace_LDADD = libcatch.la ../src/libthe-seed-core.la ${LIBECS_LIBS}
 
 libtestmodule_la_SOURCES = TestModule.cpp
 libtestmodule_la_CXXFLAGS = -std=c++20 ${LIBECS_CFLAGS} $(SANITIZER_CXXFLAGS)
@@ -221,7 +252,7 @@ test_ReadmeExamples_LDFLAGS = $(AM_LDFLAGS) -pthread
 
 EXTRA_DIST = TestPaths.hpp LoaderTestSupport.hpp PakTestSupport.hpp CfbReference.hpp MsiTestSupport.hpp ToolSupport.hpp MachOReference.hpp MachOSigningSupport.hpp HeapCounter.hpp MalformedInput.hpp ReplaceTestSupport.hpp \
              reference/reference-dump.cpp reference/compare-reference.sh \
-             reference/make-generated-references.sh run-test.sh run-test-selftest.sh check-fixtures.sh check-style.sh \
+             reference/make-generated-references.sh run-test.sh run-test-selftest.sh check-fixtures.sh check-style.sh check-exports.sh public-symbols.txt \
              fuzz/FuzzTargets.hpp fuzz/FuzzTargets.cpp fuzz/fuzz_entry.cpp \
              fuzz/build-fuzzers.sh fuzz/run-fuzzers.sh \
              fuzz/corpus \

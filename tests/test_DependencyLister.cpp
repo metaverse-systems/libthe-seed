@@ -3,7 +3,7 @@
 
 #include <libthe-seed/DependencyLister.hpp>
 
-#include "../src/internal/PeParser.hpp"
+#include "internal/PeParser.hpp"
 
 #include <algorithm>
 #include <cctype>

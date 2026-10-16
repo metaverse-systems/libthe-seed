@@ -1,5 +1,7 @@
 #pragma once
 
+#include <libthe-seed/Export.hpp>
+
 #include <cstdint>
 #include <string>
 #include <vector>
@@ -10,7 +12,7 @@
  * All methods are static — no instance state required.
  * Works cross-platform (no Windows API dependency).
  */
-class PeSigner
+class THE_SEED_API PeSigner
 {
 public:
     /** Result of computing an Authenticode digest. */

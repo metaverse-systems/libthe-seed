@@ -1,0 +1,32 @@
+# Scopes the shared library may export, one per line. check-exports.sh accepts
+# a symbol only when its demangled name starts with one of these lines.
+#
+# Every line is a literal prefix of the demangled name. A line ending in "::"
+# covers the members of a class; the runtime type information of a polymorphic
+# public class is listed with its "typeinfo for", "typeinfo name for" and
+# "vtable for" forms. Lines starting with # and blank lines are ignored.
+
+# Plugin loaders and the resource pak
+the_seed::ComponentLoader::
+the_seed::SystemLoader::
+the_seed::JSONLoader::
+the_seed::PakLoader::
+the_seed::ResourcePak::
+
+# Errors
+the_seed::LoadError::
+typeinfo for the_seed::LoadError
+typeinfo name for the_seed::LoadError
+vtable for the_seed::LoadError
+
+# Library loading and dependency listing
+the_seed::LibraryLoader::
+the_seed::DependencyLister::
+the_seed::DependencyResult::
+the_seed::LibraryError::
+
+# Parsing and signing
+the_seed::MachOParser::
+the_seed::PeSigner::
+the_seed::MachOSigner::
+the_seed::MsiSigner::

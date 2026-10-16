@@ -1,5 +1,7 @@
 #pragma once
 
+#include <libthe-seed/Export.hpp>
+
 #include <memory>
 #include <string>
 #include <vector>
@@ -27,7 +29,7 @@ template <typename Creator> class PluginCache;
  * must not load through the same loader. A request made after PathAdd
  * returned uses the new location.
  */
-class ComponentLoader
+class THE_SEED_API ComponentLoader
 {
   public:
     using ComponentCreator = ecs::Component *(*)(void *);

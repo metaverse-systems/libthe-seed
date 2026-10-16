@@ -1,5 +1,7 @@
 #pragma once
 
+#include <libthe-seed/Export.hpp>
+
 #include <cstdint>
 #include <string>
 #include <vector>
@@ -46,7 +48,7 @@
  * Apple's tools. Programs signed by earlier versions of the-seed are malformed
  * after re-signing and may need to be rebuilt from their unsigned originals.
  */
-class MachOParser
+class THE_SEED_API MachOParser
 {
 public:
     enum class Format

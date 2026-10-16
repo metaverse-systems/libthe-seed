@@ -1,5 +1,7 @@
 #pragma once
 
+#include <libthe-seed/Export.hpp>
+
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -16,7 +18,7 @@
  * (for a reason other than not existing) has LocationState::Unreadable and the
  * system's text in Location::reason; this holds for every loader.
  */
-class LoadError : public std::runtime_error
+class THE_SEED_API LoadError : public std::runtime_error
 {
   public:
     enum class Reason

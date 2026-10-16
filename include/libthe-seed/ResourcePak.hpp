@@ -1,5 +1,7 @@
 #pragma once
 
+#include <libthe-seed/Export.hpp>
+
 #include <memory>
 #include <string>
 #include <vector>
@@ -24,7 +26,7 @@
  * remembered description. Adding to an ecs::Container is limited to that
  * container's thread, as libecs-cpp requires.
  */
-class ResourcePak
+class THE_SEED_API ResourcePak
 {
   public:
     /**

@@ -1,6 +1,10 @@
 lib_LTLIBRARIES = libthe-seed.la
+# Every source is compiled once into the convenience library; the installed
+# library is built from it and the tests of internals link it statically.
+noinst_LTLIBRARIES = libthe-seed-core.la
 pkginclude_HEADERS = \
     ../include/libthe-seed/LoadError.hpp \
+    ../include/libthe-seed/Export.hpp \
     ../include/libthe-seed/JSONLoader.hpp \
     ../include/libthe-seed/SystemLoader.hpp \
     ../include/libthe-seed/ComponentLoader.hpp \
@@ -37,10 +41,18 @@ noinst_HEADERS = \
 	internal/MsiAuthenticode.hpp \
 	internal/AuthenticodeDigestField.hpp
 
-libthe_seed_la_CXXFLAGS = -std=c++20 -I$(top_srcdir)/include -I$(top_srcdir)/external ${LIBECS_CFLAGS} $(SANITIZER_CXXFLAGS)
-libthe_seed_la_LIBADD = -lpthread ${LIBECS_LIBS}
+# Hidden by default: only classes marked THE_SEED_API are exported.
+libthe_seed_core_la_CPPFLAGS = -DTHE_SEED_BUILDING
+libthe_seed_core_la_CXXFLAGS = -fvisibility=hidden -std=c++20 -I$(top_srcdir)/include -I$(top_srcdir)/external ${LIBECS_CFLAGS} $(SANITIZER_CXXFLAGS)
+libthe_seed_core_la_LIBADD = -lpthread ${LIBECS_LIBS}
+
+# The shared library has no sources of its own. The empty C++ file only makes
+# libtool link it with the C++ driver.
+libthe_seed_la_SOURCES =
+nodist_EXTRA_libthe_seed_la_SOURCES = dummy.cpp
+libthe_seed_la_LIBADD = libthe-seed-core.la -lpthread ${LIBECS_LIBS}
 libthe_seed_la_LDFLAGS = -no-undefined -version-info 0:0:0 $(SANITIZER_LDFLAGS)
-libthe_seed_la_SOURCES = LoadError.cpp \
+libthe_seed_core_la_SOURCES = LoadError.cpp \
 		LibraryLoader.cpp \
 		SystemLoader.cpp \
 		ComponentLoader.cpp \

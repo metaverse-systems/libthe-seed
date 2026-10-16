@@ -1,5 +1,7 @@
 #pragma once
 
+#include <libthe-seed/Export.hpp>
+
 #include <map>
 #include <future>
 #include <memory>
@@ -54,7 +56,7 @@ struct PakIndex;
  * share the result. No lock is held while searching, opening, checking or
  * reading. A request made after PathAdd returned uses the new location.
  */
-class PakLoader
+class THE_SEED_API PakLoader
 {
   public:
     PakLoader();
