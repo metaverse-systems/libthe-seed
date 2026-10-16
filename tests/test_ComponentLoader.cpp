@@ -1,6 +1,8 @@
-#include <catch_amalgamated.hpp>
+#include "LoaderTestSupport.hpp"
+#include <libecs-cpp/ecs.hpp>
 #include <libthe-seed/ComponentLoader.hpp>
 #include <libthe-seed/LoadError.hpp>
+#include <memory>
 #include <stdexcept>
 
 TEST_CASE("ComponentLoader instance isolation", "[ComponentLoader]") {
@@ -68,5 +70,17 @@ TEST_CASE("ComponentLoader destruction completes and unloads nothing", "[Compone
         auto loader = std::make_unique<the_seed::ComponentLoader>();
         loader->PathAdd("/some/path");
         REQUIRE_NOTHROW(loader.reset());
+    }
+
+    SECTION("A component made by the loader outlives it and the plugin stays mapped") {
+        std::unique_ptr<ecs::Component> component;
+        {
+            auto loader = std::make_unique<the_seed::ComponentLoader>();
+            loader->PathAdd(seedtest::ModuleDir());
+            component = loader->Create("testmodule");
+            REQUIRE(component);
+        }
+        CHECK(component->Type == "TestModule");
+        CHECK(component->Export()["variant"] == 1);
     }
 }

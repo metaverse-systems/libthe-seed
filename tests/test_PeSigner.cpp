@@ -4,6 +4,7 @@
 
 #include <filesystem>
 #include <fstream>
+#include <sstream>
 #include <string>
 #include <vector>
 #include <cstdint>
@@ -18,6 +19,45 @@ std::string CopyFixture(const seedtest::ScratchDir &scratch, const std::string &
     return dst.string();
 }
 
+// The digest osslsigncode calculated for `fixture` with nothing appended, from the recorded
+// reference file (the same file test_PeDigestReference reads).
+std::string RecordedDigest(const std::string &fixture)
+{
+    std::ifstream in(seedtest::FixturePath("pe-reference-digests.txt"));
+    REQUIRE(in.good());
+    std::string line;
+    while(std::getline(in, line))
+    {
+        if(line.empty() || line[0] == '#')
+        {
+            continue;
+        }
+        std::istringstream fields(line);
+        std::string name;
+        unsigned appended = 0;
+        std::uint64_t length = 0;
+        std::string digest;
+        if((fields >> name >> appended >> length >> digest) && name == fixture && appended == 0)
+        {
+            return digest;
+        }
+    }
+    FAIL("no recorded digest for " << fixture);
+    return {};
+}
+
+std::string Hex(const std::vector<std::uint8_t> &bytes)
+{
+    static const char digits[] = "0123456789abcdef";
+    std::string text;
+    for(std::uint8_t byte : bytes)
+    {
+        text.push_back(digits[byte >> 4]);
+        text.push_back(digits[byte & 15]);
+    }
+    return text;
+}
+
 } // namespace
 
 TEST_CASE("PeSigner::ComputeAuthenticodeDigest computes valid digest", "[PeSigner]")
@@ -29,6 +69,9 @@ TEST_CASE("PeSigner::ComputeAuthenticodeDigest computes valid digest", "[PeSigne
 
     // Digest should be 32 bytes (SHA-256)
     REQUIRE(result.digest.size() == 32);
+
+    // The value is the one an independent tool calculated.
+    CHECK(Hex(result.digest) == RecordedDigest("tiny.exe"));
 
     // tiny.exe is PE32+ (x86-64)
     CHECK(result.is_pe32_plus == true);

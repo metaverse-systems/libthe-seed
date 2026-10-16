@@ -232,13 +232,6 @@ TEST_CASE("a question about an installer package reads only its tables", "[Query
     }
 }
 
-#else
-
-TEST_CASE("the cost of a question about a file is measured on Linux only", "[QueryCost]")
-{
-    SUCCEED("the byte count comes from /proc/self/io");
-}
-
 #endif
 
 TEST_CASE("the mini stream's chain is resolved once per package model", "[QueryCost]")

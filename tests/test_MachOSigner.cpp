@@ -470,6 +470,8 @@ TEST_CASE("MachOSigner equal inputs give an identical CodeDirectory", "[MachOSig
             // A different path is a different name, not a different program.
             CHECK(a.slices[i].code_directory == c.slices[i].code_directory);
             CHECK(a.slices[i].cd_hash.size() == 32);
+            CHECK(a.slices[i].cd_hash ==
+                  mr::Sha256(a.slices[i].code_directory.data(), a.slices[i].code_directory.size()));
         }
 
         // Different inputs give a different CodeDirectory.

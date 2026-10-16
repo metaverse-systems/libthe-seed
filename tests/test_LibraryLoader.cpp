@@ -22,6 +22,7 @@ TEST_CASE("LibraryLoader adds and retrieves paths correctly", "[LibraryLoader]")
     SECTION("PathsGet never throws, even when no library is present") {
         loader.PathAdd("/nonexistent/path");
         REQUIRE_NOTHROW(loader.PathsGet());
+        CHECK(loader.PathsGet() == std::vector<std::string>{"/nonexistent/path"});
     }
 
     SECTION("PathsGet returns locations, not candidate files") {

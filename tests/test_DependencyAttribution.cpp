@@ -236,10 +236,15 @@ TEST_CASE("Many programs sharing many libraries read each file once", "[Dependen
         // program with its whole closure, so its result is far larger than
         // the combined program's and the ratio depends on the machine. The
         // read count above is what shows each file is parsed once.
-        const double combined_seconds = SecondsFor(lister, {combined}, search);
-        const double many_seconds = SecondsFor(lister, programs, search);
+        the_seed::DependencyResult combined_result;
+        the_seed::DependencyResult many_result;
+        const double combined_seconds = SecondsFor(lister, {combined}, search, &combined_result);
+        const double many_seconds = SecondsFor(lister, programs, search, &many_result);
         WARN("combined " << combined_seconds << " s, many " << many_seconds << " s");
-        SUCCEED();
+        // The timed requests are real: both finished without errors and listed every library.
+        CHECK(combined_result.errors.empty());
+        CHECK(many_result.errors.empty());
+        CHECK(many_result.dependencies.size() == static_cast<std::size_t>(kCount));
     }
 }
 

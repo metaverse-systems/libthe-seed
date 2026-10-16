@@ -4,6 +4,7 @@
 #include <libthe-seed/LoadError.hpp>
 #include <libthe-seed/SystemLoader.hpp>
 #include <libthe-seed/PakLoader.hpp>
+#include <algorithm>
 #include <atomic>
 #include <barrier>
 #include <chrono>
@@ -16,6 +17,44 @@
 #include <vector>
 
 static constexpr int NUM_THREADS = 8;
+
+namespace
+{
+    // Checks that `paths` holds exactly the entries "<prefix><thread><separator><index>" for every
+    // thread below `threads` and every index below `perThread`, each once, and that for each thread
+    // the entries appear in the order that thread added them. Extra leading entries (`skip`) are
+    // not looked at.
+    void CheckEveryPathOnce(const std::vector<std::string> &paths, const std::string &prefix,
+                            const std::string &separator, int threads, int perThread, std::size_t skip = 0)
+    {
+        REQUIRE(paths.size() == skip + static_cast<std::size_t>(threads) * static_cast<std::size_t>(perThread));
+        std::vector<std::vector<int>> seen(static_cast<std::size_t>(threads));
+        for(std::size_t at = skip; at < paths.size(); ++at)
+        {
+            const std::string &path = paths[at];
+            INFO("path " << path);
+            REQUIRE(path.compare(0, prefix.size(), prefix) == 0);
+            const std::size_t cut = path.find(separator, prefix.size());
+            REQUIRE(cut != std::string::npos);
+            const int thread = std::stoi(path.substr(prefix.size(), cut - prefix.size()));
+            const int index = std::stoi(path.substr(cut + separator.size()));
+            REQUIRE(thread >= 0);
+            REQUIRE(thread < threads);
+            seen[static_cast<std::size_t>(thread)].push_back(index);
+        }
+        for(int thread = 0; thread < threads; ++thread)
+        {
+            INFO("thread " << thread);
+            const std::vector<int> &indexes = seen[static_cast<std::size_t>(thread)];
+            REQUIRE(indexes.size() == static_cast<std::size_t>(perThread));
+            for(int index = 0; index < perThread; ++index)
+            {
+                // Present once, and after the entry the same thread added before it.
+                REQUIRE(indexes[static_cast<std::size_t>(index)] == index);
+            }
+        }
+    }
+}
 
 TEST_CASE("ComponentLoader concurrent PathAdd is thread-safe", "[concurrency]") {
     the_seed::ComponentLoader loader;
@@ -34,7 +73,7 @@ TEST_CASE("ComponentLoader concurrent PathAdd is thread-safe", "[concurrency]") 
     for (auto &t : threads)
         t.join();
 
-    REQUIRE(loader.PathsGet().size() == NUM_THREADS * 100);
+    CheckEveryPathOnce(loader.PathsGet(), "/path/", "/", NUM_THREADS, 100);
 }
 
 TEST_CASE("SystemLoader concurrent PathAdd is thread-safe", "[concurrency]") {
@@ -54,7 +93,7 @@ TEST_CASE("SystemLoader concurrent PathAdd is thread-safe", "[concurrency]") {
     for (auto &t : threads)
         t.join();
 
-    REQUIRE(loader.PathsGet().size() == NUM_THREADS * 100);
+    CheckEveryPathOnce(loader.PathsGet(), "/path/", "/", NUM_THREADS, 100);
 }
 
 TEST_CASE("PakLoader concurrent PathAdd is thread-safe", "[concurrency]") {
@@ -74,7 +113,7 @@ TEST_CASE("PakLoader concurrent PathAdd is thread-safe", "[concurrency]") {
     for (auto &t : threads)
         t.join();
 
-    REQUIRE(loader.PathsGet().size() == NUM_THREADS * 100);
+    CheckEveryPathOnce(loader.PathsGet(), "/path/", "/", NUM_THREADS, 100);
 }
 
 TEST_CASE("ComponentLoader concurrent PathsGet while PathAdd", "[concurrency]") {
@@ -82,11 +121,13 @@ TEST_CASE("ComponentLoader concurrent PathsGet while PathAdd", "[concurrency]") 
     loader.PathAdd("/initial");
     std::barrier sync(NUM_THREADS);
     std::atomic<bool> reader_saw_empty{false};
+    // What each reader saw on each call. The threads record; the test thread checks.
+    std::vector<std::vector<std::vector<std::string>>> snapshots(NUM_THREADS);
 
     std::vector<std::thread> threads;
     // Half writers, half readers
     for (int i = 0; i < NUM_THREADS; ++i) {
-        threads.emplace_back([&loader, &sync, &reader_saw_empty, i]() {
+        threads.emplace_back([&loader, &sync, &reader_saw_empty, &snapshots, i]() {
             sync.arrive_and_wait();
             if (i % 2 == 0) {
                 for (int j = 0; j < 100; ++j)
@@ -96,6 +137,7 @@ TEST_CASE("ComponentLoader concurrent PathsGet while PathAdd", "[concurrency]") 
                     auto paths = loader.PathsGet();
                     if (paths.empty())
                         reader_saw_empty.store(true);
+                    snapshots[static_cast<std::size_t>(i)].push_back(std::move(paths));
                 }
             }
         });
@@ -108,77 +150,113 @@ TEST_CASE("ComponentLoader concurrent PathsGet while PathAdd", "[concurrency]") 
     auto final_paths = loader.PathsGet();
     REQUIRE(final_paths.size() >= 1);
     REQUIRE(final_paths[0] == "/initial");
+
+    // The four writers (even indexes) each added 100 paths, every one once and in order.
+    std::vector<std::string> added(final_paths.begin() + 1, final_paths.end());
+    REQUIRE(added.size() == static_cast<std::size_t>(NUM_THREADS / 2) * 100);
+    std::vector<std::vector<int>> seen(NUM_THREADS);
+    for (const auto &path : added) {
+        INFO("path " << path);
+        REQUIRE(path.compare(0, 6, "/path/") == 0);
+        const std::size_t cut = path.find('/', 6);
+        REQUIRE(cut != std::string::npos);
+        const int writer = std::stoi(path.substr(6, cut - 6));
+        REQUIRE(writer >= 0);
+        REQUIRE(writer < NUM_THREADS);
+        REQUIRE(writer % 2 == 0);
+        seen[static_cast<std::size_t>(writer)].push_back(std::stoi(path.substr(cut + 1)));
+    }
+    for (int writer = 0; writer < NUM_THREADS; writer += 2) {
+        INFO("writer " << writer);
+        REQUIRE(seen[static_cast<std::size_t>(writer)].size() == 100);
+        for (int j = 0; j < 100; ++j)
+            REQUIRE(seen[static_cast<std::size_t>(writer)][static_cast<std::size_t>(j)] == j);
+    }
+
+    // Every list a reader got is the start of the final list: paths are only ever appended.
+    for (int reader = 1; reader < NUM_THREADS; reader += 2) {
+        const auto &list = snapshots[static_cast<std::size_t>(reader)];
+        REQUIRE(list.size() == 100);
+        std::size_t previous = 0;
+        for (const auto &snapshot : list) {
+            REQUIRE(snapshot.size() >= previous);
+            REQUIRE(snapshot.size() <= final_paths.size());
+            REQUIRE(std::equal(snapshot.begin(), snapshot.end(), final_paths.begin()));
+            previous = snapshot.size();
+        }
+    }
+}
+
+namespace
+{
+    // The outcome of one call that is expected to throw a LoadError.
+    struct Failure
+    {
+        bool threwLoadError = false;
+        the_seed::LoadError::Reason reason = the_seed::LoadError::Reason::InvalidName;
+        std::string message;
+    };
+
+    // Runs `call(item)` on NUM_THREADS threads at once, where item is "<prefix><thread>", and
+    // returns what each thread saw. Nothing is asserted inside the threads.
+    template <typename Call>
+    std::vector<Failure> FailTogether(const std::string &prefix, Call call)
+    {
+        std::barrier sync(NUM_THREADS);
+        std::vector<Failure> failures(NUM_THREADS);
+        std::vector<std::thread> threads;
+        for (int i = 0; i < NUM_THREADS; ++i) {
+            threads.emplace_back([&, i]() {
+                sync.arrive_and_wait();
+                try {
+                    call(prefix + std::to_string(i));
+                } catch (const the_seed::LoadError &error) {
+                    failures[static_cast<std::size_t>(i)] = {true, error.ReasonGet(), error.what()};
+                } catch (...) {
+                }
+            });
+        }
+        for (auto &t : threads)
+            t.join();
+        return failures;
+    }
+
+    void CheckEveryCallFailed(const std::vector<Failure> &failures, const std::string &prefix)
+    {
+        REQUIRE(failures.size() == static_cast<std::size_t>(NUM_THREADS));
+        for (int i = 0; i < NUM_THREADS; ++i) {
+            const Failure &failure = failures[static_cast<std::size_t>(i)];
+            INFO("thread " << i);
+            REQUIRE(failure.threwLoadError);
+            REQUIRE(failure.reason == the_seed::LoadError::Reason::NotFound);
+            REQUIRE(failure.message.find(prefix + std::to_string(i)) != std::string::npos);
+        }
+    }
 }
 
 TEST_CASE("ComponentLoader concurrent Create for nonexistent libraries", "[concurrency]") {
     the_seed::ComponentLoader loader;
     loader.PathAdd("/nonexistent");
-    std::barrier sync(NUM_THREADS);
 
-    std::vector<std::thread> threads;
-    for (int i = 0; i < NUM_THREADS; ++i) {
-        threads.emplace_back([&loader, &sync, i]() {
-            sync.arrive_and_wait();
-            // All threads try to Create — should all throw, no crash/race
-            try {
-                loader.Create("nonexistent/item_" + std::to_string(i));
-            } catch (const std::runtime_error &) {
-                // Expected — library not found
-            }
-        });
-    }
-
-    for (auto &t : threads)
-        t.join();
-
-    // If we got here without crashing or hanging, concurrency is safe
-    REQUIRE(true);
+    // All threads try to Create at once: every call must fail with NotFound naming its item.
+    auto failures = FailTogether("nonexistent/item_", [&loader](const std::string &item) { loader.Create(item); });
+    CheckEveryCallFailed(failures, "nonexistent/item_");
 }
 
 TEST_CASE("SystemLoader concurrent Create for nonexistent libraries", "[concurrency]") {
     the_seed::SystemLoader loader;
     loader.PathAdd("/nonexistent");
-    std::barrier sync(NUM_THREADS);
 
-    std::vector<std::thread> threads;
-    for (int i = 0; i < NUM_THREADS; ++i) {
-        threads.emplace_back([&loader, &sync, i]() {
-            sync.arrive_and_wait();
-            try {
-                loader.Create("nonexistent/item_" + std::to_string(i));
-            } catch (const std::runtime_error &) {
-                // Expected
-            }
-        });
-    }
-
-    for (auto &t : threads)
-        t.join();
-
-    REQUIRE(true);
+    auto failures = FailTogether("nonexistent/item_", [&loader](const std::string &item) { loader.Create(item); });
+    CheckEveryCallFailed(failures, "nonexistent/item_");
 }
 
 TEST_CASE("PakLoader concurrent Load for nonexistent paks", "[concurrency]") {
     the_seed::PakLoader loader;
     loader.PathAdd("/nonexistent");
-    std::barrier sync(NUM_THREADS);
 
-    std::vector<std::thread> threads;
-    for (int i = 0; i < NUM_THREADS; ++i) {
-        threads.emplace_back([&loader, &sync, i]() {
-            sync.arrive_and_wait();
-            try {
-                loader.Load("nonexistent/pak_" + std::to_string(i));
-            } catch (const std::runtime_error &) {
-                // Expected
-            }
-        });
-    }
-
-    for (auto &t : threads)
-        t.join();
-
-    REQUIRE(true);
+    auto failures = FailTogether("nonexistent/pak_", [&loader](const std::string &item) { loader.Load(item); });
+    CheckEveryCallFailed(failures, "nonexistent/pak_");
 }
 
 TEST_CASE("Mixed read/write operations across all loaders", "[concurrency]") {
@@ -212,9 +290,9 @@ TEST_CASE("Mixed read/write operations across all loaders", "[concurrency]") {
         t.join();
 
     REQUIRE_FALSE(any_empty.load());
-    REQUIRE(comp.PathsGet().size() == NUM_THREADS * 50);
-    REQUIRE(sys.PathsGet().size() == NUM_THREADS * 50);
-    REQUIRE(pak.PathsGet().size() == NUM_THREADS * 50);
+    CheckEveryPathOnce(comp.PathsGet(), "/comp/", "_", NUM_THREADS, 50);
+    CheckEveryPathOnce(sys.PathsGet(), "/sys/", "_", NUM_THREADS, 50);
+    CheckEveryPathOnce(pak.PathsGet(), "/pak/", "_", NUM_THREADS, 50);
 }
 
 
@@ -260,6 +338,22 @@ namespace
         }
         return component->Export().value("variant", 0);
     }
+
+    // True when the system is the one the test plugin makes and it runs: it reports its handle,
+    // is updated once, and reports one update.
+    bool SystemWorks(ecs::System *system)
+    {
+        if(system == nullptr || system->Handle != "TestSystem")
+        {
+            return false;
+        }
+        if(system->Export().value("updates", -1) != 0)
+        {
+            return false;
+        }
+        system->UpdateSystem();
+        return system->Export().value("updates", -1) == 1;
+    }
 }
 
 TEST_CASE("Concurrent Create of an existing plugin opens it once per loader", "[concurrency]")
@@ -292,7 +386,7 @@ TEST_CASE("Concurrent Create of an existing plugin opens it once per loader", "[
                 else
                 {
                     std::unique_ptr<ecs::System> system = systems.Create("testsystem");
-                    (system ? working : broken)++;
+                    (SystemWorks(system.get()) ? working : broken)++;
                 }
             }
             catch(...)
@@ -324,7 +418,7 @@ TEST_CASE("Concurrent Create of an existing plugin opens it once per loader", "[
             {
                 std::unique_ptr<ecs::Component> component = components.Create("testmodule");
                 std::unique_ptr<ecs::System> system = systems.Create("testsystem");
-                (VariantOf(component.get()) == 1 && system ? working : broken)++;
+                (VariantOf(component.get()) == 1 && SystemWorks(system.get()) ? working : broken)++;
             }
             catch(...)
             {
@@ -585,5 +679,85 @@ TEST_CASE("PathAdd while other threads load the same plugin", "[concurrency]")
         const std::vector<std::string> paths = loader.PathsGet();
         REQUIRE(paths.size() == 2);
         REQUIRE(paths.back() == late);
+    }
+}
+
+TEST_CASE("component loader: 8+ threads first-time load of an existing plugin", "[concurrency]")
+{
+    const std::string moduleDir = seedtest::ModuleDir();
+    seedtest::PluginPath("testmodule");
+
+    for(int round = 0; round < 20; ++round)
+    {
+        // A fresh loader: no thread has loaded the plugin before.
+        the_seed::ComponentLoader loader;
+        loader.PathAdd(moduleDir);
+        std::atomic<int> working{0};
+        std::atomic<int> broken{0};
+        seedtest::DestructionCounter destroyed{0};
+        the_seed::internal::ResetPluginOpenCallCount();
+
+        RunTogether([&](int index) {
+            try
+            {
+                nlohmann::json configuration = {{"value", 100 + index},
+                                                {"counter", seedtest::CounterAddress(destroyed)}};
+                std::unique_ptr<ecs::Component> component = loader.Create("testmodule", &configuration);
+                if(component && component->Type == "TestModule" &&
+                   component->Export().value("variant", 0) == 1 &&
+                   component->Export().value("value", -1) == 100 + index)
+                {
+                    ++working;
+                }
+                else
+                {
+                    ++broken;
+                }
+            }
+            catch(...)
+            {
+                ++broken;
+            }
+        });
+
+        REQUIRE(broken.load() == 0);
+        REQUIRE(working.load() == NUM_THREADS);
+        // Every component was destroyed at the end of its thread's call.
+        REQUIRE(destroyed.load() == NUM_THREADS);
+        REQUIRE(the_seed::internal::PluginOpenCallCount() == 1);
+    }
+}
+
+TEST_CASE("system loader: 8+ threads first-time load of an existing plugin", "[concurrency]")
+{
+    const std::string moduleDir = seedtest::ModuleDir();
+    seedtest::PluginPath("testsystem");
+
+    for(int round = 0; round < 20; ++round)
+    {
+        the_seed::SystemLoader loader;
+        loader.PathAdd(moduleDir);
+        std::atomic<int> working{0};
+        std::atomic<int> broken{0};
+        seedtest::DestructionCounter destroyed{0};
+        the_seed::internal::ResetPluginOpenCallCount();
+
+        RunTogether([&](int) {
+            try
+            {
+                std::unique_ptr<ecs::System> system = loader.Create("testsystem", &destroyed);
+                (SystemWorks(system.get()) ? working : broken)++;
+            }
+            catch(...)
+            {
+                ++broken;
+            }
+        });
+
+        REQUIRE(broken.load() == 0);
+        REQUIRE(working.load() == NUM_THREADS);
+        // Each system's destructor ran once, adding to the counter handed to its creator.
+        REQUIRE(destroyed.load() == NUM_THREADS);
+        REQUIRE(the_seed::internal::PluginOpenCallCount() == 1);
     }
 }

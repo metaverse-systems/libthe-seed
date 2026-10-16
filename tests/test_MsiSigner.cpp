@@ -162,7 +162,13 @@ TEST_CASE("MsiSigner::StripSignature removes embedded signature", "[MsiSigner]")
 TEST_CASE("MsiSigner::StripSignature returns bool", "[MsiSigner]")
 {
     static_assert(std::is_same_v<decltype(the_seed::MsiSigner::StripSignature(std::declval<const std::string &>())), bool>);
-    SUCCEED();
+
+    // The bool is the outcome: false when there is nothing to remove, true when a signature went.
+    seedtest::ScratchDir scratch;
+    auto unsignedPath = msi::CopySample(scratch, "tiny.msi");
+    CHECK(the_seed::MsiSigner::StripSignature(unsignedPath) == false);
+    auto signedPath = msi::CopySample(scratch, msi::kSignedSamples.front());
+    CHECK(the_seed::MsiSigner::StripSignature(signedPath) == true);
 }
 
 TEST_CASE("MsiSigner::StripSignature on a signature of another tool", "[MsiSigner]")

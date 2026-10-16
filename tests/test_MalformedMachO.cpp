@@ -856,6 +856,8 @@ void CheckCodeDirectoryShape(const the_seed::MachOSigner::PreparedSlice &result,
     CHECK(GetBE32(cd, 28) == slots);
     CHECK(GetBE32(cd, 32) == code_limit);
     CHECK(result.cd_hash.size() == 32);
+    // The hash is the SHA-256 of the code directory, from the independent reference.
+    CHECK(result.cd_hash == machoref::Sha256(cd.data(), cd.size()));
 }
 
 std::uint32_t GetLE32(const Bytes &bytes, std::uint64_t offset)

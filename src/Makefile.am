@@ -32,6 +32,7 @@ noinst_HEADERS = \
 	internal/PakIndex.hpp \
 	internal/PakAccess.hpp \
 	internal/PluginCache.hpp \
+	internal/PluginLoaderCore.hpp \
 	internal/FileReplaceHooks.hpp \
 	internal/MachODefs.hpp \
 	internal/MachOLayout.hpp \

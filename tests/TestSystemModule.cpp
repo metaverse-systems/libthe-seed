@@ -22,13 +22,23 @@ namespace
             }
         }
 
+        void Update() override
+        {
+            ++this->Updates;
+        }
+
+        /*! Reports the handle and how many times the container updated the system. */
         nlohmann::json Export() const override
         {
-            return nlohmann::json::object();
+            nlohmann::json state = nlohmann::json::object();
+            state["handle"] = this->Handle;
+            state["updates"] = this->Updates;
+            return state;
         }
 
       private:
         std::atomic<int> *Counter;
+        int Updates = 0;
     };
 }
 

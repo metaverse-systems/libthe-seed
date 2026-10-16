@@ -332,6 +332,8 @@ TEST_CASE("layout: every truncation of a sample is rejected without reading outs
         // Cutting at the very end of every slice keeps the file readable only
         // when nothing is lost.
         CHECK_NOTHROW(Parse(whole));
+        const si::MachOContainer parsed = Parse(whole);
+        CHECK(parsed.entries.size() == (std::string(name).find("universal") != std::string::npos ? 2u : 1u));
     }
 }
 
@@ -378,8 +380,11 @@ TEST_CASE("layout: damaged load commands are rejected with a named message", "[M
         b[8] = '_'; b[9] = '_'; b[10] = 'T'; b[11] = 'E'; b[12] = 'X'; b[13] = 'T';
         return b;
     }();
+    // A segment command and a code signature command that fit are read, giving one slice.
     CHECK_NOTHROW(Parse(Program({seg})));
+    CHECK(Parse(Program({seg})).entries.size() == 1);
     CHECK_NOTHROW(Parse(Program({Command(0x1D, 16, 200, 100)})));
+    CHECK(Parse(Program({Command(0x1D, 16, 200, 100)})).entries.size() == 1);
     RequireRejected(Program({Command(0x99, 0)}), "is smaller than 8");
     RequireRejected(Program({Command(0x99, 10)}), "is not a multiple of 4");
     RequireRejected(Program({Command(0x99, 64)}, 512, 32), "runs past the end of the load commands");
