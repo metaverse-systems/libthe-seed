@@ -188,14 +188,19 @@ jobs:
           done
           exit 0
 
+      # upload-artifact refuses paths with "." or ".." segments, which the out
+      # of tree build directory has: hand it the resolved, absolute folder.
+      - name: Find the logs
+        if: failure()
+        working-directory: ${{ matrix.build }}
+        run: echo "TEST_LOG_DIR=$PWD/tests" >> "$GITHUB_ENV"
+
       - name: Upload logs
         if: failure()
         uses: actions/upload-artifact@v7
         with:
           name: test-logs-${{ matrix.name }}
-          path: |
-            ${{ matrix.build }}/tests/*.log
-            ${{ matrix.build }}/tests/test-suite.log
+          path: ${{ env.TEST_LOG_DIR }}/*.log
           if-no-files-found: ignore
 
   fuzz:
