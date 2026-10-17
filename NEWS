@@ -127,12 +127,13 @@ libthe-seed 0.8.0
 * ABI: the private members of every loader changed. Rebuild programs against
   the new headers.
 
-* Tests: configure --enable-tests (default off) is the only thing that needs
-  the external/Catch2 submodule. Building and installing the library from a
-  clone made without submodules works with the plain ./configure and make
-  commands; a build that asks for the tests without the submodule stops with a
-  message naming it. Nobody who only installs the library has to change
-  anything.
+* Tests: only the tests need the external/Catch2 submodule. configure
+  --enable-tests=auto (the default) enables them when the submodule is
+  present, yes stops with a message naming it when it is missing, and no does
+  not look for it. Building and installing the library from a clone made
+  without submodules works with the plain ./configure and make commands, and
+  make check there says how to fetch the framework. Nobody who only installs
+  the library has to change anything.
 
 * Warnings: compiler warnings are always shown. configure --enable-werror
   makes them fatal; maintainers should use it. Nobody has to change code.

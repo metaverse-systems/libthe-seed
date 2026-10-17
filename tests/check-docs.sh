@@ -25,7 +25,7 @@ builddir=${SEED_BUILDDIR:-$srcdir}
 
 if ! command -v doxygen >/dev/null 2>&1; then
     if [ "${SEED_REQUIRE_DOCS:-0}" = 1 ]; then
-        echo "check-docs: doxygen is not installed, and SEED_REQUIRE_DOCS=1 requires it"
+        echo "FAIL: check-docs: doxygen is not installed, and SEED_REQUIRE_DOCS=1 requires it"
         exit 1
     fi
     echo "check-docs: skipped, doxygen is not installed"
@@ -44,7 +44,7 @@ trap 'rm -rf "$work"' EXIT HUP INT TERM
 fail=0
 problem() {
     fail=1
-    echo "check-docs: $*"
+    echo "FAIL: check-docs: $*"
 }
 
 # ---- 1. doxygen runs ----
@@ -154,5 +154,5 @@ fi
 if [ "$fail" -ne 0 ]; then
     exit 1
 fi
-echo "check-docs: the documentation builds, covers the public classes and leaves out internals; no workflow writes to the repository"
+echo "PASS: check-docs: the documentation builds, covers the public classes and leaves out internals; no workflow writes to the repository"
 exit 0

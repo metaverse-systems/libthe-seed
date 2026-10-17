@@ -29,7 +29,7 @@ if [ ! -f "$builddir/Makefile" ]; then
     exit 77
 fi
 
-stage=$(mktemp -d "${TMPDIR:-/tmp}/check-install.XXXXXX") || exit 99
+stage=$(mktemp -d "${TMPDIR:-/tmp}/check-install.XXXXXX") || exit 2
 trap 'rm -rf "$stage"' EXIT HUP INT TERM
 
 root=$stage$prefix

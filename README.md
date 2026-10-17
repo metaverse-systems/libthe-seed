@@ -152,8 +152,7 @@ The sample executables, DLL, installer and Mach-O files in `tests/fixtures/` are
 
 ### Hosted checks
 
-
-The workflow in `.github/workflows/ci.yaml` runs `make check` for the plain, the address+undefined and the thread variants on every pull request and on pushes to `main`. It builds libecs-cpp from commit `bd84b5a5bee05bed2006fc9ef9dbbfe3e58f9f7e` (version 2.1.0). Update `LIBECS_CPP_REF` in the workflow when the required libecs-cpp changes. The documentation job builds the reference documentation and runs `tests/check-docs.sh` on every pull request and push; it only reads the repository.
+The workflow in `.github/workflows/ci.yaml` runs `make check` for the plain, the address+undefined, the thread and the plain out-of-tree variants, each configured with `--enable-tests=yes --enable-werror=yes`, on every pull request and on pushes to `main`. It builds libecs-cpp from commit `bd84b5a5bee05bed2006fc9ef9dbbfe3e58f9f7e` (version 2.1.0). Update `LIBECS_CPP_REF` in the workflow when the required libecs-cpp changes. The documentation job builds the reference documentation and runs `tests/check-docs.sh` on every pull request and push; it only reads the repository.
 
 ### Documentation
 
