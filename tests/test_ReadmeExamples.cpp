@@ -5,10 +5,12 @@
 #include <libthe-seed/JSONLoader.hpp>
 #include <libthe-seed/LoadError.hpp>
 #include <libthe-seed/PakLoader.hpp>
+#include <libthe-seed/PeSigner.hpp>
 #include <libthe-seed/ResourcePak.hpp>
 #include <libthe-seed/SystemLoader.hpp>
 #include <libecs-cpp/ecs.hpp>
 #include <filesystem>
+#include <cstdint>
 #include <iostream>
 #include <functional>
 #include <string>
@@ -40,6 +42,7 @@ namespace
         // Get the raw factory function pointer
         auto creator = loader.Get("org/my-component");
         // --- end README text
+        (void)creator;
     }
 
     void SystemLoaderExample()
@@ -132,6 +135,26 @@ namespace
         seedtest::WritePak(install_dir / "paks", "art", resources);
     }
 
+    // The program the example signs is app.exe in the working directory.
+    void PeSignerExample(const std::vector<std::uint8_t> &pkcs7_der)
+    {
+        // --- begin README text
+        // The fingerprint to sign: SHA-256 of the program without its signature.
+        auto result = the_seed::PeSigner::ComputeAuthenticodeDigest("app.exe");
+
+        // pkcs7_der is the DER-encoded signature that was made over that fingerprint.
+        the_seed::PeSigner::EmbedSignature("app.exe", pkcs7_der);
+
+        if(the_seed::PeSigner::HasEmbeddedSignature("app.exe"))
+        {
+            auto signature = the_seed::PeSigner::ExtractSignature("app.exe");
+        }
+
+        the_seed::PeSigner::StripSignature("app.exe");
+        // --- end README text
+        (void)result;
+    }
+
     void JSONLoaderExample()
     {
         // --- begin README text
@@ -216,6 +239,29 @@ TEST_CASE("README not-found text for a loader with no locations", "[README]")
         REQUIRE(text.find("../../my-component/src/.libs") != std::string::npos);
         REQUIRE(text.find("../node_modules/org/my-component/src/.libs") != std::string::npos);
     }
+}
+
+TEST_CASE("README PeSigner example signs and strips a program", "[README]")
+{
+    seedtest::ScratchDir scratch;
+    const std::filesystem::path program = scratch.Path() / "app.exe";
+    std::filesystem::copy_file(seedtest::FixturePath("tiny.exe"), program);
+    const std::vector<std::uint8_t> blob(64, 0xAA);
+
+    const std::filesystem::path before = std::filesystem::current_path();
+    std::filesystem::current_path(scratch.Path());
+    try
+    {
+        PeSignerExample(blob);
+    }
+    catch(...)
+    {
+        std::filesystem::current_path(before);
+        throw;
+    }
+    std::filesystem::current_path(before);
+
+    REQUIRE_FALSE(the_seed::PeSigner::HasEmbeddedSignature(program.string()));
 }
 
 TEST_CASE("README pak examples run against a generated pak", "[README]")

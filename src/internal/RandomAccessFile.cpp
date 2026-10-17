@@ -193,6 +193,17 @@ RandomAccessFile RandomAccessFile::Open(const std::filesystem::path &path)
         const int id = errno;
         throw FileOpenError(std::generic_category().message(id), id == ENOENT || id == ENOTDIR);
     }
+
+    // A folder opens for reading here, unlike on Windows, and its size is
+    // whatever the file system says (LLONG_MAX on ext4): refuse it as Windows
+    // does.
+    struct stat info;
+    const int id = ::fstat(descriptor, &info) != 0 ? errno : S_ISDIR(info.st_mode) ? EISDIR : 0;
+    if(id != 0)
+    {
+        ::close(descriptor);
+        throw FileOpenError(std::generic_category().message(id), false);
+    }
     return RandomAccessFile(path, static_cast<std::intptr_t>(descriptor));
 }
 
