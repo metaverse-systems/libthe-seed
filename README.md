@@ -30,7 +30,7 @@ To build and install:
 To run the tests, in addition:
 
 * the `external/Catch2` submodule (see "Running the tests")
-* osslsigncode, wine, node, and `clang++` and `python3` for the style check; the checks that need a tool skip themselves without it
+* osslsigncode, wine, node, and `clang-query` (in the `clang-tools` package) for the style check; the checks that need a tool skip themselves without it
 
 To generate the documentation: doxygen and graphviz.
 
@@ -136,7 +136,7 @@ make && make check VERBOSE=1
 
 Compiler warnings (`-Wall -Wextra`) are always shown. To make them fatal, as the hosted checks do, add `--enable-werror=yes`.
 
-These scripts in `make check` guard the public surface, the installation, the version numbers, this readme and the code style: `tests/check-exports.sh` fails when the shared library exports anything outside `tests/public-symbols.txt`, `tests/check-public-headers.sh` checks that the installed headers are the ones in `tests/public-headers.txt`, compile alone and leak no platform header, `tests/check-install.sh` checks the installed file list, `tests/check-consumer.sh` builds a program against the installed package, `tests/check-versions.sh` checks that the version numbers agree, `tests/check-readme.sh` checks that this readme names real files and options, and `tests/check-style.sh` fails on a member used without `this->` or a member name ending in an underscore. The style check needs `clang++` and `python3` and skips itself without them.
+These scripts in `make check` guard the public surface, the installation, the version numbers, this readme and the code style: `tests/check-exports.sh` fails when the shared library exports anything outside `tests/public-symbols.txt`, `tests/check-public-headers.sh` checks that the installed headers are the ones in `tests/public-headers.txt`, compile alone and leak no platform header, `tests/check-install.sh` checks the installed file list, `tests/check-consumer.sh` builds a program against the installed package, `tests/check-versions.sh` checks that the version numbers agree, `tests/check-readme.sh` checks that this readme names real files and options, and `tests/check-style.sh` fails on a member used without `this->` or a member name ending in an underscore. The style check needs `clang-query` (in the `clang-tools` package) and skips itself without it.
 
 ### Known gaps
 
