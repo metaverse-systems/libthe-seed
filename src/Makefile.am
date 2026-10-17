@@ -3,19 +3,19 @@ lib_LTLIBRARIES = libthe-seed.la
 # library is built from it and the tests of internals link it statically.
 noinst_LTLIBRARIES = libthe-seed-core.la
 pkginclude_HEADERS = \
-    ../include/libthe-seed/LoadError.hpp \
-    ../include/libthe-seed/Export.hpp \
-    ../include/libthe-seed/JSONLoader.hpp \
-    ../include/libthe-seed/SystemLoader.hpp \
-    ../include/libthe-seed/ComponentLoader.hpp \
-    ../include/libthe-seed/LibraryLoader.hpp \
-	../include/libthe-seed/ResourcePak.hpp \
-	../include/libthe-seed/DependencyLister.hpp \
-    ../include/libthe-seed/PakLoader.hpp \
-	../include/libthe-seed/PeSigner.hpp \
-	../include/libthe-seed/MachOParser.hpp \
-	../include/libthe-seed/MachOSigner.hpp \
-	../include/libthe-seed/MsiSigner.hpp
+    $(top_srcdir)/include/libthe-seed/LoadError.hpp \
+    $(top_srcdir)/include/libthe-seed/Export.hpp \
+    $(top_srcdir)/include/libthe-seed/JSONLoader.hpp \
+    $(top_srcdir)/include/libthe-seed/SystemLoader.hpp \
+    $(top_srcdir)/include/libthe-seed/ComponentLoader.hpp \
+    $(top_srcdir)/include/libthe-seed/LibraryLoader.hpp \
+    $(top_srcdir)/include/libthe-seed/ResourcePak.hpp \
+    $(top_srcdir)/include/libthe-seed/DependencyLister.hpp \
+    $(top_srcdir)/include/libthe-seed/PakLoader.hpp \
+    $(top_srcdir)/include/libthe-seed/PeSigner.hpp \
+    $(top_srcdir)/include/libthe-seed/MachOParser.hpp \
+    $(top_srcdir)/include/libthe-seed/MachOSigner.hpp \
+    $(top_srcdir)/include/libthe-seed/MsiSigner.hpp
 
 noinst_HEADERS = \
 	internal/ElfParser.hpp \

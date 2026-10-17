@@ -32,9 +32,13 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { name: plain, sanitizer: "" }
-          - { name: address+undefined, sanitizer: address }
-          - { name: thread, sanitizer: thread }
+          # build: the directory the build runs in, relative to the checkout.
+          # "." builds in the source tree; "../build" is configured from the
+          # checkout by absolute path and leaves the sources untouched.
+          - { name: plain, sanitizer: "", build: "." }
+          - { name: address+undefined, sanitizer: address, build: "." }
+          - { name: thread, sanitizer: thread, build: "." }
+          - { name: plain (out of tree), sanitizer: "", build: "../build" }
 
     steps:
       - name: Check out repository
@@ -98,14 +102,23 @@ jobs:
       - name: Configure
         env:
           SANITIZER: ${{ matrix.sanitizer }}
+          BUILD_DIR: ${{ matrix.build }}
         run: |
           ./autogen.sh
-          ./configure --enable-tests=yes --enable-werror=yes ${SANITIZER:+--enable-sanitizer=$SANITIZER}
+          if [ "$BUILD_DIR" = . ]; then
+            ./configure --enable-tests=yes --enable-werror=yes ${SANITIZER:+--enable-sanitizer=$SANITIZER}
+          else
+            mkdir "$BUILD_DIR"
+            cd "$BUILD_DIR"
+            "$GITHUB_WORKSPACE/configure" --enable-tests=yes --enable-werror=yes ${SANITIZER:+--enable-sanitizer=$SANITIZER}
+          fi
 
       - name: Build
+        working-directory: ${{ matrix.build }}
         run: make -j4
 
       - name: Test
+        working-directory: ${{ matrix.build }}
         env:
           REPEAT: ${{ inputs.repeat || 1 }}
           # Headless Wine: do not try to install Mono or Gecko when the test
@@ -127,6 +140,7 @@ jobs:
 
       - name: Check the sanitizer runtime is linked
         if: matrix.sanitizer != ''
+        working-directory: ${{ matrix.build }}
         run: |
           case "${{ matrix.sanitizer }}" in
             address) runtime=libasan ;;
@@ -139,6 +153,7 @@ jobs:
 
       - name: Summary
         if: always()
+        working-directory: ${{ matrix.build }}
         run: |
           {
             echo "### test (${{ matrix.name }})"
@@ -179,8 +194,8 @@ jobs:
         with:
           name: test-logs-${{ matrix.name }}
           path: |
-            tests/*.log
-            tests/test-suite.log
+            ${{ matrix.build }}/tests/*.log
+            ${{ matrix.build }}/tests/test-suite.log
           if-no-files-found: ignore
 
   fuzz:
