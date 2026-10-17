@@ -53,7 +53,15 @@ libthe_seed_core_la_LIBADD = -lpthread ${LIBECS_LIBS}
 libthe_seed_la_SOURCES =
 nodist_EXTRA_libthe_seed_la_SOURCES = dummy.cpp
 libthe_seed_la_LIBADD = libthe-seed-core.la -lpthread ${LIBECS_LIBS}
-libthe_seed_la_LDFLAGS = -no-undefined -version-info 0:0:0 $(SANITIZER_LDFLAGS)
+# Compatibility version (libtool current:revision:age), independent of the
+# package version. Rule: a fix that changes no interface raises revision by
+# one; an addition raises current by one, resets revision to 0 and raises age
+# by one; an incompatible change, including a changed layout of an exported
+# class, raises current by one and resets revision and age to 0. The installed
+# names are libthe-seed.so.<current-age> and libthe-seed-<current-age>.dll.
+# The count starts at 1:0:0 because every earlier release shipped soname 0
+# while breaking compatibility.
+libthe_seed_la_LDFLAGS = -no-undefined -version-info 1:0:0 $(SANITIZER_LDFLAGS)
 libthe_seed_core_la_SOURCES = LoadError.cpp \
 		LibraryLoader.cpp \
 		SystemLoader.cpp \

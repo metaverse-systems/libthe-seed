@@ -3,7 +3,7 @@
 
 AC_PREREQ([2.69])
 m4_define([the_seed_libecs_min], [2.1.0])
-AC_INIT([libthe-seed], [0.7.0], [tim@metaverse.systems])
+AC_INIT([libthe-seed], [0.7.0], [tim@metaverse.systems], [libthe-seed], [https://github.com/metaverse-systems/libthe-seed])
 LT_INIT
 AC_CONFIG_SRCDIR([src/LibraryLoader.cpp])
 AC_CONFIG_HEADERS([config.h])
@@ -24,6 +24,10 @@ AC_CHECK_LIB([pthread], [pthread_exit])
 LIBECS_MIN_VERSION=the_seed_libecs_min
 AC_SUBST([LIBECS_MIN_VERSION])
 PKG_CHECK_MODULES([LIBECS], [ecs-cpp >= the_seed_libecs_min])
+# The directory holding libecs-cpp's metadata; the install checks limit
+# pkg-config to it and to a staged install.
+ECS_PCDIR=`$PKG_CONFIG --variable=pcfiledir ecs-cpp`
+AC_SUBST([ECS_PCDIR])
 # The test framework is the vendored Catch2 submodule. Building and installing
 # the library never needs it; only "make check" does.
 # --enable-tests=auto (default) enables the tests when the framework is present,
