@@ -1,3 +1,25 @@
+Versioning
+
+* Package version: semantic versioning. Until 1.0.0, a raise of the minor
+  number (0.7.0 to 0.8.0) signals changes that are not compatible with the
+  previous release; a raise of the patch number is a fix.
+
+* Compatibility version (the libtool triple current:revision:age in
+  src/Makefile.am): a fix that changes no interface raises revision by one; an
+  addition raises current by one, resets revision to 0 and raises age by one;
+  an incompatible change, including a changed layout of an exported class,
+  raises current by one and resets revision and age to 0. The installed names
+  carry current minus age: libthe-seed.so.<current-age> on Linux and
+  libthe-seed-<current-age>.dll on Windows.
+
+* The two numbers move independently: a release can raise one and not the
+  other.
+
+* The compatibility version starts at 1:0:0 because every release up to 0.7.0
+  shipped with the value 0 while making changes that were not compatible.
+  Programs built against those releases ask for libthe-seed.so.0 or
+  libthe-seed-0.dll, which the new library does not provide.
+
 libthe-seed (unreleased)
 
 * Breaking: every public class moved into the `the_seed` namespace
@@ -211,8 +233,8 @@ libthe-seed 0.5.0
 
 * Mach-O inputs are declined: the input appears in `errors` with
   "<path>: Mach-O files are not supported for dependency listing" (a Mach-O
-  library gets the same text in `libraryErrors`). This will be revisited after
-  roadmap task 5. MachOParser::ListDependencies now reads weak, re-exported,
+  library gets the same text in `libraryErrors`). This will be revisited once
+  Mach-O dependency reading is complete. MachOParser::ListDependencies now reads weak, re-exported,
   lazy and upward references, reads every slice of a universal file and
   rejects an unterminated library name.
 
