@@ -146,8 +146,17 @@ jobs:
             address) runtime=libasan ;;
             thread) runtime=libtsan ;;
           esac
-          if ! ldd tests/.libs/test_NameParser | grep -q "$runtime"; then
-            echo "::error::tests/.libs/test_NameParser is not linked with $runtime"
+          # test_NameParser links the static core library, so libtool writes
+          # it straight to tests/ with no .libs wrapper. The shared library is
+          # not checked: the runtime is a dependency of the program, not of
+          # the library.
+          binary=tests/test_NameParser
+          if [ ! -f "$binary" ]; then
+            echo "::error::$binary was not built"
+            exit 1
+          fi
+          if ! ldd "$binary" | grep -q "$runtime"; then
+            echo "::error::$binary is not linked with $runtime"
             exit 1
           fi
 
