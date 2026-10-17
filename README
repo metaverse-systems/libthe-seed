@@ -61,7 +61,7 @@ Three scripts in `make check` guard the public surface and the code style: `test
 
 ### Known gaps
 
-Failures that a defect recorded in `docs/reviews/libthe-seed-1.md` causes are listed in `tests/known-gaps.txt`, one line per test case, with the finding and the roadmap task that fixes it. A listed failure is reported as `KNOWN GAP:` and does not fail the run; any other failure does. A `STALE KNOWN GAP:` line means a listed test now passes: the change that fixed the defect must remove the entry. A `MALFORMED KNOWN GAP:` line means an entry could not be read or matches no test case, and it fails the run.
+Failures that a defect recorded in the parent project's review of libthe-seed causes are listed in `tests/known-gaps.txt`, one line per test case, with the finding and the roadmap task that fixes it. A listed failure is reported as `KNOWN GAP:` and does not fail the run; any other failure does. A `STALE KNOWN GAP:` line means a listed test now passes: the change that fixed the defect must remove the entry. A `MALFORMED KNOWN GAP:` line means an entry could not be read or matches no test case, and it fails the run.
 
 ### Sample files
 
@@ -73,7 +73,19 @@ The sample executables, DLL, installer and Mach-O files in `tests/fixtures/` are
 
 ### Hosted checks
 
-The workflow in `.github/workflows/ci.yaml` runs `make check` for the plain, the address+undefined and the thread variants on every pull request and on pushes to `main`. It builds libecs-cpp from commit `bd84b5a5bee05bed2006fc9ef9dbbfe3e58f9f7e` (version 2.1.0). Update `LIBECS_CPP_REF` in the workflow when the required libecs-cpp changes.
+The workflow in `.github/workflows/ci.yaml` runs `make check` for the plain, the address+undefined and the thread variants on every pull request and on pushes to `main`. It builds libecs-cpp from commit `bd84b5a5bee05bed2006fc9ef9dbbfe3e58f9f7e` (version 2.1.0). Update `LIBECS_CPP_REF` in the workflow when the required libecs-cpp changes. The `docs` job builds the reference documentation and runs `tests/check-docs.sh` on every pull request and push; it only reads the repository.
+
+## Documentation
+
+The reference documentation for the public headers is published at https://metaverse-systems.github.io/libthe-seed/ and is not stored in the repository. To build it yourself, install doxygen and graphviz, run `configure`, and run:
+
+```
+make doxygen
+```
+
+The pages are written to `doxygen/html` in the build directory, which is the source directory for an in-place build. Open `doxygen/html/index.html`. The configuration (`Doxyfile.in`) reads only `include/libthe-seed` and this readme; internal sources and tests are not documented. `make clean` removes the `doxygen` directory. `tests/check-docs.sh` checks the result and skips itself when doxygen is not installed; set `SEED_REQUIRE_DOCS=1` to fail instead.
+
+The workflow `.github/workflows/doxygen.yaml` builds the pages on every push to `main` and publishes them as a Pages artifact. It never commits or pushes to the repository. Publishing needs a one-time setting by the repository owner: in the repository settings, under Pages, set Source to "GitHub Actions", or run `gh api -X PUT repos/metaverse-systems/libthe-seed/pages -f build_type=workflow`. Until then the deploy job reports an error and the workflow still succeeds.
 
 ## Dependency listing
 

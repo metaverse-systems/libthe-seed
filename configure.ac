@@ -128,6 +128,9 @@ AC_CHECK_HEADER([windows.h],
 
 # Checks for library functions.
 
+# The documentation target is optional.
+AC_CHECK_PROG([DOXYGEN], [doxygen], [doxygen])
+
 AC_CONFIG_FILES([Makefile
                  the-seed.pc
                  src/Makefile

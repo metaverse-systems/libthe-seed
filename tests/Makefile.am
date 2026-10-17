@@ -60,7 +60,7 @@ seed_test_programs = test_NameParser test_LoadError test_LibraryLoader test_Depe
 check_PROGRAMS = $(seed_test_programs)
 
 # Scripts listed here run in every build, including cross builds.
-host_independent_tests = check-fixtures.sh check-style.sh check-exports.sh check-public-headers.sh check-versions.sh check-install.sh check-consumer.sh
+host_independent_tests = check-fixtures.sh check-style.sh check-exports.sh check-public-headers.sh check-versions.sh check-install.sh check-consumer.sh check-docs.sh
 
 if CROSS_COMPILING
 cross_compiling_flag = yes
@@ -286,7 +286,7 @@ endif
 
 EXTRA_DIST = TestPaths.hpp LoaderTestSupport.hpp PakTestSupport.hpp CfbReference.hpp MsiTestSupport.hpp ToolSupport.hpp MachOReference.hpp MachOSigningSupport.hpp HeapCounter.hpp MalformedInput.hpp ReplaceTestSupport.hpp \
              reference/reference-dump.cpp reference/compare-reference.sh \
-             reference/make-generated-references.sh run-test.sh run-test-selftest.sh check-fixtures.sh check-style.sh check-exports.sh public-symbols.txt check-public-headers.sh public-headers.txt check-versions.sh check-install.sh check-consumer.sh \
+             reference/make-generated-references.sh run-test.sh run-test-selftest.sh check-fixtures.sh check-style.sh check-exports.sh public-symbols.txt check-public-headers.sh public-headers.txt check-versions.sh check-install.sh check-consumer.sh check-docs.sh \
              fuzz/FuzzTargets.hpp fuzz/FuzzTargets.cpp fuzz/fuzz_entry.cpp \
              fuzz/build-fuzzers.sh fuzz/run-fuzzers.sh \
              fuzz/corpus \

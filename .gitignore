@@ -48,6 +48,8 @@ autom4te.cache
 
 /the-seed.pc
 /Doxyfile
+/docs/
+/doxygen/
 Makefile
 .libs
 .deps

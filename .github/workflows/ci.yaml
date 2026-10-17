@@ -58,7 +58,7 @@ jobs:
         # installed here so the style check always runs in the hosted job.
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential autoconf automake libtool pkg-config uuid-dev \
+          sudo apt-get install -y build-essential autoconf automake libtool pkg-config \
             osslsigncode wine wine64 clang
           clang++ --version
           osslsigncode --version
@@ -238,3 +238,51 @@ jobs:
           name: fuzz-findings
           path: ${{ runner.temp }}/fuzz-out
           if-no-files-found: ignore
+
+  docs:
+    name: docs
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential autoconf automake libtool pkg-config doxygen graphviz
+
+      - name: Restore libecs-cpp
+        id: ecs-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/ecs
+          key: libecs-cpp-${{ env.LIBECS_CPP_REF }}-${{ runner.os }}-${{ env.ImageVersion }}
+
+      - name: Build libecs-cpp
+        if: steps.ecs-cache.outputs.cache-hit != 'true'
+        run: |
+          mkdir "$RUNNER_TEMP/libecs-cpp"
+          cd "$RUNNER_TEMP/libecs-cpp"
+          git init
+          git fetch --depth 1 https://github.com/metaverse-systems/libecs-cpp.git "$LIBECS_CPP_REF"
+          git checkout FETCH_HEAD
+          ./autogen.sh
+          ./configure --prefix="$HOME/ecs" --enable-tests=no
+          make -j4
+          make install
+
+      - name: Generate the documentation
+        run: |
+          export PKG_CONFIG_PATH="$HOME/ecs/lib/pkgconfig"
+          ./autogen.sh
+          ./configure --enable-tests=no
+          make doxygen
+
+      - name: Check the documentation
+        run: SEED_REQUIRE_DOCS=1 SEED_SRCDIR=$PWD SEED_BUILDDIR=$PWD tests/check-docs.sh

@@ -2,9 +2,6 @@
   "name": "@metaverse-systems/libthe-seed",
   "version": "0.7.0",
   "description": "The Seed game engine library",
-  "directories": {
-    "doc": "docs"
-  },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
