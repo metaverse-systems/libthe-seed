@@ -3,7 +3,7 @@
 
 AC_PREREQ([2.69])
 m4_define([the_seed_libecs_min], [2.1.0])
-AC_INIT([libthe-seed], [0.7.0], [tim@metaverse.systems], [libthe-seed], [https://github.com/metaverse-systems/libthe-seed])
+AC_INIT([libthe-seed], [0.8.0], [tim@metaverse.systems], [libthe-seed], [https://github.com/metaverse-systems/libthe-seed])
 LT_INIT
 AC_CONFIG_SRCDIR([src/LibraryLoader.cpp])
 AC_CONFIG_HEADERS([config.h])

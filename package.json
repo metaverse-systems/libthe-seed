@@ -1,6 +1,6 @@
 {
   "name": "@metaverse-systems/libthe-seed",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "The Seed game engine library",
   "scripts": {
     "test": "sh -c 'test -x configure || ./autogen.sh; test -f Makefile || ./configure; make check'"

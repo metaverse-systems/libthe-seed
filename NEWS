@@ -20,7 +20,7 @@ Versioning
   Programs built against those releases ask for libthe-seed.so.0 or
   libthe-seed-0.dll, which the new library does not provide.
 
-libthe-seed (unreleased)
+libthe-seed 0.8.0
 
 * Breaking: every public class moved into the `the_seed` namespace
   (the_seed::ComponentLoader, SystemLoader, JSONLoader, PakLoader,
@@ -125,8 +125,39 @@ libthe-seed (unreleased)
   The README states the pak format.
 
 * ABI: the private members of every loader changed. Rebuild programs against
-  the new headers. No version change; the version is set when the work is
-  released.
+  the new headers.
+
+* Tests: configure --enable-tests (default off) is the only thing that needs
+  the external/Catch2 submodule. Building and installing the library from a
+  clone made without submodules works with the plain ./configure and make
+  commands; a build that asks for the tests without the submodule stops with a
+  message naming it. Nobody who only installs the library has to change
+  anything.
+
+* Warnings: compiler warnings are always shown. configure --enable-werror
+  makes them fatal; maintainers should use it. Nobody has to change code.
+
+* Compatibility version 1 (soname libthe-seed.so.1, libthe-seed-1.dll). Every
+  program and plugin that links libthe-seed must be rebuilt. The old
+  libthe-seed.so.0* files and libthe-seed-0.dll are left in place by the
+  install; remove them by hand when nothing uses them any more.
+
+* The installed the-seed.pc is complete: it carries -std=c++20, Libs.private
+  for static linking (pkg-config --static), URL and Requires: ecs-cpp >= 2.1.0.
+  A consumer builds from `pkg-config --cflags --libs the-seed` alone and needs
+  no extra include directory.
+
+* libecs-cpp 2.1.0 or later is required (it was 2.0.0). Install it before
+  building this release.
+
+* Documentation is published as a site by a workflow and is no longer
+  committed: the docs/ directory is removed. The repository owner must switch
+  GitHub Pages to the GitHub Actions source once. make doxygen builds the
+  reference into the build directory. Nobody has to change code.
+
+* One readme: README.md is the only one (the duplicate README is removed), and
+  the ChangeLog and package-lock.json files are removed. npm test runs the
+  tests.
 
 libthe-seed 0.7.0
 

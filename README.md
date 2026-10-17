@@ -97,7 +97,7 @@ pkg-config --cflags --libs the-seed
 prints the include folder, `-std=c++20`, the library folder and `-lthe-seed` (and the flags of libecs-cpp, which the package requires). In a `configure.ac`, ask for the version you need:
 
 ```
-PKG_CHECK_MODULES([LIBTHE_SEED], [the-seed >= 0.7.0])
+PKG_CHECK_MODULES([LIBTHE_SEED], [the-seed >= 0.8.0])
 ```
 
 To link statically, use `pkg-config --static --cflags --libs the-seed`, which adds the libraries the static library needs (`Libs.private`).
