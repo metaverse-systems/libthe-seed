@@ -93,7 +93,11 @@ libthe-seed 0.8.0
 
 * Tests: configure --enable-sanitizer=thread builds the library, the tests and
   the test plugins with ThreadSanitizer. The README examples are compiled and
-  run by test_ReadmeExamples.
+  run by test_ReadmeExamples. Under AddressSanitizer, make check caps the
+  fake stack behind use-after-return detection (ASAN_OPTIONS
+  max_uar_stack_size_log=16): the tests that provoke tens of thousands of
+  refusals ran seventy times slower than without the sanitizer, and now run
+  about eight times slower, with the detection kept.
 
 * Resource paks read only what is asked. PakLoader and ResourcePak read each
   requested resource straight into its own resource, and read a pak's

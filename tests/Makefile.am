@@ -12,13 +12,19 @@ AM_LDFLAGS = $(SANITIZER_LDFLAGS)
 LOG_COMPILER = $(SHELL) $(srcdir)/run-test.sh
 SH_LOG_COMPILER = $(SHELL)
 
+# max_uar_stack_size_log caps AddressSanitizer's fake stack, which backs its
+# use-after-return detection, at 64 KiB per frame size. Every exception leaves
+# a fake frame behind that the next function call collects by scanning the
+# whole fake stack, so the tests that provoke tens of thousands of refusals
+# (test_QueryEquivalence, test_TruncatedSamples) ran seventy times slower than
+# without the sanitizer at the default size; the cap keeps the detection.
 AM_TESTS_ENVIRONMENT = \
     SEED_SANITIZER='@SANITIZER@'; export SEED_SANITIZER; \
     SEED_KNOWN_GAPS_FILE='$(abs_srcdir)/known-gaps.txt'; export SEED_KNOWN_GAPS_FILE; \
     SEED_TEST_PROGRAMS='$(seed_test_programs)'; export SEED_TEST_PROGRAMS; \
     SEED_FIXTURES_DIR='$(abs_srcdir)/fixtures'; export SEED_FIXTURES_DIR; \
     SEED_TESTS_SRCDIR='$(abs_srcdir)'; export SEED_TESTS_SRCDIR; \
-    ASAN_OPTIONS='halt_on_error=1:detect_leaks=1:abort_on_error=0:print_summary=1'; export ASAN_OPTIONS; \
+    ASAN_OPTIONS='halt_on_error=1:detect_leaks=1:abort_on_error=0:print_summary=1:max_uar_stack_size_log=16'; export ASAN_OPTIONS; \
     UBSAN_OPTIONS='halt_on_error=1:print_stacktrace=1:print_summary=1'; export UBSAN_OPTIONS; \
     TSAN_OPTIONS='halt_on_error=1:second_deadlock_stack=1:print_summary=1'; export TSAN_OPTIONS; \
     CXX='$(CXX)'; export CXX; \
