@@ -113,6 +113,10 @@ TEST_CASE("LoadError is copyable", "[LoadError]")
         REQUIRE(copy.FileGet() == "libthing.so");
         REQUIRE(copy.LocationsGet().size() == 3);
         REQUIRE(message == copy.what());
+        // The copy owns its message: a loader throws copies of one failure on
+        // several threads at once, and a shared message would be released by
+        // one thread while another reads it.
+        REQUIRE(copy.what() != original.what());
     }
 
     SECTION("Copy assignment")
@@ -123,6 +127,7 @@ TEST_CASE("LoadError is copyable", "[LoadError]")
         REQUIRE(other.ReasonGet() == the_seed::LoadError::Reason::NotFound);
         REQUIRE(other.NameGet() == "org/thing");
         REQUIRE(message == other.what());
+        REQUIRE(other.what() != original.what());
     }
 
     SECTION("Copy survives the original")

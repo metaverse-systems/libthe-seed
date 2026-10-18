@@ -86,7 +86,10 @@ libthe-seed 0.8.0
   none).
 
 * Concurrent loads: one open per plugin file per loader, concurrent requests
-  for one name share one load, and a failed load is not remembered.
+  for one name share one load, and a failed load is not remembered. Every
+  request that waited for a failed load gets its own copy of the LoadError,
+  and a copy of a LoadError owns its message (std::runtime_error's copy
+  shares it), so threads never read and release one message at once.
 
 * Tests: configure --enable-sanitizer=thread builds the library, the tests and
   the test plugins with ThreadSanitizer. The README examples are compiled and

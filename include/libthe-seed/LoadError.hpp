@@ -64,6 +64,15 @@ class THE_SEED_API LoadError : public std::runtime_error
               std::vector<Location> locations, std::string detail,
               std::string kind = "", std::vector<std::string> missing = {});
 
+    /**
+     * A copy owns its message. std::runtime_error shares one text between
+     * copies, so copies thrown on different threads would read and release
+     * the same memory; a loader hands a copy of one failure to every thread
+     * that waited for the same load.
+     */
+    LoadError(const LoadError &other);
+    LoadError &operator=(const LoadError &other);
+
     Reason ReasonGet() const;
     const std::string &NameGet() const;
     const std::string &FileGet() const;
