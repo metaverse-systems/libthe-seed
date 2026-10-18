@@ -375,7 +375,7 @@ TEST_CASE("MachONoRoom the space ends at the section data and not at the end of 
 
 TEST_CASE("MachONoRoom the refusal of every unsigned sample without room leaves the folder as it was", "[MachONoRoom]")
 {
-    for(const std::string &name : {"tiny-macho-x86_64-nospace"})
+    for(const std::string name : {"tiny-macho-x86_64-nospace"})
     {
         INFO(name);
         seedtest::ScratchDir scratch;

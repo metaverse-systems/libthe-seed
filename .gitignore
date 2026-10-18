@@ -48,6 +48,8 @@ autom4te.cache
 
 /the-seed.pc
 /Doxyfile
+/docs/
+/doxygen/
 Makefile
 .libs
 .deps
@@ -86,3 +88,6 @@ src/internal/.dirstamp
 tests/*.log
 tests/*.trs
 tests/test-suite.log
+
+# npm lock file is not kept
+/package-lock.json

@@ -20,7 +20,7 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
-  # libecs-cpp 2.1.0 (provides ecs-cpp >= 2.0.0), fetched anonymously at this exact commit.
+  # libecs-cpp 2.1.0 (provides ecs-cpp >= 2.1.0), fetched anonymously at this exact commit.
   LIBECS_CPP_REF: bd84b5a5bee05bed2006fc9ef9dbbfe3e58f9f7e
 
 jobs:
@@ -32,9 +32,13 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { name: plain, sanitizer: "" }
-          - { name: address+undefined, sanitizer: address }
-          - { name: thread, sanitizer: thread }
+          # build: the directory the build runs in, relative to the checkout.
+          # "." builds in the source tree; "../build" is configured from the
+          # checkout by absolute path and leaves the sources untouched.
+          - { name: plain, sanitizer: "", build: "." }
+          - { name: address+undefined, sanitizer: address, build: "." }
+          - { name: thread, sanitizer: thread, build: "." }
+          - { name: plain (out of tree), sanitizer: "", build: "../build" }
 
     steps:
       - name: Check out repository
@@ -50,13 +54,14 @@ jobs:
         # resource pak writer's own code in test_PakWriterCompat; a missing node
         # fails that test (SEED_TOOLS_OPTIONAL is not set in CI), and the version
         # is printed here so a missing node fails visibly before the tests.
-        # clang runs tests/check-style.sh, which skips itself without it; it is
-        # installed here so the style check always runs in the hosted job.
+        # clang-tools provides clang-query, which runs tests/check-style.sh; the
+        # check skips itself without it, so the tool is installed here to make
+        # sure the style check always runs in the hosted job.
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential autoconf automake libtool pkg-config uuid-dev \
-            osslsigncode wine wine64 clang
-          clang++ --version
+          sudo apt-get install -y build-essential autoconf automake libtool pkg-config \
+            osslsigncode wine wine64 clang clang-tools
+          clang-query --version
           osslsigncode --version
           wine --version
           node --version
@@ -85,9 +90,9 @@ jobs:
         run: |
           echo "PKG_CONFIG_PATH=$HOME/ecs/lib/pkgconfig" >> "$GITHUB_ENV"
           echo "LD_LIBRARY_PATH=$HOME/ecs/lib" >> "$GITHUB_ENV"
-          if ! PKG_CONFIG_PATH="$HOME/ecs/lib/pkgconfig" pkg-config --atleast-version=2.0.0 ecs-cpp; then
+          if ! PKG_CONFIG_PATH="$HOME/ecs/lib/pkgconfig" pkg-config --atleast-version=2.1.0 ecs-cpp; then
             found=$(PKG_CONFIG_PATH="$HOME/ecs/lib/pkgconfig" pkg-config --modversion ecs-cpp 2>/dev/null || echo none)
-            echo "::error::ecs-cpp >= 2.0.0 is required, found $found"
+            echo "::error::ecs-cpp >= 2.1.0 is required, found $found"
             exit 1
           fi
 
@@ -98,14 +103,23 @@ jobs:
       - name: Configure
         env:
           SANITIZER: ${{ matrix.sanitizer }}
+          BUILD_DIR: ${{ matrix.build }}
         run: |
           ./autogen.sh
-          ./configure ${SANITIZER:+--enable-sanitizer=$SANITIZER}
+          if [ "$BUILD_DIR" = . ]; then
+            ./configure --enable-tests=yes --enable-werror=yes ${SANITIZER:+--enable-sanitizer=$SANITIZER}
+          else
+            mkdir "$BUILD_DIR"
+            cd "$BUILD_DIR"
+            "$GITHUB_WORKSPACE/configure" --enable-tests=yes --enable-werror=yes ${SANITIZER:+--enable-sanitizer=$SANITIZER}
+          fi
 
       - name: Build
+        working-directory: ${{ matrix.build }}
         run: make -j4
 
       - name: Test
+        working-directory: ${{ matrix.build }}
         env:
           REPEAT: ${{ inputs.repeat || 1 }}
           # Headless Wine: do not try to install Mono or Gecko when the test
@@ -127,18 +141,29 @@ jobs:
 
       - name: Check the sanitizer runtime is linked
         if: matrix.sanitizer != ''
+        working-directory: ${{ matrix.build }}
         run: |
           case "${{ matrix.sanitizer }}" in
             address) runtime=libasan ;;
             thread) runtime=libtsan ;;
           esac
-          if ! ldd tests/.libs/test_NameParser | grep -q "$runtime"; then
-            echo "::error::tests/.libs/test_NameParser is not linked with $runtime"
+          # test_NameParser links the static core library, so libtool writes
+          # it straight to tests/ with no .libs wrapper. The shared library is
+          # not checked: the runtime is a dependency of the program, not of
+          # the library.
+          binary=tests/test_NameParser
+          if [ ! -f "$binary" ]; then
+            echo "::error::$binary was not built"
+            exit 1
+          fi
+          if ! ldd "$binary" | grep -q "$runtime"; then
+            echo "::error::$binary is not linked with $runtime"
             exit 1
           fi
 
       - name: Summary
         if: always()
+        working-directory: ${{ matrix.build }}
         run: |
           {
             echo "### test (${{ matrix.name }})"
@@ -173,14 +198,19 @@ jobs:
           done
           exit 0
 
+      # upload-artifact refuses paths with "." or ".." segments, which the out
+      # of tree build directory has: hand it the resolved, absolute folder.
+      - name: Find the logs
+        if: failure()
+        working-directory: ${{ matrix.build }}
+        run: echo "TEST_LOG_DIR=$PWD/tests" >> "$GITHUB_ENV"
+
       - name: Upload logs
         if: failure()
         uses: actions/upload-artifact@v7
         with:
           name: test-logs-${{ matrix.name }}
-          path: |
-            tests/*.log
-            tests/test-suite.log
+          path: ${{ env.TEST_LOG_DIR }}/*.log
           if-no-files-found: ignore
 
   fuzz:
@@ -223,3 +253,51 @@ jobs:
           name: fuzz-findings
           path: ${{ runner.temp }}/fuzz-out
           if-no-files-found: ignore
+
+  docs:
+    name: docs
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential autoconf automake libtool pkg-config doxygen graphviz
+
+      - name: Restore libecs-cpp
+        id: ecs-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/ecs
+          key: libecs-cpp-${{ env.LIBECS_CPP_REF }}-${{ runner.os }}-${{ env.ImageVersion }}
+
+      - name: Build libecs-cpp
+        if: steps.ecs-cache.outputs.cache-hit != 'true'
+        run: |
+          mkdir "$RUNNER_TEMP/libecs-cpp"
+          cd "$RUNNER_TEMP/libecs-cpp"
+          git init
+          git fetch --depth 1 https://github.com/metaverse-systems/libecs-cpp.git "$LIBECS_CPP_REF"
+          git checkout FETCH_HEAD
+          ./autogen.sh
+          ./configure --prefix="$HOME/ecs" --enable-tests=no
+          make -j4
+          make install
+
+      - name: Generate the documentation
+        run: |
+          export PKG_CONFIG_PATH="$HOME/ecs/lib/pkgconfig"
+          ./autogen.sh
+          ./configure --enable-tests=no
+          make doxygen
+
+      - name: Check the documentation
+        run: SEED_REQUIRE_DOCS=1 SEED_SRCDIR=$PWD SEED_BUILDDIR=$PWD tests/check-docs.sh

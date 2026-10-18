@@ -12,7 +12,7 @@
 #include <string>
 #include <utility>
 
-#include "../external/picosha2.h"
+#include <picosha2.h>
 
 namespace the_seed
 {

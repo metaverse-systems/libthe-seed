@@ -1,0 +1,91 @@
+name: Publish Documentation
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# No grant at workflow level; each job asks for what it needs.
+permissions: {}
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+env:
+  # libecs-cpp 2.1.0 (provides ecs-cpp >= 2.1.0), fetched anonymously at this exact commit.
+  LIBECS_CPP_REF: bd84b5a5bee05bed2006fc9ef9dbbfe3e58f9f7e
+
+jobs:
+  build:
+    name: build documentation
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential autoconf automake libtool pkg-config doxygen graphviz
+
+      - name: Restore libecs-cpp
+        id: ecs-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/ecs
+          key: libecs-cpp-${{ env.LIBECS_CPP_REF }}-${{ runner.os }}-${{ env.ImageVersion }}
+
+      - name: Build libecs-cpp
+        if: steps.ecs-cache.outputs.cache-hit != 'true'
+        run: |
+          mkdir "$RUNNER_TEMP/libecs-cpp"
+          cd "$RUNNER_TEMP/libecs-cpp"
+          git init
+          git fetch --depth 1 https://github.com/metaverse-systems/libecs-cpp.git "$LIBECS_CPP_REF"
+          git checkout FETCH_HEAD
+          ./autogen.sh
+          ./configure --prefix="$HOME/ecs" --enable-tests=no
+          make -j4
+          make install
+
+      - name: Generate the documentation
+        run: |
+          export PKG_CONFIG_PATH="$HOME/ecs/lib/pkgconfig"
+          ./autogen.sh
+          ./configure --enable-tests=no
+          make doxygen
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v6
+
+      - name: Upload the site
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: doxygen/html
+
+  deploy:
+    name: deploy to Pages
+    needs: build
+    runs-on: ubuntu-24.04
+    # GitHub Pages must be switched to "GitHub Actions" once by the repository
+    # owner (Settings, Pages, Source). Until then this job reports an error
+    # without failing the workflow.
+    continue-on-error: true
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v5

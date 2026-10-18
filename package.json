@@ -1,12 +1,9 @@
 {
   "name": "@metaverse-systems/libthe-seed",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "The Seed game engine library",
-  "directories": {
-    "doc": "docs"
-  },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "sh -c 'test -x configure || ./autogen.sh; test -f Makefile || ./configure; make check'"
   },
   "repository": {
     "type": "git",
@@ -19,6 +16,6 @@
   },
   "homepage": "https://github.com/metaverse-systems/libthe-seed#readme",
   "dependencies": {
-    "@metaverse-systems/libecs-cpp": "^1.0.0"
+    "@metaverse-systems/libecs-cpp": "^2.1.0"
   }
 }

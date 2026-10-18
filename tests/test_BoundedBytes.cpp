@@ -440,7 +440,11 @@ TEST_CASE("MutableByteSpan Fill at and past the end", "[BoundedBytes]")
                      "MSI: ", {"padding", "offset 7", "8 bytes"});
     RequireMalformed([&] { span.Fill(9, 0, 0x55, "padding"); },
                      "MSI: ", {"padding", "offset 9", "8 bytes"});
-    RequireMalformed([&] { span.Fill(0, kMax, 0x55, "padding"); },
+    // The length is read through a volatile so the compiler cannot see the constant
+    // and the call reaches the bound check at run time.
+    volatile std::uint64_t hugeLength = kMax;
+    const std::uint64_t huge = hugeLength;
+    RequireMalformed([&] { span.Fill(0, huge, 0x55, "padding"); },
                      "MSI: ", {"padding"});
     CHECK(bytes == before);
 }

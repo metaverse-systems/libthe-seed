@@ -1,4 +1,4 @@
-AM_CPPFLAGS = -I$(top_srcdir)/include ${LIBECS_CFLAGS} -I$(top_srcdir)/external/Catch2/extras -I$(srcdir) \
+AM_CPPFLAGS = -I$(top_srcdir)/include ${LIBECS_CFLAGS} -isystem $(top_srcdir)/external/Catch2/extras -I$(srcdir) \
               -DFIXTURES_DIR=\"$(abs_srcdir)/fixtures\" \
               -DLIBRARY_PATH_UNDER_TEST=\"$(abs_top_builddir)/src/.libs/libthe-seed.so\" \
               -DMODULE_DIR=\"$(abs_builddir)/.libs\"
@@ -6,19 +6,25 @@ AM_CPPFLAGS = -I$(top_srcdir)/include ${LIBECS_CFLAGS} -I$(top_srcdir)/external/
 # _CPPFLAGS that adds -I$(top_srcdir)/src. Public tests link the shared library
 # only and cannot include internal headers. Internal tests link
 # ../src/libthe-seed-core.la statically (one copy of every internal counter).
-AM_CXXFLAGS = -std=c++20 $(SANITIZER_CXXFLAGS)
+AM_CXXFLAGS = -std=c++20 $(SANITIZER_CXXFLAGS) $(WARN_CXXFLAGS) $(WERROR_CXXFLAGS)
 AM_LDFLAGS = $(SANITIZER_LDFLAGS)
 
 LOG_COMPILER = $(SHELL) $(srcdir)/run-test.sh
 SH_LOG_COMPILER = $(SHELL)
 
+# max_uar_stack_size_log caps AddressSanitizer's fake stack, which backs its
+# use-after-return detection, at 64 KiB per frame size. Every exception leaves
+# a fake frame behind that the next function call collects by scanning the
+# whole fake stack, so the tests that provoke tens of thousands of refusals
+# (test_QueryEquivalence, test_TruncatedSamples) ran seventy times slower than
+# without the sanitizer at the default size; the cap keeps the detection.
 AM_TESTS_ENVIRONMENT = \
     SEED_SANITIZER='@SANITIZER@'; export SEED_SANITIZER; \
     SEED_KNOWN_GAPS_FILE='$(abs_srcdir)/known-gaps.txt'; export SEED_KNOWN_GAPS_FILE; \
     SEED_TEST_PROGRAMS='$(seed_test_programs)'; export SEED_TEST_PROGRAMS; \
     SEED_FIXTURES_DIR='$(abs_srcdir)/fixtures'; export SEED_FIXTURES_DIR; \
     SEED_TESTS_SRCDIR='$(abs_srcdir)'; export SEED_TESTS_SRCDIR; \
-    ASAN_OPTIONS='halt_on_error=1:detect_leaks=1:abort_on_error=0:print_summary=1'; export ASAN_OPTIONS; \
+    ASAN_OPTIONS='halt_on_error=1:detect_leaks=1:abort_on_error=0:print_summary=1:max_uar_stack_size_log=16'; export ASAN_OPTIONS; \
     UBSAN_OPTIONS='halt_on_error=1:print_stacktrace=1:print_summary=1'; export UBSAN_OPTIONS; \
     TSAN_OPTIONS='halt_on_error=1:second_deadlock_stack=1:print_summary=1'; export TSAN_OPTIONS; \
     CXX='$(CXX)'; export CXX; \
@@ -31,7 +37,20 @@ AM_TESTS_ENVIRONMENT = \
     top_srcdir='$(abs_top_srcdir)'; export top_srcdir; \
     host='$(host)'; export host; \
     CROSS_COMPILING='$(cross_compiling_flag)'; export CROSS_COMPILING; \
-    MAKE='$(MAKE)'; export MAKE;
+    MAKE='$(MAKE)'; export MAKE; \
+    SEED_SRCDIR='$(abs_top_srcdir)'; export SEED_SRCDIR; \
+    SEED_BUILDDIR='$(abs_top_builddir)'; export SEED_BUILDDIR; \
+    SEED_PREFIX='$(prefix)'; export SEED_PREFIX; \
+    SEED_VERSION='$(PACKAGE_VERSION)'; export SEED_VERSION; \
+    SEED_LIBECS_MIN='@LIBECS_MIN_VERSION@'; export SEED_LIBECS_MIN; \
+    SEED_ECS_PCDIR='@ECS_PCDIR@'; export SEED_ECS_PCDIR; \
+    SEED_HOST_OS='@host_os@'; export SEED_HOST_OS; \
+    SEED_SANITIZER_FLAGS='$(SANITIZER_CXXFLAGS) $(SANITIZER_LDFLAGS)'; export SEED_SANITIZER_FLAGS;
+
+# Everything that needs the test framework is in this conditional. Without it
+# "make", "make install" and "make uninstall" do not touch this directory, and
+# "make check" says why it cannot run.
+if ENABLE_TESTS
 
 # Bare program names: run-test.sh compares them with known-gaps.txt, and
 # check_PROGRAMS gets $(EXEEXT) appended when cross-compiling for Windows.
@@ -46,19 +65,26 @@ seed_test_programs = test_NameParser test_LoadError test_LibraryLoader test_Depe
 
 check_PROGRAMS = $(seed_test_programs)
 
+# Scripts listed here run in every build, including cross builds.
+host_independent_tests = check-fixtures.sh check-style.sh check-exports.sh check-public-headers.sh check-versions.sh check-install.sh check-consumer.sh check-docs.sh check-readme.sh
+
 if CROSS_COMPILING
 cross_compiling_flag = yes
-TESTS = check-fixtures.sh check-style.sh check-exports.sh check-public-headers.sh
+TESTS = $(host_independent_tests)
 check-local:
 	@echo "Test programs were built but not run: cross-compiling."
 else
 cross_compiling_flag = no
-TESTS = $(seed_test_programs) run-test-selftest.sh check-fixtures.sh check-style.sh check-exports.sh check-public-headers.sh
+TESTS = $(seed_test_programs) run-test-selftest.sh $(host_independent_tests)
 endif
 
 check_LTLIBRARIES = libtestmodule.la libtestmodulealt.la libtestsystem.la libcatch.la
 
-libcatch_la_SOURCES = ../external/Catch2/extras/catch_amalgamated.cpp
+# The vendored framework source is reached through plain -I, so its warnings are
+# shown; it never gets -Werror.
+libcatch_la_SOURCES = catch_main.cpp
+libcatch_la_CPPFLAGS = -I$(top_srcdir)/external/Catch2/extras
+libcatch_la_CXXFLAGS = -std=c++20 $(SANITIZER_CXXFLAGS) $(WARN_CXXFLAGS)
 
 test_NameParser_SOURCES = test_NameParser.cpp
 test_NameParser_CPPFLAGS = $(AM_CPPFLAGS) -I$(top_srcdir)/src
@@ -218,17 +244,17 @@ test_SignersUseReplace_CPPFLAGS = $(AM_CPPFLAGS) -I$(top_srcdir)/src
 test_SignersUseReplace_LDADD = libcatch.la ../src/libthe-seed-core.la ${LIBECS_LIBS}
 
 libtestmodule_la_SOURCES = TestModule.cpp
-libtestmodule_la_CXXFLAGS = -std=c++20 ${LIBECS_CFLAGS} $(SANITIZER_CXXFLAGS)
+libtestmodule_la_CXXFLAGS = -std=c++20 ${LIBECS_CFLAGS} $(SANITIZER_CXXFLAGS) $(WARN_CXXFLAGS) $(WERROR_CXXFLAGS)
 libtestmodule_la_LDFLAGS = -no-undefined -rpath /nowhere -version-info 0:0:0 $(SANITIZER_LDFLAGS)
 libtestmodule_la_LIBADD = ${LIBECS_LIBS}
 
 libtestmodulealt_la_SOURCES = TestModule.cpp
-libtestmodulealt_la_CXXFLAGS = -std=c++20 ${LIBECS_CFLAGS} $(SANITIZER_CXXFLAGS) -DTEST_MODULE_VARIANT=2
+libtestmodulealt_la_CXXFLAGS = -std=c++20 ${LIBECS_CFLAGS} $(SANITIZER_CXXFLAGS) $(WARN_CXXFLAGS) $(WERROR_CXXFLAGS) -DTEST_MODULE_VARIANT=2
 libtestmodulealt_la_LDFLAGS = -no-undefined -rpath /nowhere -version-info 0:0:0 $(SANITIZER_LDFLAGS)
 libtestmodulealt_la_LIBADD = ${LIBECS_LIBS}
 
 libtestsystem_la_SOURCES = TestSystemModule.cpp
-libtestsystem_la_CXXFLAGS = -std=c++20 ${LIBECS_CFLAGS} $(SANITIZER_CXXFLAGS)
+libtestsystem_la_CXXFLAGS = -std=c++20 ${LIBECS_CFLAGS} $(SANITIZER_CXXFLAGS) $(WARN_CXXFLAGS) $(WERROR_CXXFLAGS)
 libtestsystem_la_LDFLAGS = -no-undefined -rpath /nowhere -version-info 0:0:0 $(SANITIZER_LDFLAGS)
 libtestsystem_la_LIBADD = ${LIBECS_LIBS}
 
@@ -252,9 +278,21 @@ test_ReadmeExamples_SOURCES = test_ReadmeExamples.cpp
 test_ReadmeExamples_LDADD = libcatch.la ../src/libthe-seed.la ${LIBECS_LIBS}
 test_ReadmeExamples_LDFLAGS = $(AM_LDFLAGS) -pthread
 
+else
+
+if TESTS_DISABLED_BY_OPTION
+check-local:
+	@echo "make check: the tests are not enabled: configured with --enable-tests=no; configure with --enable-tests=auto to run them" >&2; exit 1
+else
+check-local:
+	@echo "make check: the tests are not enabled: the test framework (external/Catch2) is missing; run git submodule update --init external/Catch2 and then ./configure again" >&2; exit 1
+endif
+
+endif
+
 EXTRA_DIST = TestPaths.hpp LoaderTestSupport.hpp PakTestSupport.hpp CfbReference.hpp MsiTestSupport.hpp ToolSupport.hpp MachOReference.hpp MachOSigningSupport.hpp HeapCounter.hpp MalformedInput.hpp ReplaceTestSupport.hpp \
              reference/reference-dump.cpp reference/compare-reference.sh \
-             reference/make-generated-references.sh run-test.sh run-test-selftest.sh check-fixtures.sh check-style.sh check-exports.sh public-symbols.txt check-public-headers.sh public-headers.txt \
+             reference/make-generated-references.sh run-test.sh run-test-selftest.sh check-fixtures.sh check-style.sh check-exports.sh public-symbols.txt check-public-headers.sh public-headers.txt check-versions.sh check-install.sh check-consumer.sh check-docs.sh check-readme.sh \
              fuzz/FuzzTargets.hpp fuzz/FuzzTargets.cpp fuzz/fuzz_entry.cpp \
              fuzz/build-fuzzers.sh fuzz/run-fuzzers.sh \
              fuzz/corpus \

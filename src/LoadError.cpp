@@ -194,6 +194,38 @@ LoadError::LoadError(Reason reason, std::string name, std::string file,
 {
 }
 
+// Built from the text rather than from the base: std::runtime_error's own copy
+// shares one reference-counted message between copies, and the thread
+// sanitizer cannot see the atomic count inside the standard library, so two
+// threads releasing and reading one message look like a race.
+LoadError::LoadError(const LoadError &other)
+    : std::runtime_error(other.what()),
+      reason(other.reason),
+      name(other.name),
+      file(other.file),
+      locations(other.locations),
+      detail(other.detail),
+      kind(other.kind),
+      missing(other.missing)
+{
+}
+
+LoadError &LoadError::operator=(const LoadError &other)
+{
+    if(this != &other)
+    {
+        this->std::runtime_error::operator=(std::runtime_error(other.what()));
+        this->reason = other.reason;
+        this->name = other.name;
+        this->file = other.file;
+        this->locations = other.locations;
+        this->detail = other.detail;
+        this->kind = other.kind;
+        this->missing = other.missing;
+    }
+    return *this;
+}
+
 LoadError::Reason LoadError::ReasonGet() const
 {
     return this->reason;
